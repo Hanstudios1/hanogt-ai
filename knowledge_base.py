@@ -45,32 +45,37 @@ def save_knowledge(knowledge):
 
 # --------------------
 # NLP: Anlamlı Soru Bulma
+# Modeli sadece bir kere yükleyelim
 model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
 
-def find_best_match(user_input, knowledge):
+def find_best_match(user_input, knowledge, threshold=0.7):
     if not knowledge:
-        return None
+        return None, None
 
     sentences = list(knowledge.keys())
     embeddings = model.encode(sentences, convert_to_tensor=True)
     user_embedding = model.encode(user_input, convert_to_tensor=True)
 
     cosine_scores = util.cos_sim(user_embedding, embeddings)
+
     best_score, best_idx = cosine_scores.max(), cosine_scores.argmax()
 
-    if best_score > 0.7:
-        return sentences[best_idx]
+    if best_score > threshold:
+        return sentences[best_idx], None
     else:
-        return None
+        # Eğer yeterli skor yoksa en yakın 3 öneriyi getir
+        top_results = cosine_scores.squeeze().topk(3)
+        suggestions = [sentences[i] for i in top_results.indices]
+        return None, suggestions
 
 # --------------------
 # Chatbot Cevabı
 def chatbot_response(user_input, knowledge):
-    match = find_best_match(user_input, knowledge)
+    match, suggestions = find_best_match(user_input, knowledge)
     if match:
         return knowledge[match]
     else:
-        return None
+        return suggestions  # Artık öneri listesi döner
 
 # --------------------
 # Web'den Öğrenme
