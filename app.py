@@ -11,9 +11,35 @@ import time
 # Sayfa Ayarları
 st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="centered")
 
-# CSS Yükleme
-with open("static/loading.css") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+# CSS Yükleme (Avatar ve Animasyon için)
+st.markdown("""
+<style>
+.avatar-container {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% {
+        transform: rotate(0deg) scale(1);
+        box-shadow: 0 0 0px rgba(255,255,255,0.4);
+    }
+    50% {
+        transform: rotate(180deg) scale(1.05);
+        box-shadow: 0 0 30px rgba(255,255,255,0.7);
+    }
+    100% {
+        transform: rotate(360deg) scale(1);
+        box-shadow: 0 0 0px rgba(255,255,255,0.4);
+    }
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Logo ve Başlık
 st.markdown("""
@@ -91,6 +117,7 @@ def learn_from_web(query):
         except:
             return None
 
+# Uygulama Modları
 if app_mode == "Sohbet Botu":
     st.header("Yazılı Sohbet")
 
@@ -98,7 +125,7 @@ if app_mode == "Sohbet Botu":
 
     if user_input:
         with st.spinner('Hanogt AI düşünüyor...'):
-            time.sleep(1)  # loading efekti için
+            time.sleep(1)  # Loading animasyonu için
 
         result = chatbot_response(user_input, knowledge)
 
