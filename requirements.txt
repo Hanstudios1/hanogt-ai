@@ -1,10 +1,11 @@
 streamlit
-sentence-transformers
-tinydb
 wikipedia
 requests
 beautifulsoup4
+sentence-transformers
+tinydb
 speechrecognition
 pyttsx3
 langchain
-openai
+langchain-community
+langchain-openai
