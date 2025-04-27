@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import wikipedia
 import speech_recognition as sr
 import pyttsx3
-from knowledge_base import load_knowledge, save_knowledge, chatbot_response
+from knowledge_base import load_knowledge, chatbot_response
 import os
 import time
 
@@ -13,32 +13,35 @@ st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="cen
 
 # CSS Yükleme (Avatar ve Animasyon için)
 st.markdown("""
-<style>
-.avatar-container {
-    text-align: center;
-    margin-bottom: 20px;
-}
-.avatar {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
-@keyframes pulse {
-    0% {
-        transform: rotate(0deg) scale(1);
-        box-shadow: 0 0 0px rgba(255,255,255,0.4);
+    <style>
+    .avatar-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 20px;
     }
-    50% {
-        transform: rotate(180deg) scale(1.05);
-        box-shadow: 0 0 30px rgba(255,255,255,0.7);
+    .avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+        object-fit: cover;
     }
-    100% {
-        transform: rotate(360deg) scale(1);
-        box-shadow: 0 0 0px rgba(255,255,255,0.4);
+    @keyframes pulse {
+        0% {
+            transform: rotate(0deg) scale(1);
+            box-shadow: 0 0 0px rgba(255,255,255,0.4);
+        }
+        50% {
+            transform: rotate(180deg) scale(1.05);
+            box-shadow: 0 0 30px rgba(255,255,255,0.7);
+        }
+        100% {
+            transform: rotate(360deg) scale(1);
+            box-shadow: 0 0 0px rgba(255,255,255,0.4);
+        }
     }
-}
-</style>
+    </style>
 """, unsafe_allow_html=True)
 
 # Logo ve Başlık (Güncellendi)
@@ -56,7 +59,10 @@ if theme == "Dark":
     st.markdown(
         """
         <style>
-        body { background-color: #0e1117; color: white; }
+        body {
+            background-color: #0e1117;
+            color: white;
+        }
         </style>
         """,
         unsafe_allow_html=True
@@ -65,7 +71,10 @@ else:
     st.markdown(
         """
         <style>
-        body { background-color: #ffffff; color: black; }
+        body {
+            background-color: #ffffff;
+            color: black;
+        }
         </style>
         """,
         unsafe_allow_html=True
