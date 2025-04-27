@@ -9,7 +9,7 @@ from knowledge_base import load_knowledge, chatbot_response
 import os
 import time
 import json
-from PIL import Image
+from PIL import Image, ImageDraw
 import base64
 from io import BytesIO
 
@@ -95,17 +95,10 @@ def advanced_word_generator(base_word):
 
 # --- Görsel Üretici Fonksiyonu ---
 def generate_fake_image(prompt):
-    """Sahte bir görsel üretir (şu anda demo)."""
     img = Image.new('RGB', (512, 512), color=(random.randint(0,255), random.randint(0,255), random.randint(0,255)))
-    d = Image.ImageDraw.Draw(img)
+    d = ImageDraw.Draw(img)
     d.text((10,10), prompt, fill=(255,255,255))
     return img
-
-# Eğer OpenAI DALL-E kullanmak istersek:
-# def generate_image_dalle(prompt):
-#     response = openai.Image.create(prompt=prompt, n=1, size="512x512")
-#     image_url = response['data'][0]['url']
-#     return image_url
 
 # --- Streamlit Sayfa Ayarları ---
 st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="centered")
