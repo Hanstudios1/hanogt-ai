@@ -41,7 +41,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Logo ve Başlık (Güncel)
+# Logo ve Başlık (Güncellendi)
 st.markdown("""
 <div class="avatar-container">
     <img src="https://i.imgur.com/NySv35d.png" class="avatar" alt="AI Avatar">
