@@ -13,32 +13,35 @@ app_mode = st.sidebar.selectbox("Bir Mod Seçin:", ["Sohbet Botu", "Regresyon Mo
 knowledge = load_knowledge()
 
 if app_mode == "Sohbet Botu":
-    st.header("Sohbet Botu (Öğrenebilen)")
+    st.header("Hanogt AI - Öğrenen Yapay Zeka")
 
     user_input = st.text_input("Sen:", key="chat_input")
 
     if user_input:
         response = chatbot_response(user_input, knowledge)
-
+        
         if response:
             st.write("Hanogt AI:", response)
         else:
-            st.warning("Bu bilgiyi bilmiyorum. Webden araştırıyorum...")
-            web_answer = learn_from_web(user_input)
-            if web_answer:
-                st.success(f"Web'den Öğrendim: {web_answer}")
-                knowledge[user_input.lower()] = web_answer
-                save_knowledge(knowledge)
-            else:
-                st.error("Web'de de bulamadım. Bana öğretebilirsin.")
-                new_response = st.text_input("Bu soruya ne cevap vermeliyim?", key="teach_input")
-                if st.button("Öğret"):
-                    if new_response:
-                        knowledge[user_input.lower()] = new_response
+            st.warning("Bu konuda bilgim yok. Web'den öğrenmek ister misin?")
+            if st.button("Web'den Öğren"):
+                web_info = learn_from_web(user_input)
+                if web_info:
+                    st.info(f"Web'den Öğrendiğim Bilgi: {web_info}")
+                    if st.button("Bu bilgiyi kaydet"):
+                        knowledge[user_input.lower()] = web_info
                         save_knowledge(knowledge)
-                        st.success("Teşekkürler! Bunu öğrendim.")
-                    else:
-                        st.error("Lütfen bir cevap girin.")
+                        st.success("Bilgi kaydedildi!")
+                else:
+                    st.error("Web'de de bilgi bulamadım. Bana manuel öğretebilirsin.")
+                    new_response = st.text_input("Bu soruya ne cevap vermeliyim?", key="teach_input")
+                    if st.button("Öğret"):
+                        if new_response:
+                            knowledge[user_input.lower()] = new_response
+                            save_knowledge(knowledge)
+                            st.success("Teşekkürler! Bunu öğrendim.")
+                        else:
+                            st.error("Lütfen bir cevap girin.")
 
 elif app_mode == "Regresyon Modeli":
     st.header("Makine Öğrenmesi: Regresyon Modeli")
