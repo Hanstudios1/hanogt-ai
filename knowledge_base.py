@@ -1,43 +1,40 @@
-import streamlit as st
-import wikipedia
 import json
 import os
+import wikipedia
 
-# Wikipedia dili Türkçe
-wikipedia.set_lang("tr")
+knowledge_file = "knowledge_base.json"
+
+# Başlangıç için temel bilgiler
+default_knowledge = {
+    "merhaba": "Merhaba! Sana nasıl yardımcı olabilirim?",
+    "nasılsın": "İyiyim, teşekkür ederim! Sen nasılsın?",
+    "selam": "Selam! Bugün sana nasıl yardımcı olabilirim?",
+    "günaydın": "Günaydın! Harika bir gün seni bekliyor!",
+    "iyi akşamlar": "İyi akşamlar! Umarım günün güzel geçmiştir.",
+    "ne yapıyorsun": "Seninle sohbet ediyorum ve öğreniyorum!",
+    "adın ne": "Benim adım Hanogt AI!",
+    "seni kim yaptı": "Beni Hanogt tarafından geliştirildim!"
+}
 
 def load_knowledge():
-    try:
-        if os.path.exists("knowledge.json"):
-            with open("knowledge.json", "r", encoding="utf-8") as f:
-                return json.load(f)
-        else:
-            return {}
-    except Exception as e:
-        st.error(f"Bilgi veritabanı yüklenemedi: {e}")
-        return {}
+    if not os.path.exists(knowledge_file):
+        save_knowledge(default_knowledge)
+    with open(knowledge_file, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def save_knowledge(knowledge):
-    try:
-        with open("knowledge.json", "w", encoding="utf-8") as f:
-            json.dump(knowledge, f, ensure_ascii=False, indent=4)
-    except Exception as e:
-        st.error(f"Bilgi veritabanı kaydedilemedi: {e}")
+    with open(knowledge_file, "w", encoding="utf-8") as f:
+        json.dump(knowledge, f, ensure_ascii=False, indent=4)
 
 def chatbot_response(user_input, knowledge):
     user_input = user_input.lower()
-    for question in knowledge:
-        if question in user_input:
-            return knowledge[question]
-    return None
+    return knowledge.get(user_input)
 
 def learn_from_web(query):
     try:
+        wikipedia.set_lang("tr")
+        search_query = query.replace(" ", "+") + "+C# site:learn.microsoft.com"
         summary = wikipedia.summary(query, sentences=2)
         return summary
-    except wikipedia.exceptions.DisambiguationError as e:
-        return f"Birden fazla sonuç bulundu: {e.options[:5]}"
-    except wikipedia.exceptions.PageError:
-        return "Wikipedia'da böyle bir sayfa bulunamadı."
     except Exception as e:
-        return f"Hata oluştu: {e}"
+        return None
