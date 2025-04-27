@@ -1,7 +1,10 @@
 streamlit
+sentence-transformers
+tinydb
 wikipedia
-beautifulsoup4
 requests
-numpy
-scikit-learn
-matplotlib
+beautifulsoup4
+speechrecognition
+pyttsx3
+langchain
+openai
