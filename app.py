@@ -8,6 +8,7 @@ from knowledge_base import load_knowledge, chatbot_response
 import os
 import time
 import json
+import random
 
 # --- Yardımcı Fonksiyonlar ---
 
@@ -61,6 +62,36 @@ def load_chat_history():
     else:
         return []
 
+# --- Yaratıcı Fonksiyonlar ---
+
+def creative_response(prompt):
+    styles = [
+        "Bunu düşündüğümde aklıma gelen ilk şey şudur: {}",
+        "Belki de şöyle hayal edebiliriz: {}",
+        "Eğer bunu bir hikaye gibi düşünürsek: {}",
+        "Bu konuda şunu söyleyebilirim: {}",
+        "Bence {} olabilir."
+    ]
+    comment = random.choice(styles).format(generate_new_idea(prompt))
+    return comment
+
+def generate_new_idea(seed):
+    topics = ["zaman yolculuğu", "mikro evrenler", "dijital rüyalar", "ışık hızında düşünce", "ses dalgalarıyla iletişim"]
+    verbs = ["oluşturur", "dönüştürür", "yok eder", "yeniden inşa eder", "hızlandırır"]
+    seed = seed.lower()
+
+    idea = f"{seed} {random.choice(verbs)} ve {random.choice(topics)} ile birleşir."
+    return idea.capitalize()
+
+def advanced_word_generator(base_word):
+    vowels = "aeiouüöı"
+    consonants = "bcçdfgğhjklmnprsştvyz"
+    mutation = ''.join(random.choice(consonants + vowels) for _ in range(3))
+    suffixes = ["sal", "vari", "matik", "nistik", "gen", "goloji", "nomi"]
+
+    new_word = base_word[:len(base_word)//2] + mutation + random.choice(suffixes)
+    return new_word.capitalize()
+
 # --- Sayfa Ayarları ---
 st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="centered")
 
@@ -108,7 +139,7 @@ else:
         </style>
         """, unsafe_allow_html=True)
 
-# Avatar ve Başlık
+# --- Avatar ve Başlık ---
 st.markdown("""
     <style>
     .avatar-container {
@@ -144,7 +175,7 @@ knowledge = load_knowledge()
 chat_history = load_chat_history()
 
 st.sidebar.title("Hanogt AI Menü")
-app_mode = st.sidebar.selectbox("Mod Seçin:", ["Sohbet Botu", "Sesli Sohbet"])
+app_mode = st.sidebar.selectbox("Mod Seçin:", ["Sohbet Botu", "Sesli Sohbet", "Yaratıcı Mod"])
 
 # --- Sohbet Botu ---
 if app_mode == "Sohbet Botu":
@@ -154,14 +185,7 @@ if app_mode == "Sohbet Botu":
 
     if user_input:
         with st.spinner('Hanogt AI cevap üretiyor...'):
-            with st.empty():
-                for _ in range(5):
-                    st.markdown("⏳ Düşünüyorum...")
-                    time.sleep(0.3)
-                    st.markdown("⏳⏳⏳")
-                    time.sleep(0.3)
-        
-        result = chatbot_response(user_input, knowledge)
+            result = chatbot_response(user_input, knowledge)
 
         if isinstance(result, str) and result.strip() != "":
             st.success(f"Hanogt AI: {result}")
@@ -194,14 +218,7 @@ elif app_mode == "Sesli Sohbet":
             st.write(f"Sen: {user_text}")
 
             with st.spinner('Hanogt AI cevap üretiyor...'):
-                with st.empty():
-                    for _ in range(5):
-                        st.markdown("⏳ Düşünüyorum...")
-                        time.sleep(0.3)
-                        st.markdown("⏳⏳⏳")
-                        time.sleep(0.3)
-
-            result = chatbot_response(user_text, knowledge)
+                result = chatbot_response(user_text, knowledge)
 
             if isinstance(result, str) and result.strip() != "":
                 st.success(f"Hanogt AI: {result}")
@@ -225,3 +242,17 @@ elif app_mode == "Sesli Sohbet":
         st.subheader("Geçmiş Konuşmalar:")
         for sender, message in chat_history:
             st.write(f"**{sender}:** {message}")
+
+# --- Yaratıcı Mod ---
+elif app_mode == "Yaratıcı Mod":
+    st.header("Yaratıcı Mod")
+
+    creative_prompt = st.text_input("Bir kelime veya fikir gir:", key="creative_input")
+    
+    if creative_prompt:
+        with st.spinner('Yaratıcı cevap üretiliyor...'):
+            creative_result = creative_response(creative_prompt)
+            new_word = advanced_word_generator(creative_prompt)
+
+        st.success(f"**Yaratıcı Cevap:** {creative_result}")
+        st.info(f"**Yeni Kelime:** {new_word}")
