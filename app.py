@@ -2,13 +2,11 @@
 
 import streamlit as st
 import numpy as np
-from knowledge_base import load_knowledge, save_knowledge, chatbot_response
+from knowledge_base import load_knowledge, save_knowledge, chatbot_response, learn_from_web
 from regression_model import RegressionModel
 
-# Başlık
 st.title("Hanogt AI - Süper Yapay Zeka")
 
-# Yan Menü
 st.sidebar.title("Hanogt AI Menü")
 app_mode = st.sidebar.selectbox("Bir Mod Seçin:", ["Sohbet Botu", "Regresyon Modeli"])
 
@@ -21,19 +19,26 @@ if app_mode == "Sohbet Botu":
 
     if user_input:
         response = chatbot_response(user_input, knowledge)
-        
+
         if response:
             st.write("Hanogt AI:", response)
         else:
-            st.warning("Bu bilgiyi bilmiyorum.")
-            new_response = st.text_input("Bu soruya ne cevap vermeliyim?", key="teach_input")
-            if st.button("Öğret"):
-                if new_response:
-                    knowledge[user_input.lower()] = new_response
-                    save_knowledge(knowledge)
-                    st.success("Teşekkürler! Bunu öğrendim.")
-                else:
-                    st.error("Lütfen bir cevap girin.")
+            st.warning("Bu bilgiyi bilmiyorum. Webden araştırıyorum...")
+            web_answer = learn_from_web(user_input)
+            if web_answer:
+                st.success(f"Web'den Öğrendim: {web_answer}")
+                knowledge[user_input.lower()] = web_answer
+                save_knowledge(knowledge)
+            else:
+                st.error("Web'de de bulamadım. Bana öğretebilirsin.")
+                new_response = st.text_input("Bu soruya ne cevap vermeliyim?", key="teach_input")
+                if st.button("Öğret"):
+                    if new_response:
+                        knowledge[user_input.lower()] = new_response
+                        save_knowledge(knowledge)
+                        st.success("Teşekkürler! Bunu öğrendim.")
+                    else:
+                        st.error("Lütfen bir cevap girin.")
 
 elif app_mode == "Regresyon Modeli":
     st.header("Makine Öğrenmesi: Regresyon Modeli")
