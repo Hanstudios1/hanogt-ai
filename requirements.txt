@@ -1,5 +1,7 @@
-pip install wikipedia
 streamlit
+wikipedia
+beautifulsoup4
+requests
+numpy
 scikit-learn
 matplotlib
-numpy
