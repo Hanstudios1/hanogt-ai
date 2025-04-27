@@ -4,14 +4,16 @@ from bs4 import BeautifulSoup
 import wikipedia
 import speech_recognition as sr
 import pyttsx3
+import random
 from knowledge_base import load_knowledge, chatbot_response
 import os
 import time
 import json
-import random
+from PIL import Image
+import base64
+from io import BytesIO
 
 # --- Yardımcı Fonksiyonlar ---
-
 def speak(text):
     engine = pyttsx3.init()
     engine.say(text)
@@ -63,7 +65,6 @@ def load_chat_history():
         return []
 
 # --- Yaratıcı Fonksiyonlar ---
-
 def creative_response(prompt):
     styles = [
         "Bunu düşündüğümde aklıma gelen ilk şey şudur: {}",
@@ -79,7 +80,7 @@ def generate_new_idea(seed):
     topics = ["zaman yolculuğu", "mikro evrenler", "dijital rüyalar", "ışık hızında düşünce", "ses dalgalarıyla iletişim"]
     verbs = ["oluşturur", "dönüştürür", "yok eder", "yeniden inşa eder", "hızlandırır"]
     seed = seed.lower()
-
+    
     idea = f"{seed} {random.choice(verbs)} ve {random.choice(topics)} ile birleşir."
     return idea.capitalize()
 
@@ -88,104 +89,41 @@ def advanced_word_generator(base_word):
     consonants = "bcçdfgğhjklmnprsştvyz"
     mutation = ''.join(random.choice(consonants + vowels) for _ in range(3))
     suffixes = ["sal", "vari", "matik", "nistik", "gen", "goloji", "nomi"]
-
+    
     new_word = base_word[:len(base_word)//2] + mutation + random.choice(suffixes)
     return new_word.capitalize()
 
-# --- Sayfa Ayarları ---
+# --- Görsel Üretici Fonksiyonu ---
+def generate_fake_image(prompt):
+    """Sahte bir görsel üretir (şu anda demo)."""
+    img = Image.new('RGB', (512, 512), color=(random.randint(0,255), random.randint(0,255), random.randint(0,255)))
+    d = Image.ImageDraw.Draw(img)
+    d.text((10,10), prompt, fill=(255,255,255))
+    return img
+
+# Eğer OpenAI DALL-E kullanmak istersek:
+# def generate_image_dalle(prompt):
+#     response = openai.Image.create(prompt=prompt, n=1, size="512x512")
+#     image_url = response['data'][0]['url']
+#     return image_url
+
+# --- Streamlit Sayfa Ayarları ---
 st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="centered")
 
-# --- CSS ve Temalar ---
-theme = st.sidebar.selectbox("Tema Seçin", ["Light", "Dark"])
+st.sidebar.title("Hanogt AI Menü")
+app_mode = st.sidebar.selectbox("Mod Seçin:", ["Sohbet Botu", "Sesli Sohbet", "Yaratıcı Mod", "Görsel Üretici"])
 
-if theme == "Dark":
-    st.markdown("""
-        <style>
-        body, .block-container {
-            background-color: #0e1117;
-            color: white;
-        }
-        .stButton>button {
-            background-color: #262730;
-            color: white;
-        }
-        .stTextInput>div>div>input {
-            background-color: #262730;
-            color: white;
-        }
-        .css-1v3fvcr {
-            background-color: #0e1117;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-else:
-    st.markdown("""
-        <style>
-        body, .block-container {
-            background-color: #ffffff;
-            color: black;
-        }
-        .stButton>button {
-            background-color: #f0f2f6;
-            color: black;
-        }
-        .stTextInput>div>div>input {
-            background-color: #ffffff;
-            color: black;
-        }
-        .css-1v3fvcr {
-            background-color: #ffffff;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-# --- Avatar ve Başlık ---
-st.markdown("""
-    <style>
-    .avatar-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-    .avatar {
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        animation: pulse 2s infinite;
-        object-fit: cover;
-    }
-    @keyframes pulse {
-        0% { transform: rotate(0deg) scale(1); box-shadow: 0 0 0px rgba(255,255,255,0.4); }
-        50% { transform: rotate(180deg) scale(1.05); box-shadow: 0 0 30px rgba(255,255,255,0.7); }
-        100% { transform: rotate(360deg) scale(1); box-shadow: 0 0 0px rgba(255,255,255,0.4); }
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-<div class="avatar-container">
-    <img src="https://i.imgur.com/NySv35d.png" class="avatar" alt="AI Avatar">
-    <h1 style="color:#FF4B4B;">Hanogt AI</h1>
-</div>
-""", unsafe_allow_html=True)
-
-# --- Uygulama ---
+# --- Bilgi Yükle ---
 knowledge = load_knowledge()
 chat_history = load_chat_history()
 
-st.sidebar.title("Hanogt AI Menü")
-app_mode = st.sidebar.selectbox("Mod Seçin:", ["Sohbet Botu", "Sesli Sohbet", "Yaratıcı Mod"])
-
-# --- Sohbet Botu ---
+# --- Uygulamalar ---
 if app_mode == "Sohbet Botu":
     st.header("Yazılı Sohbet")
-
     user_input = st.text_input("Sen:", key="chat_input")
 
     if user_input:
-        with st.spinner('Hanogt AI cevap üretiyor...'):
-            result = chatbot_response(user_input, knowledge)
+        result = chatbot_response(user_input, knowledge)
 
         if isinstance(result, str) and result.strip() != "":
             st.success(f"Hanogt AI: {result}")
@@ -198,16 +136,10 @@ if app_mode == "Sohbet Botu":
                 chat_history.append(("Sen", user_input))
                 chat_history.append(("Hanogt AI (Wikipedia'dan)", wiki_result))
             else:
-                st.error("Üzgünüm, bu konuda bilgi bulamadım.")
+                st.error("Üzgünüm, bilgi bulamadım.")
 
         save_chat_history(chat_history)
 
-    if chat_history:
-        st.subheader("Geçmiş Konuşmalar:")
-        for sender, message in chat_history:
-            st.write(f"**{sender}:** {message}")
-
-# --- Sesli Sohbet ---
 elif app_mode == "Sesli Sohbet":
     st.header("Sesli Sohbet")
 
@@ -216,43 +148,49 @@ elif app_mode == "Sesli Sohbet":
 
         if user_text:
             st.write(f"Sen: {user_text}")
-
-            with st.spinner('Hanogt AI cevap üretiyor...'):
-                result = chatbot_response(user_text, knowledge)
+            result = chatbot_response(user_text, knowledge)
 
             if isinstance(result, str) and result.strip() != "":
                 st.success(f"Hanogt AI: {result}")
+                speak(result)
                 chat_history.append(("Sen", user_text))
                 chat_history.append(("Hanogt AI", result))
             else:
                 wiki_result = learn_from_web(user_text)
                 if wiki_result:
                     st.success(f"Hanogt AI (Wikipedia'dan öğrendi): {wiki_result}")
+                    speak(wiki_result)
                     chat_history.append(("Sen", user_text))
                     chat_history.append(("Hanogt AI (Wikipedia'dan)", wiki_result))
                 else:
-                    st.error("Bu konuda bir şey bulamadım.")
+                    st.error("Bilgi bulamadım.")
 
             save_chat_history(chat_history)
 
-        else:
-            st.error("Sesi anlayamadım. Lütfen tekrar deneyin.")
-
-    if chat_history:
-        st.subheader("Geçmiş Konuşmalar:")
-        for sender, message in chat_history:
-            st.write(f"**{sender}:** {message}")
-
-# --- Yaratıcı Mod ---
 elif app_mode == "Yaratıcı Mod":
     st.header("Yaratıcı Mod")
+    prompt = st.text_input("Hayal gücünü serbest bırak:", key="creative_input")
 
-    creative_prompt = st.text_input("Bir kelime veya fikir gir:", key="creative_input")
-    
-    if creative_prompt:
-        with st.spinner('Yaratıcı cevap üretiliyor...'):
-            creative_result = creative_response(creative_prompt)
-            new_word = advanced_word_generator(creative_prompt)
+    if prompt:
+        creative_text = creative_response(prompt)
+        st.success(creative_text)
 
-        st.success(f"**Yaratıcı Cevap:** {creative_result}")
-        st.info(f"**Yeni Kelime:** {new_word}")
+        new_word = advanced_word_generator(prompt)
+        st.info(f"Yeni bir kelime icat ettim: **{new_word}**")
+
+elif app_mode == "Görsel Üretici":
+    st.header("Görsel Üretici")
+    image_prompt = st.text_input("Ne çizelim?", key="image_input")
+
+    if st.button("Görsel Üret!"):
+        if image_prompt:
+            image = generate_fake_image(image_prompt)
+            st.image(image, caption=f"Hanogt AI - {image_prompt}", use_column_width=True)
+        else:
+            st.error("Lütfen bir açıklama girin!")
+
+# --- Geçmiş Konuşmalar ---
+if chat_history and app_mode in ["Sohbet Botu", "Sesli Sohbet"]:
+    st.subheader("Geçmiş Konuşmalar:")
+    for sender, message in chat_history:
+        st.write(f"**{sender}:** {message}")
