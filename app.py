@@ -165,14 +165,12 @@ if app_mode == "Sohbet Botu":
 
         if isinstance(result, str) and result.strip() != "":
             st.success(f"Hanogt AI: {result}")
-            speak(result)
             chat_history.append(("Sen", user_input))
             chat_history.append(("Hanogt AI", result))
         else:
             wiki_result = learn_from_web(user_input)
             if wiki_result:
                 st.success(f"Hanogt AI (Wikipedia'dan öğrendi): {wiki_result}")
-                speak(wiki_result)
                 chat_history.append(("Sen", user_input))
                 chat_history.append(("Hanogt AI (Wikipedia'dan)", wiki_result))
             else:
@@ -207,14 +205,12 @@ elif app_mode == "Sesli Sohbet":
 
             if isinstance(result, str) and result.strip() != "":
                 st.success(f"Hanogt AI: {result}")
-                speak(result)
                 chat_history.append(("Sen", user_text))
                 chat_history.append(("Hanogt AI", result))
             else:
                 wiki_result = learn_from_web(user_text)
                 if wiki_result:
                     st.success(f"Hanogt AI (Wikipedia'dan öğrendi): {wiki_result}")
-                    speak(wiki_result)
                     chat_history.append(("Sen", user_text))
                     chat_history.append(("Hanogt AI (Wikipedia'dan)", wiki_result))
                 else:
