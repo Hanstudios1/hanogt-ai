@@ -1,10 +1,11 @@
 import json
 import os
 import wikipedia
+import requests
+from bs4 import BeautifulSoup
 
 knowledge_file = "knowledge_base.json"
 
-# Başlangıç için temel bilgiler
 default_knowledge = {
     "merhaba": "Merhaba! Sana nasıl yardımcı olabilirim?",
     "nasılsın": "İyiyim, teşekkür ederim! Sen nasılsın?",
@@ -32,9 +33,27 @@ def chatbot_response(user_input, knowledge):
 
 def learn_from_web(query):
     try:
+        # Önce Wikipedia'da aramaya çalış
         wikipedia.set_lang("tr")
-        search_query = query.replace(" ", "+") + "+C# site:learn.microsoft.com"
         summary = wikipedia.summary(query, sentences=2)
         return summary
-    except Exception as e:
-        return None
+    except Exception:
+        try:
+            # Wikipedia'da bulunamadıysa Google'dan learn.microsoft.com sitesi üzerinde ara
+            search_query = query.replace(" ", "+") + "+site:learn.microsoft.com"
+            google_url = f"https://www.google.com/search?q={search_query}"
+
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            }
+            response = requests.get(google_url, headers=headers)
+            soup = BeautifulSoup(response.text, "html.parser")
+            links = soup.select(".tF2Cxc a")
+
+            if links:
+                first_link = links[0]['href']
+                return f"Daha fazla bilgi için buraya bakabilirsin: {first_link}"
+            else:
+                return None
+        except Exception as e:
+            return None
