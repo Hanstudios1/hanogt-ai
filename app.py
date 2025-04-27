@@ -41,10 +41,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Logo ve Başlık
+# Logo ve Başlık (Güncel)
 st.markdown("""
 <div class="avatar-container">
-    <img src="app/static/avatar.png" class="avatar" alt="AI Avatar">
+    <img src="https://i.imgur.com/NySv35d.png" class="avatar" alt="AI Avatar">
     <h1 style="color:#FF4B4B;">Hanogt AI</h1>
 </div>
 """, unsafe_allow_html=True)
@@ -125,7 +125,7 @@ if app_mode == "Sohbet Botu":
 
     if user_input:
         with st.spinner('Hanogt AI düşünüyor...'):
-            time.sleep(1)  # Loading animasyonu için
+            time.sleep(1)
 
         result = chatbot_response(user_input, knowledge)
 
@@ -140,7 +140,6 @@ if app_mode == "Sohbet Botu":
         else:
             st.error("Üzgünüm, hiç bilgi bulamadım.")
 
-    # Chat Geçmişi
     if chat_history:
         st.subheader("Geçmiş Konuşmalar:")
         for sender, message in chat_history:
@@ -174,7 +173,6 @@ elif app_mode == "Sesli Sohbet":
         else:
             st.error("Sesi anlayamadım. Lütfen tekrar deneyin.")
 
-    # Chat Geçmişi
     if chat_history:
         st.subheader("Geçmiş Konuşmalar:")
         for sender, message in chat_history:
