@@ -117,3 +117,50 @@ elif app_mode == "Sohbet Botu":
     if user_input:
         response = chatbot_response(user_input)
         st.write("Hanogt AI:", response)
+import streamlit as st
+import json
+import os
+
+# --- Bilgi Veritabanı Fonksiyonları ---
+
+def load_knowledge():
+    if os.path.exists("knowledge.json"):
+        with open("knowledge.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        return {}
+
+def save_knowledge(knowledge):
+    with open("knowledge.json", "w", encoding="utf-8") as f:
+        json.dump(knowledge, f, ensure_ascii=False, indent=4)
+
+def chatbot_response(user_input, knowledge):
+    user_input = user_input.lower()
+    for question in knowledge:
+        if question in user_input:
+            return knowledge[question]
+    return None
+
+# --- Ana Uygulama ---
+
+st.title("Hanogt AI - Öğrenebilen Sohbet Botu")
+
+knowledge = load_knowledge()
+
+st.write("## Hanogt AI ile Sohbet Et")
+
+user_input = st.text_input("Mesajınızı yazın:")
+
+if user_input:
+    response = chatbot_response(user_input, knowledge)
+    
+    if response:
+        st.write("Hanogt AI:", response)
+    else:
+        st.warning("Bu bilgiyi bilmiyorum.")
+        if st.button("Bu bilgiyi öğretmek ister misin?"):
+            new_response = st.text_input("Bana ne cevap vermemi istersin?", key="new_response")
+            if new_response:
+                knowledge[user_input.lower()] = new_response
+                save_knowledge(knowledge)
+                st.success("Teşekkürler! Artık bunu öğrendim.")
