@@ -17,6 +17,29 @@ import time
 # --- Sayfa yapılandırması ---
 st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="wide")
 
+# --- Logo Animasyonu Fonksiyonu ---
+def show_loading_animation():
+    st.markdown(
+        """
+        <div style="text-align: center; margin-top: 50px;">
+            <img src="https://i.imgur.com/NySv35d.png" alt="Logo" width="150" style="animation: spin 2s linear infinite;">
+        </div>
+
+        <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg);}
+            100% { transform: rotate(360deg);}
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# --- Başlangıçta Logo Göster ---
+show_loading_animation()
+time.sleep(2)
+st.experimental_rerun()
+
 # --- Yardımcı Fonksiyonlar ---
 def speak(text):
     engine = pyttsx3.init()
@@ -99,22 +122,11 @@ def generate_fake_image(prompt):
     d.text((20, 250), prompt, fill=(255, 255, 255))
     return img
 
-def show_loading_animation():
-    loading_logo_url = "https://i.imgur.com/NySv35d.png"  # Senin verdiğin logo
-    response = requests.get(loading_logo_url)
-    logo_img = Image.open(BytesIO(response.content))
-
-    with st.spinner("Hanogt AI Yükleniyor..."):
-        st.image(logo_img, width=200)
-        time.sleep(2)
-
-# --- Başlangıç ---
-show_loading_animation()
-
+# --- Veri Yükleme ---
 knowledge = load_knowledge()
 chat_history = load_chat_history()
 
-# --- Sayfa başlığı ---
+# --- Sayfa Başlığı ---
 st.markdown("<h1 style='text-align: center;'>🧠 Hanogt AI</h1>", unsafe_allow_html=True)
 
 # --- Mod Seçimi ---
@@ -145,7 +157,7 @@ elif gorsel_buton:
 
 app_mode = st.session_state.app_mode
 
-# --- Uygulama İşlevi ---
+# --- Uygulama İşlevleri ---
 if app_mode == "Yazılı Sohbet":
     st.subheader("Geçmiş Konuşmalar")
 
