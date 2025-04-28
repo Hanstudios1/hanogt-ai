@@ -1,67 +1,28 @@
+# app.py
+
 import streamlit as st
-import time
 import requests
 from bs4 import BeautifulSoup
 import wikipedia
 import speech_recognition as sr
 import pyttsx3
 import random
+from knowledge_base import load_knowledge, chatbot_response
 import os
 import json
 from PIL import Image, ImageDraw
-from knowledge_base import load_knowledge, chatbot_response
+import time
+from io import BytesIO
 
-# Sayfa yapılandırması
-st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="wide")
+# --- Sayfa Yapılandırması ---
+st.set_page_config(page_title="Hanogt AI", page_icon="🧐", layout="wide")
 
-# --- Sayfa yüklenme kontrolü ---
-if 'page_loaded' not in st.session_state:
-    st.session_state.page_loaded = False
-if 'started_chat' not in st.session_state:
-    st.session_state.started_chat = False
+# --- Logoyu Yükle ve Sidebar'a koy ---
+st.sidebar.image("logo.png", width=100)
 
-# --- Yüklenme Animasyonu ---
-if not st.session_state.page_loaded:
-    with st.spinner('Hanogt AI Yükleniyor...'):
-        st.markdown(
-            """
-            <div style="text-align: center; margin-top: 30px;">
-                <div style="
-                    width: 160px; 
-                    height: 160px; 
-                    margin: auto; 
-                    border-radius: 50%; 
-                    border: 5px solid transparent; 
-                    background-image: linear-gradient(white, white), 
-                                      radial-gradient(circle at top left, red, yellow, lime, aqua, blue, magenta);
-                    background-origin: border-box;
-                    background-clip: content-box, border-box;
-                    animation: spin 8s linear infinite;
-                ">
-                    <img src="https://i.imgur.com/NySv35d.png" alt="Hanogt AI Logo" width="140" style="border-radius: 50%;">
-                </div>
-                <h2 style="color: #6c63ff; margin-top: 20px;">Hanogt AI</h2>
-            </div>
-
-            <style>
-            @keyframes spin {
-                0% { transform: rotate(0deg);}
-                100% { transform: rotate(360deg);}
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        time.sleep(3)
-    st.session_state.page_loaded = True
-
-# --- Sol Üstte Logo ---
-st.sidebar.image("https://i.imgur.com/NySv35d.png", width=100)
-st.sidebar.title("Hanogt AI")
-
-# --- Hoş geldin Mesajı ---
-if not st.session_state.started_chat:
-    st.markdown("<h2 style='text-align: center; color: #6c63ff;'>Hanogt AI'ye Hoş Geldin!</h2>", unsafe_allow_html=True)
+# --- Hoşgeldin Mesajı ---
+if 'chat_started' not in st.session_state:
+    st.session_state.chat_started = False
 
 # --- Yardımcı Fonksiyonlar ---
 def speak(text):
@@ -116,7 +77,7 @@ def load_chat_history():
 
 def creative_response(prompt):
     styles = [
-        "Bunu düşündüğümde aklıma gelen şey: {}",
+        "Bunu düşütüğümde aklıma gelen şey: {}",
         "Şöyle hayal edebiliriz: {}",
         "Bir hikaye gibi düşünürsek: {}",
         "Bence {} olabilir."
@@ -149,20 +110,28 @@ def generate_fake_image(prompt):
 knowledge = load_knowledge()
 chat_history = load_chat_history()
 
+# --- Ana Sayfa ---
+st.markdown("""
+    <div style='text-align: center;'>
+        <h1>Hanogt AI</h1>
+    </div>
+""", unsafe_allow_html=True)
+
+if not st.session_state.chat_started:
+    st.success("Hanogt AI'ye Hoş Geldin! Bir mesaj yazdığında sohbet başlayacak.")
+
 # --- Mod Seçimi ---
-st.markdown("### Mod Seçimi")
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     yazili_buton = st.button("✏️ Yazılı Sohbet")
 with col2:
-    sesli_buton = st.button("🎤 Sesli Sohbet")
+    sesli_buton = st.button("🎙️ Sesli Sohbet")
 with col3:
     yaratıcı_buton = st.button("✨ Yaratıcı Mod")
 with col4:
     gorsel_buton = st.button("🖼️ Görsel Üretici")
 
-# --- Mod Kontrolleri ---
 if 'app_mode' not in st.session_state:
     st.session_state.app_mode = "Yazılı Sohbet"
 
@@ -177,7 +146,7 @@ elif gorsel_buton:
 
 app_mode = st.session_state.app_mode
 
-# --- Ana Uygulama Akışı ---
+# --- Uygulama Modları ---
 if app_mode == "Yazılı Sohbet":
     st.subheader("Geçmiş Konuşmalar")
 
@@ -193,7 +162,7 @@ if app_mode == "Yazılı Sohbet":
 
     if st.button("Gönder"):
         if user_input:
-            st.session_state.started_chat = True
+            st.session_state.chat_started = True
             response = chatbot_response(user_input, knowledge)
 
             if isinstance(response, str) and response.strip() != "":
@@ -205,9 +174,10 @@ if app_mode == "Yazılı Sohbet":
                 if wiki_result:
                     st.success(f"Wikipedia'dan öğrendim: {wiki_result}")
                     chat_history.append(("Sen", user_input))
-                    chat_history.append(("Hanogt AI (Wikipedia'dan)", wiki_result))
+                    chat_history.append(("Hanogt AI (Wikipedia)", wiki_result))
                 else:
                     st.error("Üzgünüm, cevap bulamadım.")
+
             save_chat_history(chat_history)
 
 elif app_mode == "Sesli Sohbet":
@@ -217,8 +187,8 @@ elif app_mode == "Sesli Sohbet":
         user_text = listen_to_microphone()
 
         if user_text:
-            st.session_state.started_chat = True
             st.write(f"Sen: {user_text}")
+            st.session_state.chat_started = True
             response = chatbot_response(user_text, knowledge)
 
             if isinstance(response, str) and response.strip() != "":
@@ -232,9 +202,10 @@ elif app_mode == "Sesli Sohbet":
                     st.success(f"Wikipedia'dan öğrendim: {wiki_result}")
                     speak(wiki_result)
                     chat_history.append(("Sen", user_text))
-                    chat_history.append(("Hanogt AI (Wikipedia'dan)", wiki_result))
+                    chat_history.append(("Hanogt AI (Wikipedia)", wiki_result))
                 else:
                     st.error("Bilgi bulunamadı.")
+
             save_chat_history(chat_history)
 
 elif app_mode == "Yaratıcı Mod":
@@ -243,7 +214,7 @@ elif app_mode == "Yaratıcı Mod":
     creative_prompt = st.text_input("Bir hayal ya da fikir yazın:", key="creative_input")
 
     if creative_prompt:
-        st.session_state.started_chat = True
+        st.session_state.chat_started = True
         creative_text = creative_response(creative_prompt)
         st.success(creative_text)
 
@@ -257,7 +228,7 @@ elif app_mode == "Görsel Üretici":
 
     if st.button("Görsel Üret"):
         if image_prompt:
-            st.session_state.started_chat = True
+            st.session_state.chat_started = True
             image = generate_fake_image(image_prompt)
             st.image(image, caption=f"Hanogt AI - {image_prompt}", use_container_width=True)
         else:
