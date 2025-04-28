@@ -11,34 +11,44 @@ from knowledge_base import load_knowledge, chatbot_response
 import os
 import json
 from PIL import Image, ImageDraw
-from io import BytesIO
 import time
 
 # --- Sayfa yapılandırması ---
 st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="wide")
 
-# --- Logo Animasyonu Fonksiyonu ---
+# --- Yükleniyor Animasyonu ---
 def show_loading_animation():
-    st.markdown(
-        """
-        <div style="text-align: center; margin-top: 50px;">
-            <img src="https://i.imgur.com/NySv35d.png" alt="Logo" width="150" style="animation: spin 2s linear infinite;">
-        </div>
+    placeholder = st.empty()
 
-        <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg);}
-            100% { transform: rotate(360deg);}
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    with placeholder.container():
+        st.markdown(
+            """
+            <div style="text-align: center; margin-top: 50px;">
+                <img src="https://i.imgur.com/NySv35d.png" alt="Logo" width="150" style="animation: spin 2s linear infinite;">
+            </div>
 
-# --- Başlangıçta Logo Göster ---
-show_loading_animation()
-time.sleep(2)
-st.experimental_rerun()
+            <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg);}
+                100% { transform: rotate(360deg);}
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+    time.sleep(2)
+    placeholder.empty()  # Loading ekranını temizle
+    st.session_state.page_loaded = True
+    st.experimental_rerun()
+
+# --- İlk Yüklemede Animasyonu Göster ---
+if 'page_loaded' not in st.session_state:
+    st.session_state.page_loaded = False
+
+if not st.session_state.page_loaded:
+    show_loading_animation()
+    st.stop()
 
 # --- Yardımcı Fonksiyonlar ---
 def speak(text):
@@ -142,7 +152,7 @@ with col3:
 with col4:
     gorsel_buton = st.button("🖼️ Görsel Üretici")
 
-# --- Ana Mod Kontrolleri ---
+# --- Mod Takibi ---
 if 'app_mode' not in st.session_state:
     st.session_state.app_mode = "Yazılı Sohbet"
 
@@ -157,7 +167,7 @@ elif gorsel_buton:
 
 app_mode = st.session_state.app_mode
 
-# --- Uygulama İşlevleri ---
+# --- Modlara Göre İşlevler ---
 if app_mode == "Yazılı Sohbet":
     st.subheader("Geçmiş Konuşmalar")
 
