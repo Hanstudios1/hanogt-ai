@@ -16,7 +16,10 @@ import time
 # --- Sayfa yapılandırması ---
 st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="wide")
 
-# --- Yükleniyor Animasyonu ---
+# --- Başlangıç: Yüklenme kontrolü ---
+if 'page_loaded' not in st.session_state:
+    st.session_state.page_loaded = False
+
 def show_loading_animation():
     placeholder = st.empty()
 
@@ -36,16 +39,12 @@ def show_loading_animation():
             """,
             unsafe_allow_html=True
         )
-
     time.sleep(2)
-    placeholder.empty()  # Loading ekranını temizle
+    placeholder.empty()
     st.session_state.page_loaded = True
     st.experimental_rerun()
 
-# --- İlk Yüklemede Animasyonu Göster ---
-if 'page_loaded' not in st.session_state:
-    st.session_state.page_loaded = False
-
+# Eğer sayfa henüz yüklenmediyse loading ekranı göster
 if not st.session_state.page_loaded:
     show_loading_animation()
     st.stop()
@@ -152,7 +151,7 @@ with col3:
 with col4:
     gorsel_buton = st.button("🖼️ Görsel Üretici")
 
-# --- Mod Takibi ---
+# --- Ana Mod Kontrolleri ---
 if 'app_mode' not in st.session_state:
     st.session_state.app_mode = "Yazılı Sohbet"
 
@@ -167,7 +166,7 @@ elif gorsel_buton:
 
 app_mode = st.session_state.app_mode
 
-# --- Modlara Göre İşlevler ---
+# --- Uygulama İşlevleri ---
 if app_mode == "Yazılı Sohbet":
     st.subheader("Geçmiş Konuşmalar")
 
