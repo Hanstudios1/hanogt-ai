@@ -233,8 +233,3 @@ elif app_mode == "Görsel Üretici":
             st.image(image, caption=f"Hanogt AI - {image_prompt}", use_container_width=True)
         else:
             st.error("Lütfen bir açıklama girin!")
-for link in something:
-    if isinstance(link, dict) and 'href' in link:
-        href = link['href']
-    else:
-        href = None
