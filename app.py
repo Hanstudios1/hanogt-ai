@@ -7,14 +7,38 @@ import wikipedia
 import speech_recognition as sr
 import pyttsx3
 import random
-from knowledge_base import load_knowledge, chatbot_response
 import os
 import json
+import time
 from PIL import Image, ImageDraw
 from io import BytesIO
+from knowledge_base import load_knowledge, chatbot_response
 
 # Sayfa yapılandırması
-st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="wide")
+st.set_page_config(page_title="Hanogt AI", page_icon="https://i.imgur.com/NySv35d.png", layout="wide")
+
+# --- Yükleniyor Animasyonu ---
+@st.cache_resource
+def load_logo():
+    return "https://i.imgur.com/NySv35d.png"
+
+with st.spinner('Yapay Zekâ Yükleniyor...'):
+    time.sleep(2)  # 2 saniye beklet
+
+logo_url = load_logo()
+
+# --- Üstte Logo ve Başlık ---
+st.markdown(
+    f"""
+    <div style='text-align: center;'>
+        <img src="{logo_url}" width="120"/>
+        <h1 style='color: #4CAF50; font-family: Arial;'>Hanogt AI</h1>
+        <h4>Akıllı Asistan & Yaratıcı Yapay Zekâ</h4>
+    </div>
+    <hr style='border:1px solid #eee;'/>
+    """,
+    unsafe_allow_html=True
+)
 
 # --- Yardımcı Fonksiyonlar ---
 def speak(text):
@@ -102,34 +126,29 @@ def generate_fake_image(prompt):
     d.text((20, 250), prompt, fill=(255, 255, 255))
     return img
 
-# --- Bilgileri Yükle ---
+# --- Bilgi Yükle ---
 knowledge = load_knowledge()
 chat_history = load_chat_history()
 
 # --- Sidebar Menü ---
-st.sidebar.title("Hanogt AI")
-st.sidebar.markdown("### Akıllı Yardımcı & Yaratıcı Modlar")
-app_mode = st.sidebar.radio("Mod Seçin:", ["Yazılı Sohbet", "Sesli Sohbet", "Yaratıcı Mod", "Görsel Üretici"])
-
+st.sidebar.title("Menü")
+app_mode = st.sidebar.radio("Bir Mod Seçin:", ["🧠 Yazılı Sohbet", "🎤 Sesli Sohbet", "✨ Yaratıcı Mod", "🖼️ Görsel Üretici"])
 st.sidebar.markdown("---")
-st.sidebar.markdown("© 2025 Hanogt AI")
+st.sidebar.caption("© 2025 Hanogt AI")
 
-# --- Ana Uygulama ---
-if app_mode == "Yazılı Sohbet":
-    st.title("🧠 Hanogt AI - Yazılı Sohbet")
+# --- Ana İçerik ---
+if app_mode == "🧠 Yazılı Sohbet":
+    st.subheader("Yazılı Sohbet")
 
-    # Önce geçmiş konuşmalar göster
     if chat_history:
-        st.subheader("Geçmiş Konuşmalar")
+        st.markdown("### Geçmiş Mesajlar")
         for sender, message in chat_history:
             if sender == "Sen":
-                st.markdown(f"**{sender}:** {message}", unsafe_allow_html=True)
+                st.markdown(f"**{sender}:** {message}")
             else:
-                st.markdown(f"<div style='background-color: #f0f2f6; padding: 8px; border-radius: 8px;'><b>{sender}:</b> {message}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background-color: #f7f9fa; padding: 8px; border-radius: 8px;'><b>{sender}:</b> {message}</div>", unsafe_allow_html=True)
 
-    # Yeni mesaj kutusu
-    st.subheader("Yeni Mesaj")
-    user_input = st.text_input("Bir şeyler yaz...", key="chat_input")
+    user_input = st.text_input("Yeni Mesajınız", key="chat_input")
 
     if st.button("Gönder"):
         if user_input:
@@ -146,12 +165,11 @@ if app_mode == "Yazılı Sohbet":
                     chat_history.append(("Sen", user_input))
                     chat_history.append(("Hanogt AI (Wikipedia'dan)", wiki_result))
                 else:
-                    st.error("Üzgünüm, cevap bulamadım.")
-
+                    st.error("Üzgünüm, bir cevap bulamadım.")
             save_chat_history(chat_history)
 
-elif app_mode == "Sesli Sohbet":
-    st.title("🎤 Hanogt AI - Sesli Sohbet")
+elif app_mode == "🎤 Sesli Sohbet":
+    st.subheader("Sesli Sohbet")
 
     if st.button("Konuşmaya Başla"):
         user_text = listen_to_microphone()
@@ -176,22 +194,22 @@ elif app_mode == "Sesli Sohbet":
                     st.error("Bilgi bulamadım.")
             save_chat_history(chat_history)
 
-elif app_mode == "Yaratıcı Mod":
-    st.title("✨ Hanogt AI - Yaratıcı Mod")
+elif app_mode == "✨ Yaratıcı Mod":
+    st.subheader("Yaratıcı Mod")
 
-    creative_prompt = st.text_input("Hayal gücünü serbest bırak:", key="creative_input")
+    creative_prompt = st.text_input("Bir fikir üret:", key="creative_input")
 
     if creative_prompt:
         creative_text = creative_response(creative_prompt)
         st.success(creative_text)
 
         new_word = advanced_word_generator(creative_prompt)
-        st.info(f"Yeni bir kelime icat ettim: **{new_word}**")
+        st.info(f"Yeni bir kelime: **{new_word}**")
 
-elif app_mode == "Görsel Üretici":
-    st.title("🖼️ Hanogt AI - Görsel Üretici")
+elif app_mode == "🖼️ Görsel Üretici":
+    st.subheader("Görsel Üretici")
 
-    image_prompt = st.text_input("Ne çizmeli?", key="image_input")
+    image_prompt = st.text_input("Çizilecek şey:", key="image_input")
 
     if st.button("Görsel Üret"):
         if image_prompt:
