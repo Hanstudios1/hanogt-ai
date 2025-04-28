@@ -1,62 +1,67 @@
-# app.py
-
 import streamlit as st
+import time
 import requests
 from bs4 import BeautifulSoup
 import wikipedia
 import speech_recognition as sr
 import pyttsx3
 import random
-from knowledge_base import load_knowledge, chatbot_response
 import os
 import json
 from PIL import Image, ImageDraw
-import time
+from knowledge_base import load_knowledge, chatbot_response
 
 # Sayfa yapılandırması
 st.set_page_config(page_title="Hanogt AI", page_icon=":robot_face:", layout="wide")
 
-# --- Logo ve Animasyon Fonksiyonu ---
-def show_logo_animation():
-    st.markdown(
-        """
-        <div style="text-align: center; margin-top: 20px;">
-            <div style="
-                width: 160px; 
-                height: 160px; 
-                margin: auto; 
-                border-radius: 50%; 
-                border: 5px solid transparent; 
-                background-image: linear-gradient(white, white), 
-                                  radial-gradient(circle at top left, red, yellow, lime, aqua, blue, magenta);
-                background-origin: border-box;
-                background-clip: content-box, border-box;
-                animation: spin 8s linear infinite;
-            ">
-                <img src="https://i.imgur.com/NySv35d.png" alt="Hanogt AI Logo" width="150" style="border-radius: 50%;">
-            </div>
-            <h2 style="color: #6c63ff; margin-top: 10px;">Hanogt AI</h2>
-        </div>
-
-        <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg);}
-            100% { transform: rotate(360deg);}
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-# --- Sayfa Yüklendiğinde Animasyon ---
+# --- Sayfa yüklenme kontrolü ---
 if 'page_loaded' not in st.session_state:
     st.session_state.page_loaded = False
+if 'started_chat' not in st.session_state:
+    st.session_state.started_chat = False
 
+# --- Yüklenme Animasyonu ---
 if not st.session_state.page_loaded:
-    show_logo_animation()
-    time.sleep(2)
+    with st.spinner('Hanogt AI Yükleniyor...'):
+        st.markdown(
+            """
+            <div style="text-align: center; margin-top: 30px;">
+                <div style="
+                    width: 160px; 
+                    height: 160px; 
+                    margin: auto; 
+                    border-radius: 50%; 
+                    border: 5px solid transparent; 
+                    background-image: linear-gradient(white, white), 
+                                      radial-gradient(circle at top left, red, yellow, lime, aqua, blue, magenta);
+                    background-origin: border-box;
+                    background-clip: content-box, border-box;
+                    animation: spin 8s linear infinite;
+                ">
+                    <img src="https://i.imgur.com/NySv35d.png" alt="Hanogt AI Logo" width="140" style="border-radius: 50%;">
+                </div>
+                <h2 style="color: #6c63ff; margin-top: 20px;">Hanogt AI</h2>
+            </div>
+
+            <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg);}
+                100% { transform: rotate(360deg);}
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        time.sleep(3)
     st.session_state.page_loaded = True
-    st.experimental_rerun()
+
+# --- Sol Üstte Logo ---
+st.sidebar.image("https://i.imgur.com/NySv35d.png", width=100)
+st.sidebar.title("Hanogt AI")
+
+# --- Hoş geldin Mesajı ---
+if not st.session_state.started_chat:
+    st.markdown("<h2 style='text-align: center; color: #6c63ff;'>Hanogt AI'ye Hoş Geldin!</h2>", unsafe_allow_html=True)
 
 # --- Yardımcı Fonksiyonlar ---
 def speak(text):
@@ -144,18 +149,6 @@ def generate_fake_image(prompt):
 knowledge = load_knowledge()
 chat_history = load_chat_history()
 
-# --- Sol Üst Logo ---
-with st.sidebar:
-    st.image("https://i.imgur.com/NySv35d.png", width=120)
-    st.title("Hanogt AI")
-
-# --- Hoş Geldin Mesajı ---
-if 'greet_shown' not in st.session_state:
-    st.session_state.greet_shown = True
-
-if st.session_state.greet_shown:
-    st.success("🧠 Hanogt AI'ye Hoş Geldin! Hemen bir soru sorarak sohbet etmeye başlayabilirsin.")
-
 # --- Mod Seçimi ---
 st.markdown("### Mod Seçimi")
 col1, col2, col3, col4 = st.columns(4)
@@ -169,6 +162,7 @@ with col3:
 with col4:
     gorsel_buton = st.button("🖼️ Görsel Üretici")
 
+# --- Mod Kontrolleri ---
 if 'app_mode' not in st.session_state:
     st.session_state.app_mode = "Yazılı Sohbet"
 
@@ -181,15 +175,16 @@ elif yaratıcı_buton:
 elif gorsel_buton:
     st.session_state.app_mode = "Görsel Üretici"
 
-# --- Ana Uygulama ---
 app_mode = st.session_state.app_mode
 
+# --- Ana Uygulama Akışı ---
 if app_mode == "Yazılı Sohbet":
     st.subheader("Geçmiş Konuşmalar")
+
     if chat_history:
         for sender, message in chat_history:
             if sender == "Sen":
-                st.markdown(f"**{sender}:** {message}")
+                st.markdown(f"**{sender}:** {message}", unsafe_allow_html=True)
             else:
                 st.markdown(f"<div style='background-color: #f0f2f6; padding: 8px; border-radius: 8px;'><b>{sender}:</b> {message}</div>", unsafe_allow_html=True)
 
@@ -198,9 +193,9 @@ if app_mode == "Yazılı Sohbet":
 
     if st.button("Gönder"):
         if user_input:
-            if st.session_state.greet_shown:
-                st.session_state.greet_shown = False
+            st.session_state.started_chat = True
             response = chatbot_response(user_input, knowledge)
+
             if isinstance(response, str) and response.strip() != "":
                 st.success(f"Hanogt AI: {response}")
                 chat_history.append(("Sen", user_input))
@@ -217,11 +212,15 @@ if app_mode == "Yazılı Sohbet":
 
 elif app_mode == "Sesli Sohbet":
     st.subheader("Sesli Konuşma Başlat")
+
     if st.button("Konuşmaya Başla"):
         user_text = listen_to_microphone()
+
         if user_text:
+            st.session_state.started_chat = True
             st.write(f"Sen: {user_text}")
             response = chatbot_response(user_text, knowledge)
+
             if isinstance(response, str) and response.strip() != "":
                 st.success(f"Hanogt AI: {response}")
                 speak(response)
@@ -240,18 +239,25 @@ elif app_mode == "Sesli Sohbet":
 
 elif app_mode == "Yaratıcı Mod":
     st.subheader("Hayal Gücünü Serbest Bırak")
+
     creative_prompt = st.text_input("Bir hayal ya da fikir yazın:", key="creative_input")
+
     if creative_prompt:
+        st.session_state.started_chat = True
         creative_text = creative_response(creative_prompt)
         st.success(creative_text)
+
         new_word = advanced_word_generator(creative_prompt)
         st.info(f"Yeni kelime: **{new_word}**")
 
 elif app_mode == "Görsel Üretici":
     st.subheader("Görsel Üret")
+
     image_prompt = st.text_input("Ne çizelim?", key="image_input")
+
     if st.button("Görsel Üret"):
         if image_prompt:
+            st.session_state.started_chat = True
             image = generate_fake_image(image_prompt)
             st.image(image, caption=f"Hanogt AI - {image_prompt}", use_container_width=True)
         else:
