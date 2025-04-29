@@ -18,11 +18,7 @@ from io import BytesIO
 st.set_page_config(page_title="Hanogt AI", page_icon="🧐", layout="wide")
 
 # --- Logoyu Yükle ve Sidebar'a koy ---
-st.sidebar.image("logo.png", width=100)
-if os.path.exists("logo.png"):
-    st.sidebar.image("logo.png", width=100)
-else:
-    st.sidebar.image("https://i.imgur.com/NySv35d.png", width=100)
+st.sidebar.image("https://i.imgur.com/NySv35d.png", width=100)
 # --- Hoşgeldin Mesajı ---
 if 'chat_started' not in st.session_state:
     st.session_state.chat_started = False
