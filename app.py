@@ -18,12 +18,14 @@ from io import BytesIO
 st.set_page_config(page_title="Hanogt AI", page_icon="🧐", layout="wide")
 
 # --- Logoyu Yükle ve Sidebar'a koy ---
-st.sidebar.image("https://i.imgur.com/NySv35d.png", width=100)
+st.sidebar.image("logo.png", width=100)  # Yerel logo dosyası kullanılıyor
+
 # --- Hoşgeldin Mesajı ---
 if 'chat_started' not in st.session_state:
     st.session_state.chat_started = False
 
 # --- Yardımcı Fonksiyonlar ---
+
 def speak(text):
     engine = pyttsx3.init()
     engine.say(text)
@@ -76,7 +78,7 @@ def load_chat_history():
 
 def creative_response(prompt):
     styles = [
-        "Bunu düşütüğümde aklıma gelen şey: {}",
+        "Bunu düşündüğümde aklıma gelen şey: {}",
         "Şöyle hayal edebiliriz: {}",
         "Bir hikaye gibi düşünürsek: {}",
         "Bence {} olabilir."
@@ -121,7 +123,6 @@ if not st.session_state.chat_started:
 
 # --- Mod Seçimi ---
 col1, col2, col3, col4 = st.columns(4)
-
 with col1:
     yazili_buton = st.button("✏️ Yazılı Sohbet")
 with col2:
@@ -146,9 +147,9 @@ elif gorsel_buton:
 app_mode = st.session_state.app_mode
 
 # --- Uygulama Modları ---
+
 if app_mode == "Yazılı Sohbet":
     st.subheader("Geçmiş Konuşmalar")
-
     if chat_history:
         for sender, message in chat_history:
             if sender == "Sen":
@@ -181,10 +182,8 @@ if app_mode == "Yazılı Sohbet":
 
 elif app_mode == "Sesli Sohbet":
     st.subheader("Sesli Konuşma Başlat")
-
     if st.button("Konuşmaya Başla"):
         user_text = listen_to_microphone()
-
         if user_text:
             st.write(f"Sen: {user_text}")
             st.session_state.chat_started = True
@@ -209,22 +208,17 @@ elif app_mode == "Sesli Sohbet":
 
 elif app_mode == "Yaratıcı Mod":
     st.subheader("Hayal Gücünü Serbest Bırak")
-
     creative_prompt = st.text_input("Bir hayal ya da fikir yazın:", key="creative_input")
-
     if creative_prompt:
         st.session_state.chat_started = True
         creative_text = creative_response(creative_prompt)
         st.success(creative_text)
-
         new_word = advanced_word_generator(creative_prompt)
         st.info(f"Yeni kelime: **{new_word}**")
 
 elif app_mode == "Görsel Üretici":
     st.subheader("Görsel Üret")
-
     image_prompt = st.text_input("Ne çizelim?", key="image_input")
-
     if st.button("Görsel Üret"):
         if image_prompt:
             st.session_state.chat_started = True
