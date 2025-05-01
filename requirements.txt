@@ -9,3 +9,5 @@ pyttsx3
 langchain
 langchain-community
 langchain-openai
+google-generativeai
+duckduckgo-search
