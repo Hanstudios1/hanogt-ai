@@ -12,3 +12,6 @@ langchain-openai
 google-generativeai
 duckduckgo-search
 pyaudio
+transformers
+torch
+huggingface_hub
