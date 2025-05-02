@@ -25,6 +25,18 @@ st.set_page_config(
     layout="wide"
 )
 
+# <<< YENİ: Basit Dosya Yazma İzni Testi >>>
+try:
+    with open("test_write_permission.txt", "w", encoding="utf-8") as f_test:
+        f_test.write("Test successful.")
+    # Başarılı olursa bu dosyayı daha sonra manuel olarak silebilirsiniz veya bırakabilirsiniz.
+    # st.toast("DEBUG: Yazma testi başarılı.", icon="✅") # Başarıyı göstermeye gerek yok
+except Exception as e_test:
+    # Eğer burada hata alırsak, yazma izni olmadığını anlarız.
+    st.error(f"!!! DEBUG: Dosya yazma izni testi BAŞARISIZ! Ortamda dosya oluşturulamıyor. Hata: {e_test}")
+# <<< YAZMA TESTİ SONU >>>
+
+
 # --- Sabitler ---
 CHAT_HISTORY_FILE = "chat_history.json"
 COLLECTED_DATA_FILE = "collected_data.jsonl" # Veri toplama için dosya adı
@@ -34,7 +46,6 @@ SCRAPE_MAX_CHARS = 1000
 GEMINI_ERROR_PREFIX = "GeminiError:"
 
 # --- Bilgi Tabanı (Basitleştirilmiş) ---
-# Bu blokta Streamlit komutu yok, sadece Python fonksiyonları var
 knowledge_base_load_error = None # Hata mesajını saklamak için
 def load_knowledge():
     # Örnek basit anahtar kelime eşleşmeleri
@@ -54,11 +65,9 @@ def kb_chatbot_response(query, knowledge):
         if key in query_lower: possible_responses.extend(responses)
     if possible_responses: return random.choice(possible_responses)
     return None
-# Bilgi tabanını yükle (try-except olmadan, basitçe çağır)
-KNOWLEDGE_BASE = load_knowledge()
+KNOWLEDGE_BASE = load_knowledge() # Basit bilgi tabanını yükle
 
 # --- API Anahtarı ve Gemini Yapılandırması ---
-# Bu blokta da Streamlit komutu yok
 api_key = st.secrets.get("GOOGLE_API_KEY")
 gemini_model = None
 gemini_init_error = None
@@ -75,7 +84,6 @@ else:
         gemini_model = None
 
 # --- YARDIMCI FONKSİYONLAR ---
-# (Fonksiyon tanımları burada başlar)
 
 # Metin Okuma (TTS)
 tts_engine = None
@@ -84,11 +92,9 @@ try: tts_engine = pyttsx3.init()
 except Exception as e: tts_init_error = f"⚠️ Metin okuma başlatılamadı: {e}."
 
 def speak(text):
-    # ... (Fonksiyon içeriği aynı) ...
     if not tts_engine: st.warning("Metin okuma motoru aktif değil.", icon="🔊"); return
     try: tts_engine.say(text); tts_engine.runAndWait()
     except Exception as e: st.error(f"Konuşma sırasında hata: {e}")
-
 
 # Web Arama ve Kazıma
 # ... (scrape_url_content ve search_web fonksiyonları aynı) ...
@@ -137,9 +143,7 @@ def search_web(query):
     st.toast("ℹ️ Web'de yanıt bulunamadı.", icon="❌")
     return None
 
-
 # Sohbet Geçmişi Yönetimi
-# <<< BU FONKSİYONLARIN TANIMLARI Session State'den ÖNCE >>>
 def load_chat_history():
     if os.path.exists(CHAT_HISTORY_FILE):
         try:
@@ -154,8 +158,8 @@ def save_chat_history(history):
     except Exception as e: st.error(f"Geçmiş kaydedilemedi: {e}")
 
 # Gemini Yanıt Alma
-# ... (get_gemini_response fonksiyonu aynı) ...
 def get_gemini_response(prompt, chat_history):
+    # ... (Kod önceki ile aynı) ...
     if not gemini_model: return f"{GEMINI_ERROR_PREFIX} Model aktif değil."
     gemini_history=[{'role': ("user" if sender.startswith("Sen") else "model"), 'parts': [message]} for sender, message in chat_history]
     try:
@@ -169,26 +173,38 @@ def get_gemini_response(prompt, chat_history):
         if "API key not valid" in msg: return f"{GEMINI_ERROR_PREFIX} API Anahtarı geçersiz."
         return f"{GEMINI_ERROR_PREFIX} API ile iletişim kurulamadı."
 
-
-# Veri Toplama Fonksiyonu
-# ... (log_interaction fonksiyonu aynı) ...
+# <<< GÜNCELLENMİŞ >>> Veri Toplama Fonksiyonu
 def log_interaction(prompt, response, source):
+    """Soru-Cevap çiftini ve kaynağını dosyaya loglar."""
+    print(f"DEBUG: log_interaction çağrıldı. Dosya: {COLLECTED_DATA_FILE}") # Log kontrolü
     try:
-        log_entry = {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "user_prompt": prompt, "ai_response": response, "response_source": source}
-        with open(COLLECTED_DATA_FILE, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
-    except Exception as e: st.toast(f"⚠️ Loglama hatası: {e}", icon="📝")
+        log_entry = {
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "user_prompt": prompt,
+            "ai_response": response,
+            "response_source": source
+        }
+        with open(COLLECTED_DATA_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        print(f"DEBUG: Log başarıyla yazıldı: {log_entry['timestamp']}") # Log kontrolü
+    except IOError as e:
+        # IOError genellikle izin hatasıdır.
+        print(f"ERROR in log_interaction (IOError): {e}") # Log kontrolü
+        st.error(f"Loglama hatası (IOError): '{COLLECTED_DATA_FILE}' dosyasına yazılamadı! İzin sorunu olabilir. Hata: {e}")
+    except Exception as e:
+        print(f"ERROR in log_interaction (Exception): {e}") # Log kontrolü
+        st.error(f"Beklenmedik loglama hatası: {e}")
 
-
-# Merkezi Yanıt Oluşturma Fonksiyonu
-# ... (get_hanogt_response fonksiyonu aynı) ...
+# Merkezi Yanıt Oluşturma Fonksiyonu (Loglamayı çağırır)
 def get_hanogt_response(user_prompt, chat_history):
+    # ... (Kod önceki ile aynı, log_interaction çağrıları dahil) ...
     response=None; ai_sender="Hanogt AI"
     if gemini_model: # 1. Gemini
         response=get_gemini_response(user_prompt, chat_history)
         if response and not response.startswith(GEMINI_ERROR_PREFIX): log_interaction(user_prompt, response, "Hanogt AI (Gemini)"); return response, ai_sender
         elif response and response.startswith(GEMINI_ERROR_PREFIX): st.toast(f"⚠️ Gemini: {response.replace(GEMINI_ERROR_PREFIX, '')}", icon="🤖"); response=None
         else: response=None
-    if not response: # 2. Bilgi Tabanı (Basitleştirilmiş olan)
+    if not response: # 2. Bilgi Tabanı
         kb_resp=kb_chatbot_response(user_prompt, KNOWLEDGE_BASE);
         if kb_resp: response=kb_resp; log_interaction(user_prompt, response, "Hanogt AI (Bilgi Tabanı)"); return response, ai_sender
     if not response: # 3. Web Arama
@@ -236,7 +252,6 @@ def generate_prompt_influenced_image(prompt):
     return img
 
 # --- Session State Başlatma ---
-# Bu bölüm TÜM fonksiyon tanımlarından SONRA gelir.
 if 'chat_history' not in st.session_state: st.session_state.chat_history = load_chat_history()
 if 'app_mode' not in st.session_state: st.session_state.app_mode = "Yazılı Sohbet"
 if 'user_name' not in st.session_state: st.session_state.user_name = None
@@ -246,35 +261,32 @@ if 'greeting_message_shown' not in st.session_state: st.session_state.greeting_m
 
 # --- UYGULAMA ARAYÜZÜ BAŞLANGICI ---
 
-# --- Ana Başlık ---
+# Ana Başlık
 st.markdown("<h1 style='text-align: center; color: #4A90E2;'>Hanogt AI</h1>", unsafe_allow_html=True)
 
-# Uygulama başlangıcında oluşan hataları göster (API, TTS vb.)
-# Bunları ana UI alanına taşıdık, set_page_config'den sonra olmaları için
+# Başlangıç Hatalarını Göster
 if gemini_init_error: st.error(gemini_init_error)
-if tts_init_error: st.toast(tts_init_error, icon="🔊") # Toast olarak kalsın
-# Bilgi tabanı yükleme hatasını burada gösterelim
-if knowledge_base_load_error: st.warning(knowledge_base_load_error, icon="ℹ️")
+if tts_init_error: st.toast(tts_init_error, icon="🔊")
+# if knowledge_base_load_error: st.warning(knowledge_base_load_error, icon="ℹ️") # KB hatası yerine sadece basit KB kullanıldığı notunu başta verdik
 
-
-# --- Kullanıcı Adı Sorgulama ---
+# Kullanıcı Adı Sorgulama
 if not st.session_state.show_main_app:
+    # ... (Kod aynı) ...
     st.subheader("👋 Merhaba! Tanışalım...")
     name_input = st.text_input("Size nasıl hitap etmeliyim?", key="name_input_key", placeholder="İsminiz...")
     if st.button("Kaydet", key="save_name_button"):
         if name_input.strip(): st.session_state.user_name = name_input.strip(); st.session_state.show_main_app = True; st.session_state.greeting_message_shown = False; st.rerun()
         else: st.error("Lütfen bir isim girin.")
 
-# --- ANA UYGULAMA BÖLÜMÜ ---
-elif st.session_state.show_main_app:
 
-    # Karşılama mesajı
+# Ana Uygulama Bölümü
+elif st.session_state.show_main_app:
     if not st.session_state.greeting_message_shown and st.session_state.user_name:
          st.success(f"Tanıştığıma memnun oldum, {st.session_state.user_name}! Size nasıl yardımcı olabilirim?"); st.session_state.greeting_message_shown = True
 
-    # --- Ayarlar Bölümü ---
+    # Ayarlar
     with st.expander("⚙️ Ayarlar & Kişiselleştirme", expanded=False):
-        # ... (Ayarlar içeriği önceki kod ile aynı) ...
+        # ... (Kod aynı) ...
         def update_name(): st.session_state.user_name = st.session_state.change_name_input_key; st.toast("Adınız güncellendi!")
         st.text_input("Adınızı Değiştirin:", value=st.session_state.user_name, key="change_name_input_key", on_change=update_name)
         st.caption(f"Mevcut adınız: {st.session_state.user_name}"); st.divider()
@@ -290,16 +302,12 @@ elif st.session_state.show_main_app:
         if st.button("🧹 Sohbet Geçmişini Temizle", key="clear_history_main"):
             st.session_state.chat_history = []; save_chat_history([]); st.toast("Sohbet geçmişi temizlendi!", icon="🧹"); time.sleep(1); st.rerun()
 
-
     st.markdown("---")
-
-    # --- Mod Seçim Butonları ---
+    # Mod Butonları
     st.write("**Uygulama Modu:**")
     modes = ["Yazılı Sohbet", "Sesli Sohbet (Dosya Yükle)", "Yaratıcı Mod", "Görsel Üretici"]
     icons = ["✏️", "🎙️", "✨", "🖼️"]
-    cols = st.columns(len(modes))
-    current_mode = st.session_state.app_mode
-    new_mode = current_mode
+    cols = st.columns(len(modes)); current_mode = st.session_state.app_mode; new_mode = current_mode
     for i, col in enumerate(cols):
         with col:
             is_active = (modes[i] == current_mode); button_type = "primary" if is_active else "secondary"
@@ -308,14 +316,12 @@ elif st.session_state.show_main_app:
     app_mode = st.session_state.app_mode
     st.markdown("---")
 
-    # --- MODLARA GÖRE ARAYÜZLER ---
-
-    # -- YAZILI SOHBET --
+    # Mod Arayüzleri
     if app_mode == "Yazılı Sohbet":
         chat_container = st.container()
         with chat_container:
-             # ... (Mesaj gösterme ve Oku/Kopyala butonları önceki kod ile aynı) ...
-            for i, (sender, message) in enumerate(st.session_state.chat_history):
+            # ... (Mesaj gösterme + Oku/Kopyala butonları kodu aynı) ...
+             for i, (sender, message) in enumerate(st.session_state.chat_history):
                 is_user = sender.startswith("Sen"); role = "user" if is_user else "assistant"; display_avatar = None
                 if is_user and st.session_state.user_avatar_bytes:
                     try: display_avatar = Image.open(BytesIO(st.session_state.user_avatar_bytes))
@@ -324,25 +330,25 @@ elif st.session_state.show_main_app:
                 with st.chat_message(role, avatar=display_avatar):
                     st.markdown(message) # Sadece mesaj
                     if not is_user: # AI mesajıysa butonları/kodu ekle
-                        b_cols = st.columns([0.15, 0.85]) # Buton için dar sütun
+                        b_cols = st.columns([0.15, 0.85])
                         with b_cols[0]:
                              if tts_engine:
                                 if st.button(f"🔊", key=f"speak_msg_{i}", help="Mesajı sesli oku"): speak(message)
-                        # Kopyalama alanı direkt mesajın altına
+                        # Kopyalama için st.code mesajın altına
                         st.code(message, language=None)
 
         if prompt := st.chat_input(f"{st.session_state.user_name} olarak mesaj yazın..."):
-            # ... (Yanıt alma ve gösterme önceki kod ile aynı) ...
+            # ... (Yanıt alma ve gösterme kodu aynı) ...
             st.session_state.chat_history.append(("Sen", prompt))
             with st.spinner("🤖 Düşünüyorum..."): response, ai_sender = get_hanogt_response(prompt, st.session_state.chat_history)
             st.session_state.chat_history.append((ai_sender, response)); save_chat_history(st.session_state.chat_history); st.rerun()
 
-    # -- SESLİ SOHBET (DOSYA YÜKLEME) --
+
     elif app_mode == "Sesli Sohbet (Dosya Yükle)":
-         # ... (Kod önceki ile aynı) ...
-        st.info("Lütfen yanıtlamamı istediğiniz konuşmayı içeren bir ses dosyası yükleyin.")
-        uploaded_file = st.file_uploader("Ses Dosyası Seçin", type=['wav', 'mp3', 'ogg', 'flac', 'm4a'], label_visibility="collapsed")
-        if uploaded_file is not None:
+        # ... (Kod aynı) ...
+         st.info("Lütfen yanıtlamamı istediğiniz konuşmayı içeren bir ses dosyası yükleyin.")
+         uploaded_file = st.file_uploader("Ses Dosyası Seçin", type=['wav', 'mp3', 'ogg', 'flac', 'm4a'], label_visibility="collapsed")
+         if uploaded_file is not None:
             st.audio(uploaded_file); user_prompt = None; ai_sender = "Hanogt AI"; response = None
             with st.spinner("Ses dosyası işleniyor..."):
                 recognizer = sr.Recognizer()
@@ -357,13 +363,11 @@ elif st.session_state.show_main_app:
                 st.code(response, language=None)
                 st.session_state.chat_history.append((ai_sender, response)); save_chat_history(st.session_state.chat_history)
 
-
-    # -- YARATICI MOD --
     elif app_mode == "Yaratıcı Mod":
-         # ... (Kod önceki ile aynı) ...
-        st.markdown("Bir fikir, bir kelime veya bir cümle yazın. Gemini (varsa) veya yerel yaratıcılığım size yanıt versin!")
-        creative_prompt = st.text_input("Yaratıcılık tohumu:", key="creative_input", placeholder="Örn: Zaman yolculuğu yapan bir tost makinesi")
-        if creative_prompt:
+         # ... (Kod aynı) ...
+         st.markdown("Bir fikir, bir kelime veya bir cümle yazın. Gemini (varsa) veya yerel yaratıcılığım size yanıt versin!")
+         creative_prompt = st.text_input("Yaratıcılık tohumu:", key="creative_input", placeholder="Örn: Okyanusun dibindeki kütüphane")
+         if creative_prompt:
             ai_sender = "Hanogt AI"; final_response = None
             if gemini_model:
                  with st.spinner("✨ İlham perileri fısıldaşıyor..."):
@@ -377,14 +381,12 @@ elif st.session_state.show_main_app:
             st.markdown(f"**{ai_sender}:**"); st.markdown(final_response)
             st.code(final_response, language=None)
 
-
-    # -- GÖRSEL ÜRETİCİ (Kural Tabanlı) --
     elif app_mode == "Görsel Üretici":
-         # ... (Kod önceki ile aynı) ...
-         st.markdown("Hayalinizdeki görseli tarif edin, anahtar kelimelere göre sizin için (sembolik olarak) çizeyim!")
-         st.info("Not: Bu mod, girilen anahtar kelimelere göre basit, kural tabanlı çizimler yapar.")
-         image_prompt = st.text_input("Ne çizmemi istersiniz?", key="image_input", placeholder="Örn: Mavi bir nehir kenarında yeşil ağaçlar")
-         if st.button("🎨 Görseli Oluştur", key="generate_rule_image_btn"):
+        # ... (Kod aynı) ...
+        st.markdown("Hayalinizdeki görseli tarif edin, anahtar kelimelere göre sizin için (sembolik olarak) çizeyim!")
+        st.info("Not: Bu mod, girilen anahtar kelimelere göre basit, kural tabanlı çizimler yapar.")
+        image_prompt = st.text_input("Ne çizmemi istersiniz?", key="image_input", placeholder="Örn: Mavi bir nehir kenarında yeşil ağaçlar")
+        if st.button("🎨 Görseli Oluştur", key="generate_rule_image_btn"):
             if image_prompt:
                 with st.spinner("Fırçalarım hazırlanıyor..."): image = generate_prompt_influenced_image(image_prompt)
                 st.image(image, caption=f"Hanogt AI'ın '{image_prompt}' yorumu (Kural Tabanlı)", use_container_width=True)
