@@ -18,8 +18,7 @@ from duckduckgo_search import DDGS
 from urllib.parse import urlparse
 import google.generativeai as genai
 
-# --- Sayfa Yapılandırması (İLK STREAMLIT KOMUTU OLMALI) ---
-# Bu satırı dosyanın başına, importlardan hemen sonraya taşıdık.
+# --- Sayfa Yapılandırması (İLK STREAMLIT KOMUTU OLMALI!) ---
 st.set_page_config(
     page_title="Hanogt AI",
     page_icon="🤖",
@@ -28,40 +27,38 @@ st.set_page_config(
 
 # --- Sabitler ---
 CHAT_HISTORY_FILE = "chat_history.json"
-COLLECTED_DATA_FILE = "collected_data.jsonl"
+COLLECTED_DATA_FILE = "collected_data.jsonl" # Veri toplama için dosya adı
 DEFAULT_ERROR_MESSAGE = "Üzgünüm, bir şeyler ters gitti. Lütfen tekrar deneyin."
 REQUEST_TIMEOUT = 10
 SCRAPE_MAX_CHARS = 1000
 GEMINI_ERROR_PREFIX = "GeminiError:"
 
 # --- Bilgi Tabanı (Basitleştirilmiş) ---
-# Bu blokta artık st.toast yok, çünkü set_page_config'den sonra olmalı.
-# Hata olursa daha sonra gösterilecek.
-knowledge_base_load_error = None
-try:
-    from knowledge_base import load_knowledge, chatbot_response as kb_chatbot_response
-except ImportError:
-    # st.toast("`knowledge_base.py` bulunamadı.", icon="ℹ️") # Buradan kaldırıldı
-    knowledge_base_load_error = "`knowledge_base.py` bulunamadı. Basit KB kullanılacak."
-    def load_knowledge(): return {}
-    def kb_chatbot_response(query, knowledge): return None
-except Exception as kb_e:
-    knowledge_base_load_error = f"`knowledge_base.py` yüklenirken hata: {kb_e}. Basit KB kullanılacak."
-    def load_knowledge(): return {}
-    def kb_chatbot_response(query, knowledge): return None
-
-# Eğer yukarıda hata olmadıysa ve fonksiyonlar import edildiyse KB'yi yükle
-if 'kb_chatbot_response' in locals():
-     try:
-         KNOWLEDGE_BASE = load_knowledge()
-     except Exception as load_e:
-          knowledge_base_load_error = f"Bilgi tabanı yüklenemedi (`load_knowledge` hatası): {load_e}"
-          KNOWLEDGE_BASE = {}
-else: # Import başarısız olduysa veya hata verdiyse boş KB kullan
-    KNOWLEDGE_BASE = load_knowledge() if 'load_knowledge' in locals() else {}
-
+# Bu blokta Streamlit komutu yok, sadece Python fonksiyonları var
+knowledge_base_load_error = None # Hata mesajını saklamak için
+def load_knowledge():
+    # Örnek basit anahtar kelime eşleşmeleri
+    return {
+        "merhaba": ["Merhaba!", "Selam!", "Hoş geldin!"],
+        "selam": ["Merhaba!", "Selam sana da!"],
+        "nasılsın": ["İyiyim, teşekkürler! Siz nasılsınız?", "Harika hissediyorum!", "İşler yolunda."],
+        "hanogt kimdir": ["Ben Hanogt AI, size yardımcı olmaya çalışan bir yapay zeka.", "Hanogt AI, sorularınızı yanıtlamak için burada."],
+        "teşekkür ederim": ["Rica ederim!", "Ne demek!", "Yardımcı olabildiğime sevindim."],
+        "görüşürüz": ["Görüşmek üzere!", "Hoşça kal!", "İyi günler!"]
+    }
+def kb_chatbot_response(query, knowledge):
+    query_lower = query.lower()
+    if query_lower in knowledge: return random.choice(knowledge[query_lower])
+    possible_responses = []
+    for key, responses in knowledge.items():
+        if key in query_lower: possible_responses.extend(responses)
+    if possible_responses: return random.choice(possible_responses)
+    return None
+# Bilgi tabanını yükle (try-except olmadan, basitçe çağır)
+KNOWLEDGE_BASE = load_knowledge()
 
 # --- API Anahtarı ve Gemini Yapılandırması ---
+# Bu blokta da Streamlit komutu yok
 api_key = st.secrets.get("GOOGLE_API_KEY")
 gemini_model = None
 gemini_init_error = None
@@ -83,18 +80,18 @@ else:
 # Metin Okuma (TTS)
 tts_engine = None
 tts_init_error = None
-try:
-    tts_engine = pyttsx3.init()
-except Exception as e:
-    tts_init_error = f"⚠️ Metin okuma başlatılamadı: {e}." # Hatayı değişkende sakla
+try: tts_engine = pyttsx3.init()
+except Exception as e: tts_init_error = f"⚠️ Metin okuma başlatılamadı: {e}."
 
 def speak(text):
+    # ... (Fonksiyon içeriği aynı) ...
     if not tts_engine: st.warning("Metin okuma motoru aktif değil.", icon="🔊"); return
     try: tts_engine.say(text); tts_engine.runAndWait()
     except Exception as e: st.error(f"Konuşma sırasında hata: {e}")
 
+
 # Web Arama ve Kazıma
-# ... (scrape_url_content ve search_web fonksiyonları öncekiyle aynı) ...
+# ... (scrape_url_content ve search_web fonksiyonları aynı) ...
 def scrape_url_content(url):
     st.toast(f"🌐 '{urlparse(url).netloc}' alınıyor...", icon="⏳")
     try:
@@ -140,7 +137,9 @@ def search_web(query):
     st.toast("ℹ️ Web'de yanıt bulunamadı.", icon="❌")
     return None
 
+
 # Sohbet Geçmişi Yönetimi
+# <<< BU FONKSİYONLARIN TANIMLARI Session State'den ÖNCE >>>
 def load_chat_history():
     if os.path.exists(CHAT_HISTORY_FILE):
         try:
@@ -155,8 +154,8 @@ def save_chat_history(history):
     except Exception as e: st.error(f"Geçmiş kaydedilemedi: {e}")
 
 # Gemini Yanıt Alma
+# ... (get_gemini_response fonksiyonu aynı) ...
 def get_gemini_response(prompt, chat_history):
-    # ... (Kod önceki ile aynı) ...
     if not gemini_model: return f"{GEMINI_ERROR_PREFIX} Model aktif değil."
     gemini_history=[{'role': ("user" if sender.startswith("Sen") else "model"), 'parts': [message]} for sender, message in chat_history]
     try:
@@ -170,16 +169,19 @@ def get_gemini_response(prompt, chat_history):
         if "API key not valid" in msg: return f"{GEMINI_ERROR_PREFIX} API Anahtarı geçersiz."
         return f"{GEMINI_ERROR_PREFIX} API ile iletişim kurulamadı."
 
+
 # Veri Toplama Fonksiyonu
+# ... (log_interaction fonksiyonu aynı) ...
 def log_interaction(prompt, response, source):
     try:
         log_entry = {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "user_prompt": prompt, "ai_response": response, "response_source": source}
         with open(COLLECTED_DATA_FILE, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
     except Exception as e: st.toast(f"⚠️ Loglama hatası: {e}", icon="📝")
 
+
 # Merkezi Yanıt Oluşturma Fonksiyonu
+# ... (get_hanogt_response fonksiyonu aynı) ...
 def get_hanogt_response(user_prompt, chat_history):
-    # ... (Kod önceki ile aynı: Gemini > KB > Web > Default) ...
     response=None; ai_sender="Hanogt AI"
     if gemini_model: # 1. Gemini
         response=get_gemini_response(user_prompt, chat_history)
@@ -197,8 +199,9 @@ def get_hanogt_response(user_prompt, chat_history):
         log_interaction(user_prompt, response, ai_sender)
     return response, ai_sender
 
+
 # Yerel Yaratıcı/Görsel Fonksiyonları
-# ... (creative_response, generate_new_idea, advanced_word_generator, generate_prompt_influenced_image fonksiyonları önceki kod ile aynı) ...
+# ... (creative_response, generate_new_idea, advanced_word_generator, generate_prompt_influenced_image fonksiyonları aynı) ...
 def creative_response(prompt): styles = ["Farklı düşünürsek: {}", "Hayal edelim: {}", "Belki de şöyledir: {}", "Aklıma geldi: {}"]; base_idea = generate_new_idea(prompt); return random.choice(styles).format(base_idea)
 def generate_new_idea(seed): elements = ["zaman kristalleri", "psişik ağaçlar", "rüya mimarisi", "kuantum köpüğü"]; actions = ["dokur", "çözer", "yansıtır", "inşa eder"]; outcomes = ["kaderin iplerini", "varoluşun kodunu", "bilincin sınırlarını", "kayıp uygarlıkları"]; words = seed.lower().split()[:2]; return f"{' '.join(words)} {random.choice(actions)} ve {random.choice(elements)} kullanarak {random.choice(outcomes)}.".capitalize()
 def advanced_word_generator(base_word):
@@ -208,7 +211,7 @@ def advanced_word_generator(base_word):
      if random.random() > 0.4: new_word+=random.choice(suffix)
      return new_word.capitalize()
 def generate_prompt_influenced_image(prompt):
-    # ... (Kural Tabanlı Görsel Üretici Kodu) ...
+    # ... (Kural Tabanlı Görsel Kodu) ...
     width, height=512, 512; prompt_lower=prompt.lower()
     keyword_themes = { "güneş": {"bg": [(255, 230, 150), (255, 180, 50)], "shapes": [{"type": "circle", "color": (255, 255, 0), "pos": (0.2, 0.2), "size": 0.15}]}, "ay": {"bg": [(20, 20, 80), (50, 50, 120)], "shapes": [{"type": "circle", "color": (240, 240, 240), "pos": (0.8, 0.2), "size": 0.1}]}, "gökyüzü": {"bg": [(135, 206, 250), (70, 130, 180)], "shapes": []}, "deniz": {"bg": [(0, 105, 148), (0, 0, 139)], "shapes": []}, "ağaç": {"bg": [(180, 220, 180), (140, 190, 140)], "shapes": [{"type": "rectangle", "color": (139, 69, 19), "pos": (0.5, 0.8), "size": (0.05, 0.3)}, {"type": "triangle", "color": (34, 139, 34), "pos": (0.5, 0.6), "size": 0.2}]}, }
     bg_color1=(random.randint(50, 150), random.randint(50, 150), random.randint(50, 150)); bg_color2=(random.randint(150, 255), random.randint(150, 255), random.randint(150, 255)); shapes_to_draw=[]; theme_applied=False
@@ -234,7 +237,7 @@ def generate_prompt_influenced_image(prompt):
 
 # --- Session State Başlatma ---
 # Bu bölüm TÜM fonksiyon tanımlarından SONRA gelir.
-if 'chat_history' not in st.session_state: st.session_state.chat_history = load_chat_history() # load_chat_history YUKARIDA tanımlı olmalı
+if 'chat_history' not in st.session_state: st.session_state.chat_history = load_chat_history()
 if 'app_mode' not in st.session_state: st.session_state.app_mode = "Yazılı Sohbet"
 if 'user_name' not in st.session_state: st.session_state.user_name = None
 if 'user_avatar_bytes' not in st.session_state: st.session_state.user_avatar_bytes = None
@@ -247,9 +250,11 @@ if 'greeting_message_shown' not in st.session_state: st.session_state.greeting_m
 st.markdown("<h1 style='text-align: center; color: #4A90E2;'>Hanogt AI</h1>", unsafe_allow_html=True)
 
 # Uygulama başlangıcında oluşan hataları göster (API, TTS vb.)
+# Bunları ana UI alanına taşıdık, set_page_config'den sonra olmaları için
 if gemini_init_error: st.error(gemini_init_error)
-if tts_init_error: st.toast(tts_init_error, icon="🔊")
-if knowledge_base_load_error: st.toast(knowledge_base_load_error, icon="ℹ️")
+if tts_init_error: st.toast(tts_init_error, icon="🔊") # Toast olarak kalsın
+# Bilgi tabanı yükleme hatasını burada gösterelim
+if knowledge_base_load_error: st.warning(knowledge_base_load_error, icon="ℹ️")
 
 
 # --- Kullanıcı Adı Sorgulama ---
@@ -269,11 +274,10 @@ elif st.session_state.show_main_app:
 
     # --- Ayarlar Bölümü ---
     with st.expander("⚙️ Ayarlar & Kişiselleştirme", expanded=False):
-        # Ad Değiştirme
+        # ... (Ayarlar içeriği önceki kod ile aynı) ...
         def update_name(): st.session_state.user_name = st.session_state.change_name_input_key; st.toast("Adınız güncellendi!")
         st.text_input("Adınızı Değiştirin:", value=st.session_state.user_name, key="change_name_input_key", on_change=update_name)
         st.caption(f"Mevcut adınız: {st.session_state.user_name}"); st.divider()
-        # Avatar Yönetimi
         st.write("**Avatar (Profil Resmi):**"); uploaded_avatar = st.file_uploader("Yeni Avatar Yükle (PNG, JPG - Maks 1MB):", type=["png", "jpg", "jpeg"], key="avatar_uploader")
         if uploaded_avatar is not None:
             if uploaded_avatar.size > 1 * 1024 * 1024: st.error("Dosya > 1MB!")
@@ -283,11 +287,11 @@ elif st.session_state.show_main_app:
             if st.button("Avatarı Kaldır", key="remove_avatar"): st.session_state.user_avatar_bytes = None; st.toast("Avatar kaldırıldı.", icon="🗑️"); st.rerun()
         else: st.caption("Henüz bir avatar yüklemediniz.")
         st.caption("Not: Avatar sadece bu tarayıcı oturumu için geçerlidir."); st.divider()
-        # Geçmiş Temizleme
         if st.button("🧹 Sohbet Geçmişini Temizle", key="clear_history_main"):
             st.session_state.chat_history = []; save_chat_history([]); st.toast("Sohbet geçmişi temizlendi!", icon="🧹"); time.sleep(1); st.rerun()
 
-    st.markdown("---") # Ayarlar ve modlar arası çizgi
+
+    st.markdown("---")
 
     # --- Mod Seçim Butonları ---
     st.write("**Uygulama Modu:**")
@@ -302,14 +306,15 @@ elif st.session_state.show_main_app:
             if st.button(f"{icons[i]} {modes[i]}", key=f"mode_btn_{i}", use_container_width=True, type=button_type): new_mode = modes[i]
     if new_mode != current_mode: st.session_state.app_mode = new_mode; st.rerun()
     app_mode = st.session_state.app_mode
-    st.markdown("---") # Modlar ve içerik arası çizgi
+    st.markdown("---")
 
     # --- MODLARA GÖRE ARAYÜZLER ---
 
     # -- YAZILI SOHBET --
     if app_mode == "Yazılı Sohbet":
-        chat_container = st.container() # Mesaj alanı
+        chat_container = st.container()
         with chat_container:
+             # ... (Mesaj gösterme ve Oku/Kopyala butonları önceki kod ile aynı) ...
             for i, (sender, message) in enumerate(st.session_state.chat_history):
                 is_user = sender.startswith("Sen"); role = "user" if is_user else "assistant"; display_avatar = None
                 if is_user and st.session_state.user_avatar_bytes:
@@ -318,27 +323,23 @@ elif st.session_state.show_main_app:
                 elif not is_user: display_avatar = "🤖"
                 with st.chat_message(role, avatar=display_avatar):
                     st.markdown(message) # Sadece mesaj
-                    # Sesli Okuma ve Kopyalama Alanı
-                    if not is_user: # Sadece AI mesajları için
-                        # Butonları yan yana koymak için sütunlar (isteğe bağlı)
-                        b_cols = st.columns([0.15, 0.85]) # İlk sütun buton için daha dar
+                    if not is_user: # AI mesajıysa butonları/kodu ekle
+                        b_cols = st.columns([0.15, 0.85]) # Buton için dar sütun
                         with b_cols[0]:
-                             if tts_engine: # TTS butonu
+                             if tts_engine:
                                 if st.button(f"🔊", key=f"speak_msg_{i}", help="Mesajı sesli oku"): speak(message)
-                        # Kopyalama için st.code diğer sütuna veya direkt altına konulabilir
-                        # with b_cols[1]: # Veya direkt altına:
-                        st.code(message, language=None) # Kopyalama butonu içerir
+                        # Kopyalama alanı direkt mesajın altına
+                        st.code(message, language=None)
 
-        # Yeni mesaj girişi
         if prompt := st.chat_input(f"{st.session_state.user_name} olarak mesaj yazın..."):
+            # ... (Yanıt alma ve gösterme önceki kod ile aynı) ...
             st.session_state.chat_history.append(("Sen", prompt))
-            with st.spinner("🤖 Düşünüyorum..."):
-                response, ai_sender = get_hanogt_response(prompt, st.session_state.chat_history)
+            with st.spinner("🤖 Düşünüyorum..."): response, ai_sender = get_hanogt_response(prompt, st.session_state.chat_history)
             st.session_state.chat_history.append((ai_sender, response)); save_chat_history(st.session_state.chat_history); st.rerun()
 
     # -- SESLİ SOHBET (DOSYA YÜKLEME) --
     elif app_mode == "Sesli Sohbet (Dosya Yükle)":
-        # ... (Kod önceki ile aynı) ...
+         # ... (Kod önceki ile aynı) ...
         st.info("Lütfen yanıtlamamı istediğiniz konuşmayı içeren bir ses dosyası yükleyin.")
         uploaded_file = st.file_uploader("Ses Dosyası Seçin", type=['wav', 'mp3', 'ogg', 'flac', 'm4a'], label_visibility="collapsed")
         if uploaded_file is not None:
@@ -351,16 +352,15 @@ elif st.session_state.show_main_app:
                 except Exception as e: st.error(f"Ses dosyası işlenemedi: {e}"); user_prompt = None
             if user_prompt:
                 st.session_state.chat_history.append(("Sen (Ses Dosyası)", user_prompt))
-                with st.spinner("🤖 Yanıt oluşturuluyor..."):
-                    response, ai_sender = get_hanogt_response(user_prompt, st.session_state.chat_history)
+                with st.spinner("🤖 Yanıt oluşturuluyor..."): response, ai_sender = get_hanogt_response(user_prompt, st.session_state.chat_history)
                 st.markdown(f"**{ai_sender}:**"); st.markdown(response); speak(response)
-                st.code(response, language=None) # Sesli sohbet yanıtı için de kopyalama
+                st.code(response, language=None)
                 st.session_state.chat_history.append((ai_sender, response)); save_chat_history(st.session_state.chat_history)
 
 
     # -- YARATICI MOD --
     elif app_mode == "Yaratıcı Mod":
-        # ... (Kod önceki ile aynı) ...
+         # ... (Kod önceki ile aynı) ...
         st.markdown("Bir fikir, bir kelime veya bir cümle yazın. Gemini (varsa) veya yerel yaratıcılığım size yanıt versin!")
         creative_prompt = st.text_input("Yaratıcılık tohumu:", key="creative_input", placeholder="Örn: Zaman yolculuğu yapan bir tost makinesi")
         if creative_prompt:
@@ -375,16 +375,16 @@ elif st.session_state.show_main_app:
                  with st.spinner("✨ Kendi fikirlerimi demliyorum..."):
                      final_response = creative_response(creative_prompt); new_word = advanced_word_generator(creative_prompt); final_response += f"\n\n_(Ayrıca türettiğim kelime: **{new_word}**)_";
             st.markdown(f"**{ai_sender}:**"); st.markdown(final_response)
-            st.code(final_response, language=None) # Yaratıcı yanıtı da kopyalanabilir yapalım
+            st.code(final_response, language=None)
 
 
     # -- GÖRSEL ÜRETİCİ (Kural Tabanlı) --
     elif app_mode == "Görsel Üretici":
-        # ... (Kod önceki ile aynı) ...
-        st.markdown("Hayalinizdeki görseli tarif edin, anahtar kelimelere göre sizin için (sembolik olarak) çizeyim!")
-        st.info("Not: Bu mod, girilen anahtar kelimelere göre basit, kural tabanlı çizimler yapar.")
-        image_prompt = st.text_input("Ne çizmemi istersiniz?", key="image_input", placeholder="Örn: Mavi bir nehir kenarında yeşil ağaçlar")
-        if st.button("🎨 Görseli Oluştur", key="generate_rule_image_btn"):
+         # ... (Kod önceki ile aynı) ...
+         st.markdown("Hayalinizdeki görseli tarif edin, anahtar kelimelere göre sizin için (sembolik olarak) çizeyim!")
+         st.info("Not: Bu mod, girilen anahtar kelimelere göre basit, kural tabanlı çizimler yapar.")
+         image_prompt = st.text_input("Ne çizmemi istersiniz?", key="image_input", placeholder="Örn: Mavi bir nehir kenarında yeşil ağaçlar")
+         if st.button("🎨 Görseli Oluştur", key="generate_rule_image_btn"):
             if image_prompt:
                 with st.spinner("Fırçalarım hazırlanıyor..."): image = generate_prompt_influenced_image(image_prompt)
                 st.image(image, caption=f"Hanogt AI'ın '{image_prompt}' yorumu (Kural Tabanlı)", use_container_width=True)
@@ -396,5 +396,5 @@ elif st.session_state.show_main_app:
 # --- Alt Bilgi ---
 if st.session_state.show_main_app:
     st.markdown("---")
-    st.markdown(f"<p style='text-align: center; font-size: small;'>Hanogt AI v3.5 - {st.session_state.get('user_name', 'Misafir')} için çalışıyor - 2025</p>", unsafe_allow_html=True) # Sürüm güncellendi
+    st.markdown(f"<p style='text-align: center; font-size: small;'>Hanogt AI v3.6 - {st.session_state.get('user_name', 'Misafir')} için çalışıyor - 2025</p>", unsafe_allow_html=True) # Sürüm güncellendi
 
