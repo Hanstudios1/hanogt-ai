@@ -28,15 +28,16 @@ st.set_page_config(
 
 # --- Sabitler ---
 CHAT_HISTORY_FILE = "chat_history.json"
-# COLLECTED_DATA_FILE = "collected_data.jsonl" # Artık kullanılmıyor
+# COLLECTED_DATA_FILE = "collected_data.jsonl" # Kaldırıldı, Supabase kullanılıyor
 DEFAULT_ERROR_MESSAGE = "Üzgünüm, bir şeyler ters gitti. Lütfen tekrar deneyin."
 REQUEST_TIMEOUT = 10 # sn
 SCRAPE_MAX_CHARS = 1000 # karakter
 GEMINI_ERROR_PREFIX = "GeminiError:"
 
 # --- Bilgi Tabanı (Basitleştirilmiş) ---
-# Harici dosya yerine basit sözlük kullanılıyor (OSError önlemek için)
+knowledge_base_load_error = None # Hata mesajını saklamak için
 def load_knowledge():
+    # Örnek basit anahtar kelime eşleşmeleri
     return { "merhaba": ["Merhaba!", "Selam!", "Hoş geldin!"], "selam": ["Merhaba!", "Selam sana da!"], "nasılsın": ["İyiyim, teşekkürler! Siz nasılsınız?", "Harika hissediyorum!", "İşler yolunda."], "hanogt kimdir": ["Ben Hanogt AI, size yardımcı olmaya çalışan bir yapay zeka.", "Hanogt AI, sorularınızı yanıtlamak için burada."], "teşekkür ederim": ["Rica ederim!", "Ne demek!", "Yardımcı olabildiğime sevindim."], "görüşürüz": ["Görüşmek üzere!", "Hoşça kal!", "İyi günler!"] }
 def kb_chatbot_response(query, knowledge):
     query_lower = query.lower()
@@ -70,17 +71,15 @@ if not supabase_url or not supabase_key:
     supabase_error = "Supabase URL veya Service Key Secrets'ta bulunamadı!"
 else:
     try:
-        # Bağlantıyı cache'leyerek performansı artır
         @st.cache_resource
         def init_supabase_client():
-            print("DEBUG: Supabase istemcisi başlatılıyor...") # Loglarda görmek için
+            print("DEBUG: Supabase istemcisi başlatılıyor...")
             return create_client(supabase_url, supabase_key)
         supabase = init_supabase_client()
         print("DEBUG: Supabase istemcisi başarıyla başlatıldı.")
     except Exception as e:
         supabase_error = f"Supabase bağlantı hatası: {e}"
-        print(f"ERROR: Supabase init error: {e}") # Loglarda görmek için
-
+        print(f"ERROR: Supabase init error: {e}")
 
 # --- YARDIMCI FONKSİYONLAR ---
 
@@ -96,9 +95,9 @@ def speak(text):
 
 # Web Arama ve Kazıma
 def scrape_url_content(url):
+    # ... (Kod aynı) ...
     st.toast(f"🌐 '{urlparse(url).netloc}' alınıyor...", icon="⏳")
     try:
-        # ... (Kazıma mantığı) ...
         parsed_url=urlparse(url);
         if not all([parsed_url.scheme, parsed_url.netloc]) or parsed_url.scheme not in ['http', 'https']: return None
         headers={'User-Agent': 'Mozilla/5.0 HanogtAI/Final'}; response=requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True); response.raise_for_status()
@@ -120,8 +119,8 @@ def scrape_url_content(url):
         return final_text
     except Exception as e: st.toast(f"⚠️ Sayfa işlenirken hata: {e}", icon='🌐'); return None
 def search_web(query):
+    # ... (Kod aynı) ...
     st.toast(f"🔍 '{query}' web'de aranıyor...", icon="⏳")
-    # ... (Wikipedia & DDG Mantığı) ...
     summary=None
     try: wikipedia.set_lang("tr"); summary=wikipedia.summary(query, sentences=3, auto_suggest=False); st.toast("ℹ️ Wikipedia'dan.", icon="✅"); return f"**Wikipedia'dan:**\n\n{summary}"
     except Exception: pass
@@ -174,8 +173,7 @@ def get_gemini_response(prompt, chat_history):
         if "API key not valid" in msg: return f"{GEMINI_ERROR_PREFIX} API Anahtarı geçersiz."
         return f"{GEMINI_ERROR_PREFIX} API ile iletişim kurulamadı."
 
-
-# Veri Toplama Fonksiyonu (Supabase'e yazar)
+# <<< GÜNCELLENMİŞ (Daha Detaylı Hata Raporlama) >>> Veri Toplama Fonksiyonu (Supabase'e yazar)
 def log_interaction(prompt, response, source):
     """Soru-Cevap çiftini ve kaynağını Supabase'e loglar."""
     # Supabase istemcisinin başlatılıp başlatılmadığını kontrol et
@@ -184,25 +182,44 @@ def log_interaction(prompt, response, source):
             data_to_insert = {
                 "user_prompt": prompt,
                 "ai_response": response,
-                "response_source": source # Tablodaki sütun adıyla eşleşmeli
+                "response_source": source
+                # 'created_at' Supabase tarafından otomatik eklenecek varsayıyoruz
             }
-            # Belirttiğimiz tabloya veriyi ekle
+            print(f"DEBUG: Supabase'e ekleniyor: {data_to_insert}") # Log kontrolü
+            # 'chat_logs' isimli tabloya veriyi ekle
             insert_result = supabase.table("chat_logs").insert(data_to_insert).execute()
+            print(f"DEBUG: Supabase insert sonucu: {insert_result}") # Log kontrolü
 
-            # Supabase'den dönen yanıtta hata olup olmadığını kontrol etmek daha iyi olabilir
-            # Örnek: if hasattr(insert_result, 'error') and insert_result.error: raise Exception(insert_result.error)
-            # Basit kontrol:
-            if len(insert_result.data) == 0:
-                 print(f"WARN: Supabase insert returned no data: {insert_result}")
-                 st.toast("⚠️ Log Supabase'e kaydedilemedi (Boş yanıt).", icon="💾")
+            # Supabase client'ından dönen yanıtta hata olup olmadığını kontrol et
+            # APIResponse nesnesinin data ve error attribute'ları olabilir
+            if hasattr(insert_result, 'data') and not insert_result.data:
+                 error_info = getattr(insert_result, 'error', None) or getattr(insert_result, 'message', None)
+                 # Loglara daha detaylı yazdır
+                 print(f"WARN: Supabase insert verisi boş döndü veya hata içeriyor. Result: {insert_result}")
+                 st.toast(f"⚠️ Log Supabase'e kaydedilemedi (API'den boş yanıt/hata?). Detay: {error_info}", icon="💾")
+            # else:
+            #     st.toast("Log Supabase'e kaydedildi.", icon="💾") # Başarı mesajı çok sıkıcı olabilir
 
         except Exception as e:
-            # Hataları loglara ve arayüze yazdır
-            print(f"ERROR: Supabase loglama hatası: {e}")
-            st.error(f"Supabase loglama hatası: {e}")
+            # Hataları loglara ve arayüze daha detaylı yazdır
+            print(f"ERROR: Supabase loglama hatası RAW: {e}") # Ham hatayı logla
+            print(f"ERROR: Supabase loglama hatası DETAILED: {repr(e)}") # repr(e) daha fazla detay verebilir
+
+            # Olası hata detaylarını yakalamaya çalış (Supabase/PostgREST özelinde)
+            error_detail = f"Hata Tipi: {type(e).__name__}, Detay: {str(e)}"
+            # Hata nesnesinin içindeki potansiyel detayları kontrol et
+            if hasattr(e, 'details'): error_detail += f", API Detayları: {e.details}"
+            if hasattr(e, 'message') and str(e) != e.message : error_detail += f", API Mesajı: {e.message}" # str(e) ile aynı değilse ekle
+            if hasattr(e, 'code'): error_detail += f", API Kodu: {e.code}"
+            if hasattr(e, 'hint'): error_detail += f", İpucu: {e.hint}"
+
+            print(f"ERROR DETAIL: {error_detail}") # Loglara yazdır
+            # Arayüzde daha anlaşılır bir hata göster
+            st.error(f"Supabase'e log kaydedilemedi! Detay: {error_detail}")
     else:
         # Supabase bağlantısı yoksa uyar
         st.toast("Supabase bağlantısı yok, loglama yapılamıyor.", icon="⚠️")
+        print("ERROR: log_interaction çağrıldı ama supabase istemcisi None.") # Log kontrolü
 
 
 # Merkezi Yanıt Oluşturma Fonksiyonu (Loglamayı çağırır)
@@ -268,17 +285,17 @@ if 'user_name' not in st.session_state: st.session_state.user_name = None
 if 'user_avatar_bytes' not in st.session_state: st.session_state.user_avatar_bytes = None
 if 'show_main_app' not in st.session_state: st.session_state.show_main_app = bool(st.session_state.user_name)
 if 'greeting_message_shown' not in st.session_state: st.session_state.greeting_message_shown = False
-# Session state logları kaldırıldı
 
 # --- UYGULAMA ARAYÜZÜ BAŞLANGICI ---
 
 # Ana Başlık
 st.markdown("<h1 style='text-align: center; color: #4A90E2;'>Hanogt AI</h1>", unsafe_allow_html=True)
 
-# Başlangıç Hatalarını Göster (API, TTS, Supabase)
+# Başlangıç Hatalarını Göster
 if gemini_init_error: st.error(gemini_init_error)
 if supabase_error: st.error(supabase_error) # Supabase hatasını göster
 if tts_init_error: st.toast(tts_init_error, icon="🔊")
+# Bilgi tabanı hatası artık yok (basit olana geçildi)
 
 # Kullanıcı Adı Sorgulama
 if not st.session_state.show_main_app:
@@ -297,7 +314,7 @@ elif st.session_state.show_main_app:
 
     # Ayarlar Bölümü
     with st.expander("⚙️ Ayarlar & Kişiselleştirme", expanded=False):
-        # ... (Ayarlar içeriği aynı, Debug log gösterimi yok) ...
+        # ... (Ayarlar Kodu aynı) ...
         def update_name(): st.session_state.user_name = st.session_state.change_name_input_key; st.toast("Adınız güncellendi!")
         st.text_input("Adınızı Değiştirin:", value=st.session_state.user_name, key="change_name_input_key", on_change=update_name)
         st.caption(f"Mevcut adınız: {st.session_state.user_name}"); st.divider()
@@ -331,7 +348,6 @@ elif st.session_state.show_main_app:
 
     # Mod Arayüzleri
     # ... (Yazılı Sohbet, Sesli Sohbet, Yaratıcı Mod, Görsel Üretici kodları önceki ile aynı) ...
-    # Sadece yanıt alma kısımları loglama fonksiyonunu (Supabase'e yazan) çağırıyor
     if app_mode == "Yazılı Sohbet":
         chat_container = st.container()
         with chat_container:
@@ -344,11 +360,13 @@ elif st.session_state.show_main_app:
                 with st.chat_message(role, avatar=display_avatar):
                     st.markdown(message)
                     if not is_user:
-                        b_cols = st.columns([0.15, 0.85])
+                        b_cols = st.columns([0.15, 0.85]) # Buton ve kod alanı için sütunlar
                         with b_cols[0]:
-                             if tts_engine:
+                             if tts_engine: # TTS butonu
                                 if st.button(f"🔊", key=f"speak_msg_{i}", help="Mesajı sesli oku"): speak(message)
-                        st.code(message, language=None) # Kopyalama alanı
+                        # Kopyalama alanı (st.code) ayrı olarak, butonun yanında değil, mesajın altında
+                        st.code(message, language=None)
+
         if prompt := st.chat_input(f"{st.session_state.user_name} olarak mesaj yazın..."):
             st.session_state.chat_history.append(("Sen", prompt))
             with st.spinner("🤖 Düşünüyorum..."): response, ai_sender = get_hanogt_response(prompt, st.session_state.chat_history)
@@ -360,21 +378,24 @@ elif st.session_state.show_main_app:
          if uploaded_file is not None:
             st.audio(uploaded_file); user_prompt = None; ai_sender = "Hanogt AI"; response = None
             with st.spinner("Ses dosyası işleniyor..."):
+                # ... (Ses işleme kodu aynı) ...
                 recognizer = sr.Recognizer()
                 try:
                     with sr.AudioFile(uploaded_file) as source: audio_data = recognizer.record(source)
                     user_prompt = recognizer.recognize_google(audio_data, language="tr-TR"); st.success(f"**Algılanan Metin:** {user_prompt}")
                 except Exception as e: st.error(f"Ses dosyası işlenemedi: {e}"); user_prompt = None
+
             if user_prompt:
                 st.session_state.chat_history.append(("Sen (Ses Dosyası)", user_prompt))
                 with st.spinner("🤖 Yanıt oluşturuluyor..."): response, ai_sender = get_hanogt_response(user_prompt, st.session_state.chat_history)
                 st.markdown(f"**{ai_sender}:**"); st.markdown(response); speak(response)
-                st.code(response, language=None)
+                st.code(response, language=None) # Kopyalama
                 st.session_state.chat_history.append((ai_sender, response)); save_chat_history(st.session_state.chat_history)
 
     elif app_mode == "Yaratıcı Mod":
+         # ... (Kod aynı) ...
          st.markdown("Bir fikir, bir kelime veya bir cümle yazın. Gemini (varsa) veya yerel yaratıcılığım size yanıt versin!")
-         creative_prompt = st.text_input("Yaratıcılık tohumu:", key="creative_input", placeholder="Örn: Ay'da kamp yapan astronotlar")
+         creative_prompt = st.text_input("Yaratıcılık tohumu:", key="creative_input", placeholder="Örn: Okyanusun dibindeki kütüphane")
          if creative_prompt:
             ai_sender = "Hanogt AI"; final_response = None
             if gemini_model:
@@ -387,11 +408,12 @@ elif st.session_state.show_main_app:
                  with st.spinner("✨ Kendi fikirlerimi demliyorum..."):
                      final_response = creative_response(creative_prompt); new_word = advanced_word_generator(creative_prompt); final_response += f"\n\n_(Ayrıca türettiğim kelime: **{new_word}**)_";
             st.markdown(f"**{ai_sender}:**"); st.markdown(final_response)
-            st.code(final_response, language=None)
-            log_interaction(creative_prompt, final_response, ai_sender) # Yaratıcı modu da logla
+            st.code(final_response, language=None) # Kopyalama
+            log_interaction(creative_prompt, final_response, ai_sender) # Loglama
 
 
     elif app_mode == "Görsel Üretici":
+         # ... (Kod aynı) ...
          st.markdown("Hayalinizdeki görseli tarif edin, anahtar kelimelere göre sizin için (sembolik olarak) çizeyim!")
          st.info("Not: Bu mod, girilen anahtar kelimelere göre basit, kural tabanlı çizimler yapar.")
          image_prompt = st.text_input("Ne çizmemi istersiniz?", key="image_input", placeholder="Örn: Mavi bir nehir kenarında yeşil ağaçlar")
@@ -403,8 +425,9 @@ elif st.session_state.show_main_app:
                 st.download_button(label="Görseli İndir (PNG)", data=byte_im, file_name=f"hanogt_ai_rulebased_{image_prompt[:20].replace(' ','_')}.png", mime="image/png")
             else: st.error("Lütfen ne çizmemi istediğinizi açıklayan bir metin girin!")
 
+
 # --- Alt Bilgi ---
 if st.session_state.show_main_app:
     st.markdown("---")
-    st.markdown(f"<p style='text-align: center; font-size: small;'>Hanogt AI v3.8 (Supabase Logging) - {st.session_state.get('user_name', 'Misafir')} için çalışıyor - 2025</p>", unsafe_allow_html=True) # Sürüm güncellendi
+    st.markdown(f"<p style='text-align: center; font-size: small;'>Hanogt AI v3.8 (Supabase Logging - Debug) - {st.session_state.get('user_name', 'Misafir')} için çalışıyor - 2025</p>", unsafe_allow_html=True) # Sürüm güncellendi
 
