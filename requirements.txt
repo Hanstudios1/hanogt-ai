@@ -17,4 +17,5 @@ torch
 huggingface_hub
 supabase
 pillow
-python-dotenv psycopg2
+python-dotenv 
+psycopg2
