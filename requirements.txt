@@ -17,4 +17,3 @@ torch
 huggingface_hub
 supabase
 pillow
-supabase-py 
