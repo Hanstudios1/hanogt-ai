@@ -15,4 +15,5 @@ pyaudio
 transformers
 torch
 huggingface_hub
-supabase-py
+supabase
+pillow
