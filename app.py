@@ -9,7 +9,7 @@ import speech_recognition as sr
 import pyttsx3
 import random
 import re
-import os
+import os  # load_chat_history için gerekli
 import json
 from PIL import Image, ImageDraw, ImageFont
 import time
@@ -20,8 +20,10 @@ import google.generativeai as genai
 try:
     from supabase import create_client, Client
 except ImportError:
-    st.warning("Supabase kütüphanesi bulunamadı.", icon="ℹ️")
-    create_client = None; Client = None
+    # Supabase kurulu değilse uyarı ver ama çökme
+    st.warning("Supabase kütüphanesi bulunamadı. Loglama çalışmayacak. `requirements.txt` dosyasını kontrol edin: `supabase` ve `psycopg2-binary` ekli olmalı.", icon="ℹ️")
+    create_client = None
+    Client = None
 
 # --- Sayfa Yapılandırması (İLK STREAMLIT KOMUTU OLMALI!) ---
 st.set_page_config(
@@ -32,9 +34,10 @@ st.set_page_config(
 
 # --- Sabitler ---
 CHAT_HISTORY_FILE = "chat_history.json"
+# COLLECTED_DATA_FILE = "collected_data.jsonl" # Supabase kullanıldığı için kaldırıldı
 DEFAULT_ERROR_MESSAGE = "Üzgünüm, bir şeyler ters gitti. Lütfen tekrar deneyin."
-REQUEST_TIMEOUT = 10
-SCRAPE_MAX_CHARS = 1000
+REQUEST_TIMEOUT = 10 # sn
+SCRAPE_MAX_CHARS = 1000 # karakter
 GEMINI_ERROR_PREFIX = "GeminiError:"
 
 # --- Bilgi Tabanı (Basitleştirilmiş) ---
@@ -69,13 +72,14 @@ supabase_error = None
 supabase_url = st.secrets.get("SUPABASE_URL")
 supabase_key = st.secrets.get("SUPABASE_SERVICE_KEY")
 if not supabase_url or not supabase_key: supabase_error = "Supabase URL veya Service Key Secrets'ta bulunamadı!"
-elif create_client is None: supabase_error = "Supabase kütüphanesi yüklenemedi!"
+elif create_client is None: supabase_error = "Supabase kütüphanesi yüklenemedi (`requirements.txt` kontrol edin)!"
 else:
     try:
-        @st.cache_resource
+        @st.cache_resource # Bağlantıyı cache'le
         def init_supabase_client(): return create_client(supabase_url, supabase_key)
         supabase = init_supabase_client()
     except Exception as e: supabase_error = f"Supabase bağlantı hatası: {e}"; print(f"ERROR: Supabase init error: {e}")
+
 
 # --- YARDIMCI FONKSİYONLAR ---
 
@@ -139,7 +143,7 @@ def search_web(query):
 
 # Sohbet Geçmişi Yönetimi
 def load_chat_history():
-    # ... (Kod aynı, os importu dosya başında olmalı) ...
+    # 'os' importu başta olmalı
     if os.path.exists(CHAT_HISTORY_FILE):
         try:
             with open(CHAT_HISTORY_FILE, "r", encoding="utf-8") as f: content = f.read()
@@ -148,7 +152,6 @@ def load_chat_history():
         except Exception as e: st.error(f"Geçmiş dosyası ({CHAT_HISTORY_FILE}) yüklenemedi: {e}"); return []
     else: return []
 def save_chat_history(history):
-     # ... (Kod aynı) ...
     try:
         with open(CHAT_HISTORY_FILE, "w", encoding="utf-8") as f: json.dump(history, f, ensure_ascii=False, indent=4)
     except Exception as e: st.error(f"Geçmiş kaydedilemedi: {e}")
@@ -169,20 +172,22 @@ def get_gemini_response(prompt, chat_history):
         if "API key not valid" in msg: return f"{GEMINI_ERROR_PREFIX} API Anahtarı geçersiz."
         return f"{GEMINI_ERROR_PREFIX} API ile iletişim kurulamadı."
 
-# Veri Toplama (Supabase'e - Detaylı Hata Raporlama ile)
+
+# Veri Toplama (Supabase'e - Hata detayı loglara yazılır)
 def log_interaction(prompt, response, source):
     """Soru-Cevap çiftini ve kaynağını Supabase'e loglar."""
     if supabase:
         try:
             data_to_insert = {"user_prompt": prompt, "ai_response": response, "response_source": source}
-            print(f"DEBUG: Supabase'e ekleniyor: {data_to_insert}")
+            # print(f"DEBUG: Supabase'e ekleniyor: {data_to_insert}") # Gerekirse logları aç
             insert_result = supabase.table("chat_logs").insert(data_to_insert).execute()
-            print(f"DEBUG: Supabase insert sonucu: {insert_result}")
+            # print(f"DEBUG: Supabase insert sonucu: {insert_result}") # Gerekirse logları aç
             if hasattr(insert_result, 'data') and not insert_result.data:
                  error_info = getattr(insert_result, 'error', None) or getattr(insert_result, 'message', None)
                  print(f"WARN: Supabase insert verisi boş döndü veya hata içeriyor. Result: {insert_result}")
                  st.toast(f"⚠️ Log Supabase'e kaydedilemedi. Detay: {error_info}", icon="💾")
         except Exception as e:
+            # Hataları loglara ve arayüze daha detaylı yazdır
             print(f"ERROR: Supabase loglama hatası RAW: {e}")
             print(f"ERROR: Supabase loglama hatası DETAILED: {repr(e)}")
             error_detail = f"Hata Tipi: {type(e).__name__}, Detay: {str(e)}"
@@ -191,14 +196,15 @@ def log_interaction(prompt, response, source):
             if hasattr(e, 'code'): error_detail += f", API Kodu: {e.code}"
             if hasattr(e, 'hint'): error_detail += f", İpucu: {e.hint}"
             print(f"ERROR DETAIL: {error_detail}")
-            st.error(f"Supabase'e log kaydedilemedi! Detay: {error_detail}") # <<< Hata arayüzde gösterilecek
-    else:
-        st.toast("Supabase bağlantısı yok, loglama yapılamıyor.", icon="⚠️")
-        print("ERROR: log_interaction çağrıldı ama supabase istemcisi None.")
+            st.error(f"Supabase'e log kaydedilemedi! Detay: {error_detail}") # Hata arayüzde gösterilir
+    # else: # Bağlantı yoksa uyarıyı sürekli göstermek yerine sessiz kalabiliriz
+        # st.toast("Supabase bağlantısı yok, loglama yapılamıyor.", icon="⚠️")
+        # print("ERROR: log_interaction çağrıldı ama supabase istemcisi None.")
+
 
 # Merkezi Yanıt Oluşturma Fonksiyonu
 def get_hanogt_response(user_prompt, chat_history):
-    # ... (Kod aynı, log_interaction çağrıları dahil) ...
+    # ... (Kod aynı) ...
     response=None; ai_sender="Hanogt AI"
     if gemini_model: # 1. Gemini
         response=get_gemini_response(user_prompt, chat_history)
@@ -215,6 +221,7 @@ def get_hanogt_response(user_prompt, chat_history):
         response=random.choice(["Yanıt veremiyorum.","Anlayamadım.","Başka soru?"]); ai_sender="Hanogt AI (Varsayılan)"
         log_interaction(user_prompt, response, ai_sender)
     return response, ai_sender
+
 
 # Yerel Yaratıcı/Görsel Fonksiyonları
 # ... (Kod aynı) ...
@@ -251,9 +258,9 @@ def generate_prompt_influenced_image(prompt):
     except Exception as e: st.error(f"Metin yazdırılırken hata: {e}")
     return img
 
+
 # --- Session State Başlatma ---
-# Bu bölüm TÜM fonksiyon tanımlarından SONRA gelir.
-if 'chat_history' not in st.session_state: st.session_state.chat_history = load_chat_history() # os importu başta olmalı
+if 'chat_history' not in st.session_state: st.session_state.chat_history = load_chat_history()
 if 'app_mode' not in st.session_state: st.session_state.app_mode = "Yazılı Sohbet"
 if 'user_name' not in st.session_state: st.session_state.user_name = None
 if 'user_avatar_bytes' not in st.session_state: st.session_state.user_avatar_bytes = None
@@ -286,7 +293,7 @@ elif st.session_state.show_main_app:
 
     # Ayarlar Bölümü
     with st.expander("⚙️ Ayarlar & Kişiselleştirme", expanded=False):
-         # ... (Kod aynı) ...
+        # ... (Ayarlar Kodu aynı) ...
         def update_name(): st.session_state.user_name = st.session_state.change_name_input_key; st.toast("Adınız güncellendi!")
         st.text_input("Adınızı Değiştirin:", value=st.session_state.user_name, key="change_name_input_key", on_change=update_name)
         st.caption(f"Mevcut adınız: {st.session_state.user_name}"); st.divider()
@@ -301,6 +308,7 @@ elif st.session_state.show_main_app:
         st.caption("Not: Avatar sadece bu tarayıcı oturumu için geçerlidir."); st.divider()
         if st.button("🧹 Sohbet Geçmişini Temizle", key="clear_history_main"):
             st.session_state.chat_history = []; save_chat_history([]); st.toast("Sohbet geçmişi temizlendi!", icon="🧹"); time.sleep(1); st.rerun()
+
 
     st.markdown("---")
     # Mod Butonları
@@ -317,11 +325,11 @@ elif st.session_state.show_main_app:
     app_mode = st.session_state.app_mode
     st.markdown("---")
 
+
     # Mod Arayüzleri
     if app_mode == "Yazılı Sohbet":
         chat_container = st.container()
         with chat_container:
-            # <<< GÜNCELLENMİŞ: st.rerun yorum satırı yapıldı >>>
             for i, (sender, message) in enumerate(st.session_state.chat_history):
                 is_user = sender.startswith("Sen"); role = "user" if is_user else "assistant"; display_avatar = None
                 if is_user and st.session_state.user_avatar_bytes:
@@ -330,27 +338,26 @@ elif st.session_state.show_main_app:
                 elif not is_user: display_avatar = "🤖"
                 with st.chat_message(role, avatar=display_avatar):
                     st.markdown(message)
-                    if not is_user: # AI mesajıysa butonları/kodu ekle
+                    if not is_user:
                         b_cols = st.columns([0.15, 0.85])
                         with b_cols[0]:
                              if tts_engine:
                                 if st.button(f"🔊", key=f"speak_msg_{i}", help="Mesajı sesli oku"): speak(message)
-                        st.code(message, language=None) # Kopyalama alanı
+                        st.code(message, language=None)
 
         if prompt := st.chat_input(f"{st.session_state.user_name} olarak mesaj yazın..."):
             st.session_state.chat_history.append(("Sen", prompt))
             with st.spinner("🤖 Düşünüyorum..."): response, ai_sender = get_hanogt_response(prompt, st.session_state.chat_history)
             st.session_state.chat_history.append((ai_sender, response)); save_chat_history(st.session_state.chat_history)
-            # <<< HATA GÖRMEK İÇİN st.rerun() GEÇİCİ OLARAK DEVRE DIŞI BIRAKILDI >>>
-            # st.rerun() # Bu satır hata mesajının hemen kaybolmasına neden oluyordu
-            # <<< ------------------------------------------------------------- >>>
+            # <<< st.rerun() TEKRAR AKTİF EDİLDİ >>>
+            st.rerun() # Hata ayıklama bittiği için bu satırı tekrar aktif hale getirdik
 
 
     elif app_mode == "Sesli Sohbet (Dosya Yükle)":
-        # ... (Kod aynı) ...
-         st.info("Lütfen yanıtlamamı istediğiniz konuşmayı içeren bir ses dosyası yükleyin.")
-         uploaded_file = st.file_uploader("Ses Dosyası Seçin", type=['wav', 'mp3', 'ogg', 'flac', 'm4a'], label_visibility="collapsed")
-         if uploaded_file is not None:
+         # ... (Kod aynı) ...
+        st.info("Lütfen yanıtlamamı istediğiniz konuşmayı içeren bir ses dosyası yükleyin.")
+        uploaded_file = st.file_uploader("Ses Dosyası Seçin", type=['wav', 'mp3', 'ogg', 'flac', 'm4a'], label_visibility="collapsed")
+        if uploaded_file is not None:
             st.audio(uploaded_file); user_prompt = None; ai_sender = "Hanogt AI"; response = None
             with st.spinner("Ses dosyası işleniyor..."):
                 recognizer = sr.Recognizer()
@@ -402,4 +409,4 @@ elif st.session_state.show_main_app:
 # --- Alt Bilgi ---
 if st.session_state.show_main_app:
     st.markdown("---")
-    st.markdown(f"<p style='text-align: center; font-size: small;'>Hanogt AI v3.9 (Debug - No Rerun) - {st.session_state.get('user_name', 'Misafir')} için çalışıyor - 2025</p>", unsafe_allow_html=True) # Sürüm güncellendi
+    st.markdown(f"<p style='text-align: center; font-size: small;'>Hanogt AI v3.9 (Final) - {st.session_state.get('user_name', 'Misafir')} için çalışıyor - 2025</p>", unsafe_allow_html=True) # Sürüm güncellendi
