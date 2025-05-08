@@ -19,3 +19,4 @@ supabase
 pillow
 python-dotenv 
 psycopg2-binary
+tiktoken
