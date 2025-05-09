@@ -3,7 +3,7 @@
 # --- Gerekli Kütüphaneler ---
 import streamlit as st
 import requests
-from bs4 import BeautifulSoup # lxml parser için pip install lxml de gerekebilir
+from bs4 import BeautifulSoup
 import wikipedia
 import speech_recognition as sr
 import pyttsx3
@@ -18,42 +18,39 @@ from duckduckgo_search import DDGS
 from urllib.parse import urlparse, unquote
 import google.generativeai as genai
 from datetime import datetime
-import uuid # Daha benzersiz ID'ler için
+import uuid
 
 # tiktoken kütüphanesi (isteğe bağlı, token sayımı için)
 # try:
 #     import tiktoken
-#     # tiktoken_encoder = tiktoken.get_encoding("cl100k_base") # Örnek bir encoder
-#     # tiktoken_encoder = tiktoken.encoding_for_model("gemini-1.5-flash-latest") # Modele göre encoder
+#     # tiktoken_encoder = tiktoken.encoding_for_model("gemini-1.5-flash-latest")
 # except ImportError:
 #     tiktoken = None
 #     tiktoken_encoder = None
-#     # st.toast("tiktoken kütüphanesi bulunamadı. Token sayımı yaklaşık olacaktır.", icon="⚠️")
 
 try:
     from supabase import create_client, Client
-    from postgrest import APIError as SupabaseAPIError # Supabase özel hataları için
+    from postgrest import APIError as SupabaseAPIError
 except ImportError:
     st.warning(
-        "Supabase veya postgrest kütüphanesi bulunamadı. Loglama ve bazı Supabase özellikleri kısıtlı olabilir. "
-        "`requirements.txt` dosyanızı kontrol edin: `supabase`, `psycopg2-binary` (veya eşdeğeri) ve `postgrest` ekli olmalı.",
+        "Supabase veya postgrest kütüphanesi bulunamadı. `requirements.txt` dosyanızı kontrol edin.",
         icon="ℹ️"
     )
     create_client = None
     Client = None
-    SupabaseAPIError = None # Tanımlı değilse None yapalım
+    SupabaseAPIError = None
 
-# --- Sayfa Yapılandırması (İLK STREAMLIT KOMUTU OLMALI!) ---
+# --- Sayfa Yapılandırması ---
 st.set_page_config(
     page_title="Hanogt AI Pro+",
-    page_icon="🚀",
+    page_icon="🌟", # Güncelledim
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # --- Sabitler ve Yapılandırma ---
 APP_NAME = "Hanogt AI"
-APP_VERSION = "4.8 Pro+"
+APP_VERSION = "4.8.1 Pro+" # Sürüm güncellendi (hata düzeltmesi)
 CURRENT_YEAR = datetime.now().year
 CHAT_HISTORY_FILE = "chat_history.json"
 KNOWLEDGE_BASE_FILE = "knowledge_base.json"
@@ -64,21 +61,25 @@ GEMINI_ERROR_PREFIX = "GeminiError:"
 USER_AGENT = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 {APP_NAME}/{APP_VERSION}"
 SUPABASE_TABLE_LOGS = "chat_logs"
 SUPABASE_TABLE_FEEDBACK = "user_feedback"
-FONT_FILE = "arial.ttf" # Görsel oluşturucu için kullanılacak font dosyası adı
+FONT_FILE = "arial.ttf"
+
+# --- Dinamik Fonksiyonlar (Global) ---
+# Bu fonksiyonlar KNOWLEDGE_BASE'e doğrudan eklenmeyecek, kb_chatbot_response tarafından çağrılacak.
+DYNAMIC_FUNCTIONS_MAP = {
+    "saat kaç": lambda: f"Şu an saat: {datetime.now().strftime('%H:%M:%S')}",
+    "bugün ayın kaçı": lambda: f"Bugün {datetime.now().strftime('%d %B %Y, %A')}",
+    "tarih ne": lambda: f"Bugün {datetime.now().strftime('%d %B %Y, %A')}"
+}
 
 # --- Bilgi Tabanı ---
 knowledge_base_load_error = None
 
 @st.cache_data(ttl=3600) # Bilgi tabanını 1 saat cache'le
-def load_knowledge_from_file(filename=KNOWLEDGE_BASE_FILE):
+def load_knowledge_from_file(filename=KNOWLEDGE_BASE_FILE, user_name_for_greeting="kullanıcı"):
     global knowledge_base_load_error
-    dynamic_functions = {
-        "saat kaç": lambda: f"Şu an saat: {datetime.now().strftime('%H:%M:%S')}",
-        "bugün ayın kaçı": lambda: f"Bugün {datetime.now().strftime('%d %B %Y, %A')}",
-        "tarih ne": lambda: f"Bugün {datetime.now().strftime('%d %B %Y, %A')}"
-    }
+    # Varsayılan bilgi tabanı (sadece string ve list of strings içermeli)
     default_knowledge = {
-        "merhaba": ["Merhaba!", "Selam!", "Hoş geldin!", f"Size nasıl yardımcı olabilirim, {st.session_state.get('user_name', 'kullanıcı')}?"],
+        "merhaba": ["Merhaba!", "Selam!", "Hoş geldin!", f"Size nasıl yardımcı olabilirim, {user_name_for_greeting}?"],
         "selam": ["Merhaba!", "Selam sana da!", "Nasıl gidiyor?"],
         "nasılsın": ["İyiyim, teşekkürler! Siz nasılsınız?", "Harika hissediyorum, yardımcı olmak için buradayım!", "Her şey yolunda, sizin için ne yapabilirim?"],
         "hanogt kimdir": [f"Ben {APP_NAME} ({APP_VERSION}), Streamlit ve Python ile geliştirilmiş bir yapay zeka asistanıyım.", f"{APP_NAME} ({APP_VERSION}), sorularınızı yanıtlamak, metinler üretmek ve hatta basit görseller oluşturmak için tasarlandı."],
@@ -86,9 +87,11 @@ def load_knowledge_from_file(filename=KNOWLEDGE_BASE_FILE):
         "görüşürüz": ["Görüşmek üzere!", "Hoşça kal!", "İyi günler dilerim!", "Tekrar beklerim!"],
         "adın ne": [f"Ben {APP_NAME}, versiyon {APP_VERSION}.", f"Bana {APP_NAME} diyebilirsiniz."],
         "ne yapabilirsin": ["Sorularınızı yanıtlayabilir, metin özetleyebilir, web'de arama yapabilir, yaratıcı metinler üretebilir ve basit görseller çizebilirim.", "Size çeşitli konularda yardımcı olabilirim. Ne merak ediyorsunuz?"],
-        "saat kaç": [dynamic_functions["saat kaç"]],
-        "bugün ayın kaçı": [dynamic_functions["bugün ayın kaçı"]],
-        "tarih ne": [dynamic_functions["tarih ne"]],
+        # Dinamik fonksiyonlar için anahtarlar burada olabilir, ama değerleri basit stringler olmalı
+        # kb_chatbot_response bu anahtarları DYNAMIC_FUNCTIONS_MAP ile eşleştirecek.
+        "saat kaç": ["Saat bilgisini sizin için alıyorum."],
+        "bugün ayın kaçı": ["Tarih bilgisini sizin için alıyorum."],
+        "tarih ne": ["Tarih bilgisini sizin için alıyorum."],
         "hava durumu": ["Üzgünüm, şu an için güncel hava durumu bilgisi sağlayamıyorum. Bunun için özel bir hava durumu servisine göz atabilirsiniz.", "Hava durumu servisim henüz aktif değil, ancak bu konuda bir geliştirme yapmayı planlıyorum!"]
     }
 
@@ -96,11 +99,9 @@ def load_knowledge_from_file(filename=KNOWLEDGE_BASE_FILE):
         if os.path.exists(filename):
             with open(filename, "r", encoding="utf-8") as f:
                 loaded_kb = json.load(f)
-            for key, value_list in loaded_kb.items():
-                if isinstance(value_list, list):
-                    for i, val_str in enumerate(value_list):
-                        if val_str == "<function>" and key in dynamic_functions:
-                            loaded_kb[key][i] = dynamic_functions[key]
+            # JSON'dan yüklenen KB'nin serileştirilebilir olduğundan emin ol.
+            # Eğer JSON'da "<function>" gibi özel işaretçiler varsa, bunlar string olarak kalmalı.
+            # kb_chatbot_response bunları yorumlayacak.
             knowledge_base_load_error = None
             return loaded_kb
         else:
@@ -113,38 +114,56 @@ def load_knowledge_from_file(filename=KNOWLEDGE_BASE_FILE):
         knowledge_base_load_error = f"Bilgi tabanı yüklenirken bilinmeyen bir hata oluştu: {e}. Varsayılan kullanılıyor."
         return default_knowledge
 
-KNOWLEDGE_BASE = load_knowledge_from_file()
-if knowledge_base_load_error: st.toast(knowledge_base_load_error, icon="⚠️")
 
-def kb_chatbot_response(query, knowledge):
+def kb_chatbot_response(query, knowledge_base_static_dict):
     query_lower = query.lower().strip()
-    if query_lower in knowledge:
-        response_options = knowledge[query_lower]
-        chosen_response = random.choice(response_options)
-        return chosen_response() if callable(chosen_response) else chosen_response
 
-    possible_responses = []
-    for key, responses in knowledge.items():
-        if key in query_lower:
-            for resp_opt in responses:
-                possible_responses.append(resp_opt() if callable(resp_opt) else resp_opt)
-    if possible_responses: return random.choice(list(set(possible_responses)))
+    # Öncelik 1: Sorgu doğrudan DYNAMIC_FUNCTIONS_MAP içinde bir anahtara mı karşılık geliyor?
+    if query_lower in DYNAMIC_FUNCTIONS_MAP:
+        return DYNAMIC_FUNCTIONS_MAP[query_lower]() # Fonksiyonu çağır ve sonucunu döndür
 
-    query_words = set(re.findall(r'\b\w{3,}\b', query_lower))
-    best_match_score = 0; best_responses_options = []
-    for key, responses in knowledge.items():
+    # Öncelik 2: Statik bilgi tabanında tam eşleşme var mı?
+    if query_lower in knowledge_base_static_dict:
+        response_options = knowledge_base_static_dict[query_lower]
+        # Yanıt seçeneklerinin string listesi olduğunu varsayıyoruz.
+        return random.choice(response_options)
+
+    # Öncelik 3: Statik bilgi tabanında kısmi anahtar eşleşmesi
+    possible_static_responses = []
+    for key, responses_list in knowledge_base_static_dict.items():
+        if key in query_lower: # Örn: "selamlar" içinde "selam" anahtarı
+            # Burada `key`'in DYNAMIC_FUNCTIONS_MAP içinde olup olmadığını tekrar kontrol etmeye gerek yok,
+            # çünkü o durum yukarıda halledildi.
+            if isinstance(responses_list, list):
+                possible_static_responses.extend(responses_list)
+            elif isinstance(responses_list, str): # Eğer tek bir string ise listeye ekle
+                 possible_static_responses.append(responses_list)
+
+    if possible_static_responses:
+        return random.choice(list(set(possible_static_responses))) # Tekrarları engelle
+
+    # Öncelik 4: Kelime bazlı eşleştirme (daha az öncelikli)
+    query_words = set(re.findall(r'\b\w{3,}\b', query_lower)) # Anlamlı kelimeler
+    best_match_score = 0
+    best_static_responses_options = []
+    for key, responses_list in knowledge_base_static_dict.items():
         key_words = set(re.findall(r'\b\w{3,}\b', key.lower()))
         if not key_words: continue
         common_words = query_words.intersection(key_words)
         score = len(common_words) / len(key_words) if len(key_words) > 0 else 0
-        if score > 0.6:
+        if score > 0.6: # Eşleşme oranı %60'dan fazlaysa iyi bir adaydır
+            current_options_to_add = responses_list if isinstance(responses_list, list) else [responses_list]
             if score > best_match_score:
-                best_match_score = score; best_responses_options = responses
-            elif score == best_match_score: best_responses_options.extend(responses)
-    if best_responses_options:
-        chosen_response = random.choice(list(set(best_responses_options)))
-        return chosen_response() if callable(chosen_response) else chosen_response
+                best_match_score = score
+                best_static_responses_options = current_options_to_add
+            elif score == best_match_score:
+                best_static_responses_options.extend(current_options_to_add)
+    
+    if best_static_responses_options:
+        return random.choice(list(set(best_static_responses_options))) # Tekrarları engelle
+
     return None
+
 
 # --- API Anahtarı ve Gemini Yapılandırması ---
 gemini_model = None
@@ -482,17 +501,15 @@ def log_feedback(message_unique_id: str, user_prompt_text: str, ai_response_text
 def get_hanogt_response_orchestrator(user_prompt_text: str, chat_history_for_model_processing: list[dict], current_message_unique_id: str, use_stream_output:bool = False) -> tuple[str | object, str]:
     ai_response_content = None; ai_sender_name = APP_NAME
 
-    kb_functional_response = kb_chatbot_response(user_prompt_text, KNOWLEDGE_BASE)
-    if kb_functional_response and callable(kb_functional_response):
-        try:
-            ai_response_content = kb_functional_response()
-            ai_sender_name = f"{APP_NAME} (Fonksiyonel)"
-            log_interaction(user_prompt_text, ai_response_content, ai_sender_name, current_message_unique_id)
-            return ai_response_content, ai_sender_name
-        except Exception as e_kb_func:
-            st.error(f"Bilgi tabanı fonksiyonel yanıtı işlenirken bir hata oluştu: {e_kb_func}")
-            ai_response_content = None
+    # Öncelik 1: Bilgi Tabanı (Dinamik fonksiyonlar ve statik içerik bir arada)
+    kb_response = kb_chatbot_response(user_prompt_text, KNOWLEDGE_BASE)
+    if kb_response:
+        source_detail = "Fonksiyonel" if user_prompt_text.lower() in DYNAMIC_FUNCTIONS_MAP else "Bilgi Tabanı"
+        ai_sender_name = f"{APP_NAME} ({source_detail})"
+        log_interaction(user_prompt_text, kb_response, ai_sender_name, current_message_unique_id)
+        return kb_response, ai_sender_name
 
+    # Öncelik 2: Gemini
     current_gemini_model = globals().get('gemini_model')
     if current_gemini_model:
         ai_response_content = get_gemini_response_cached(user_prompt_text, chat_history_for_model_processing, stream=use_stream_output)
@@ -502,16 +519,9 @@ def get_hanogt_response_orchestrator(user_prompt_text: str, chat_history_for_mod
                 ai_sender_name = f"{APP_NAME} (Gemini)"
                 log_interaction(user_prompt_text, str(ai_response_content), ai_sender_name, current_message_unique_id)
                 return str(ai_response_content), ai_sender_name
-            ai_response_content = None
+            ai_response_content = None # Hata durumu
 
-    if not ai_response_content:
-        st.toast("📚 Bilgi tabanı kontrol ediliyor...", icon="🗂️")
-        kb_static_response = kb_chatbot_response(user_prompt_text, KNOWLEDGE_BASE)
-        if kb_static_response and not callable(kb_static_response):
-            ai_response_content = kb_static_response; ai_sender_name = f"{APP_NAME} (Bilgi Tabanı)"
-            log_interaction(user_prompt_text, ai_response_content, ai_sender_name, current_message_unique_id)
-            return ai_response_content, ai_sender_name
-
+    # Öncelik 3: Web Arama (Eğer KB ve Gemini yanıt vermediyse)
     if not ai_response_content:
         if len(user_prompt_text.split()) > 2 and \
            ("?" in user_prompt_text or \
@@ -525,6 +535,7 @@ def get_hanogt_response_orchestrator(user_prompt_text: str, chat_history_for_mod
         else:
             st.toast("ℹ️ Kısa veya genel bir istem olduğu için web araması atlandı.", icon="⏩")
 
+    # Öncelik 4: Varsayılan Yanıt
     if not ai_response_content:
         st.toast("🤔 Üzgünüm, bu isteğiniz için uygun bir yanıt bulamadım.", icon="🤷")
         default_responses_list = [
@@ -659,17 +670,19 @@ def generate_prompt_influenced_image(prompt_text: str) -> Image.Image:
             ellipse_height_pixels = int(ellipse_size_wh_ratios[1] * height)
             draw_context.ellipse((shape_center_x - ellipse_width_pixels // 2, shape_center_y - ellipse_height_pixels // 2, shape_center_x + ellipse_width_pixels // 2, shape_center_y + ellipse_height_pixels // 2), fill=shape_color, outline=shape_outline_color)
 
-    if num_themes_applied == 0:
+    if num_themes_applied == 0: # Tema uygulanmadıysa rastgele şekiller
         for _ in range(random.randint(3, 6)):
+            # Bu for döngüsünün içindeki tüm satırlar (x1_coord, y1_coord, random_shape_fill_color, if/else) aynı girintide olmalı
             x1_coord = random.randint(0, width)
             y1_coord = random.randint(0, height)
             random_shape_fill_color = (random.randint(50, 250), random.randint(50, 250), random.randint(50, 250), random.randint(150, 220))
             
-            # Bu if/else bloğunun girintisi 'for' döngüsüne göre doğru olmalı
             if random.random() > 0.5:
+                # Bu blok if'in içinde, bir girinti daha içeride
                 random_radius = random.randint(25, 85)
                 draw_context.ellipse((x1_coord - random_radius, y1_coord - random_radius, x1_coord + random_radius, y1_coord + random_radius), fill=random_shape_fill_color)
             else:
+                # Bu blok else'in içinde, bir girinti daha içeride
                 random_rect_w, random_rect_h = random.randint(35, 125), random.randint(35, 125)
                 draw_context.rectangle((x1_coord - random_rect_w // 2, y1_coord - random_rect_h // 2, x1_coord + random_rect_w // 2, y1_coord + random_rect_h // 2), fill=random_shape_fill_color)
 
@@ -684,8 +697,6 @@ def generate_prompt_influenced_image(prompt_text: str) -> Image.Image:
         
         if not font_object_to_use:
             font_object_to_use = ImageFont.load_default()
-            # Varsayılan font kullanıldığında boyut farklı olabileceği için bir not düşülebilir
-            # st.toast(f"Varsayılan font kullanılıyor, metin boyutu istenen '{calculated_font_size}px' olmayabilir.", icon="ℹ️")
 
         text_to_display_on_image = prompt_text[:70]
         if hasattr(draw_context, 'textbbox'):
@@ -718,6 +729,14 @@ DEFAULT_SESSION_STATE_VALUES = {
 }
 for key_ss, default_val_ss in DEFAULT_SESSION_STATE_VALUES.items():
     if key_ss not in st.session_state: st.session_state[key_ss] = default_val_ss
+
+# KNOWLEDGE_BASE'i session state'deki kullanıcı adını kullanarak yükle (eğer selamlamada kullanılacaksa)
+# Bu, load_knowledge_from_file'ın @st.cache_data ile düzgün çalışması için önemli.
+# Fonksiyon argümanları değişirse cache yenilenir.
+current_user_name_for_kb = st.session_state.get('user_name', "kullanıcı")
+KNOWLEDGE_BASE = load_knowledge_from_file(user_name_for_greeting=current_user_name_for_kb)
+if knowledge_base_load_error: st.toast(knowledge_base_load_error, icon="⚠️")
+
 
 if 'models_initialized' not in st.session_state:
     gemini_model = initialize_gemini_model()
@@ -753,6 +772,10 @@ def display_sidebar_content():
             new_user_name = st.text_input("Adınızı Değiştirin:", value=st.session_state.user_name, key="change_name_sidebar_input")
             if new_user_name != st.session_state.user_name and new_user_name.strip():
                 st.session_state.user_name = new_user_name.strip()
+                # KNOWLEDGE_BASE'i yeni kullanıcı adıyla güncellemek için cache'i temizle ve yeniden yükle
+                load_knowledge_from_file.clear() # Cache'i temizle
+                global KNOWLEDGE_BASE # Global KNOWLEDGE_BASE'i güncelle
+                KNOWLEDGE_BASE = load_knowledge_from_file(user_name_for_greeting=st.session_state.user_name)
                 st.toast("Adınız başarıyla güncellendi!", icon="✏️"); st.rerun()
 
             uploaded_avatar_file = st.file_uploader("Yeni Avatar Yükle (PNG, JPG - Maks 2MB):", type=["png", "jpg", "jpeg"], key="avatar_uploader_sidebar_file")
@@ -768,8 +791,8 @@ def display_sidebar_content():
                 st.toast("Avatarınız kaldırıldı.", icon="🗑️"); st.rerun()
             st.caption("Avatarınız sadece bu tarayıcı oturumunda saklanır.")
 
-        current_tts_engine = globals().get('tts_engine')
-        st.session_state.tts_enabled = st.toggle("Metin Okuma (TTS) Aktif", value=st.session_state.tts_enabled, disabled=not current_tts_engine, help="AI yanıtlarının sesli okunmasını açar veya kapatır.")
+        current_tts_engine_sidebar = globals().get('tts_engine')
+        st.session_state.tts_enabled = st.toggle("Metin Okuma (TTS) Aktif", value=st.session_state.tts_enabled, disabled=not current_tts_engine_sidebar, help="AI yanıtlarının sesli okunmasını açar veya kapatır.")
         st.session_state.gemini_stream_enabled = st.toggle("Gemini Yanıt Akışını Etkinleştir", value=st.session_state.gemini_stream_enabled, help="Yanıtların kelime kelime gelmesini sağlar (daha hızlı ilk tepki).")
 
         with st.expander("🤖 Gemini Gelişmiş Yapılandırma", expanded=False):
@@ -800,7 +823,7 @@ def display_sidebar_content():
             else:
                 st.toast("Sohbet geçmişi zaten boş.", icon="ℹ️")
 
-        with st.expander("ℹ️ Uygulama Hakkında", expanded=True): # Başlangıçta açık olsun
+        with st.expander("ℹ️ Uygulama Hakkında", expanded=True):
             st.markdown(f"""
             **{APP_NAME} v{APP_VERSION}**
             Yapay zeka destekli kişisel sohbet asistanınız.
@@ -829,11 +852,11 @@ def display_chat_message_with_feedback(sender_name: str, message_text_content: s
             code_block_parts = message_text_content.split("```")
             for i, part_text in enumerate(code_block_parts):
                 if i % 2 == 1:
-                    language_match = re.match(r"(\w+)\n", part_text)
+                    language_match = re.match(r"(\w*)\n", part_text) # Dil etiketi boş olabilir
                     code_language = language_match.group(1) if language_match else None
                     actual_code_content = part_text[len(code_language)+1:] if code_language and part_text.startswith(code_language+"\n") else part_text
                     
-                    st.code(actual_code_content, language=code_language)
+                    st.code(actual_code_content, language=code_language if code_language else None) # language None olabilir
                     if st.button("📋 Kopyala", key=f"copy_code_btn_{message_unique_index}_{i}", help="Bu kod bloğunu panoya kopyala"):
                         st.write_to_clipboard(actual_code_content)
                         st.toast("Kod başarıyla panoya kopyalandı!", icon="✅")
@@ -848,8 +871,8 @@ def display_chat_message_with_feedback(sender_name: str, message_text_content: s
             with action_cols[0]:
                 st.caption(f"Kaynak: {ai_response_source_name}")
             with action_cols[1]:
-                current_tts_engine = globals().get('tts_engine')
-                if st.session_state.tts_enabled and current_tts_engine and message_text_content:
+                current_tts_engine_chat = globals().get('tts_engine')
+                if st.session_state.tts_enabled and current_tts_engine_chat and message_text_content:
                     if st.button("🔊", key=f"speak_msg_btn_chat_{message_unique_index}", help="Bu mesajı sesli oku", use_container_width=True):
                         speak(message_text_content)
             with action_cols[2]:
@@ -924,7 +947,7 @@ def display_chat_interface_main():
         with st.chat_message("assistant", avatar="⏳"):
             thinking_placeholder = st.empty()
             thinking_placeholder.markdown("🧠 _Düşünüyorum... Lütfen bekleyin..._")
-            time.sleep(0.05) # Placeholder'ın görünmesi için çok kısa bekleme
+            time.sleep(0.05)
 
         ai_response_data, ai_sender_identity = get_hanogt_response_orchestrator(
             user_new_prompt,
@@ -989,6 +1012,9 @@ if not st.session_state.show_main_app:
                     st.session_state.user_name = user_name_input.strip()
                     st.session_state.show_main_app = True
                     st.session_state.greeting_message_shown = False
+                    # KNOWLEDGE_BASE'i yeni kullanıcı adıyla güncellemek için cache'i temizle ve yeniden yükle
+                    load_knowledge_from_file.clear() # Cache'i temizle
+                    KNOWLEDGE_BASE = load_knowledge_from_file(user_name_for_greeting=st.session_state.user_name) # global KB'yi güncelle
                     st.rerun()
                 else:
                     st.error("Lütfen geçerli bir isim veya takma ad girin.")
