@@ -3,7 +3,7 @@
 # --- Gerekli Kütüphaneler ---
 import streamlit as st
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup # lxml parser için pip install lxml de gerekebilir
 import wikipedia
 import speech_recognition as sr
 import pyttsx3
@@ -18,7 +18,7 @@ from duckduckgo_search import DDGS
 from urllib.parse import urlparse, unquote
 import google.generativeai as genai
 from datetime import datetime
-import uuid
+import uuid # Daha benzersiz ID'ler için
 
 # tiktoken kütüphanesi (isteğe bağlı, token sayımı için)
 # try:
@@ -30,7 +30,7 @@ import uuid
 
 try:
     from supabase import create_client, Client
-    from postgrest import APIError as SupabaseAPIError
+    from postgrest import APIError as SupabaseAPIError # Supabase özel hataları için
 except ImportError:
     st.warning(
         "Supabase veya postgrest kütüphanesi bulunamadı. `requirements.txt` dosyanızı kontrol edin.",
@@ -38,21 +38,21 @@ except ImportError:
     )
     create_client = None
     Client = None
-    SupabaseAPIError = None
+    SupabaseAPIError = None # Tanımlı değilse None yapalım
 
 # --- Sayfa Yapılandırması ---
 st.set_page_config(
     page_title="Hanogt AI Pro+",
-    page_icon="🌟", # Güncelledim
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_icon="🌟",
+    layout="wide", # Geniş layout kullanmaya devam ediyoruz, kolonlarla böleceğiz
+    initial_sidebar_state="collapsed" # Sidebar artık kullanılmayacak ama ayarı dursun
 )
 
 # --- Sabitler ve Yapılandırma ---
 APP_NAME = "Hanogt AI"
-APP_VERSION = "4.8.1 Pro+" # Sürüm güncellendi (hata düzeltmesi)
+APP_VERSION = "4.9.0 Pro+ Mod" # Sürüm güncellendi (UI ve Chat History)
 CURRENT_YEAR = datetime.now().year
-CHAT_HISTORY_FILE = "chat_history.json"
+CHAT_HISTORY_FILE = "chat_history_v2.json" # Yeni format için dosya adı
 KNOWLEDGE_BASE_FILE = "knowledge_base.json"
 DEFAULT_ERROR_MESSAGE = "Üzgünüm, bir şeyler ters gitti. Lütfen biraz sonra tekrar deneyin."
 REQUEST_TIMEOUT = 18
@@ -64,7 +64,6 @@ SUPABASE_TABLE_FEEDBACK = "user_feedback"
 FONT_FILE = "arial.ttf"
 
 # --- Dinamik Fonksiyonlar (Global) ---
-# Bu fonksiyonlar KNOWLEDGE_BASE'e doğrudan eklenmeyecek, kb_chatbot_response tarafından çağrılacak.
 DYNAMIC_FUNCTIONS_MAP = {
     "saat kaç": lambda: f"Şu an saat: {datetime.now().strftime('%H:%M:%S')}",
     "bugün ayın kaçı": lambda: f"Bugün {datetime.now().strftime('%d %B %Y, %A')}",
@@ -74,10 +73,9 @@ DYNAMIC_FUNCTIONS_MAP = {
 # --- Bilgi Tabanı ---
 knowledge_base_load_error = None
 
-@st.cache_data(ttl=3600) # Bilgi tabanını 1 saat cache'le
+@st.cache_data(ttl=3600)
 def load_knowledge_from_file(filename=KNOWLEDGE_BASE_FILE, user_name_for_greeting="kullanıcı"):
     global knowledge_base_load_error
-    # Varsayılan bilgi tabanı (sadece string ve list of strings içermeli)
     default_knowledge = {
         "merhaba": ["Merhaba!", "Selam!", "Hoş geldin!", f"Size nasıl yardımcı olabilirim, {user_name_for_greeting}?"],
         "selam": ["Merhaba!", "Selam sana da!", "Nasıl gidiyor?"],
@@ -87,8 +85,6 @@ def load_knowledge_from_file(filename=KNOWLEDGE_BASE_FILE, user_name_for_greetin
         "görüşürüz": ["Görüşmek üzere!", "Hoşça kal!", "İyi günler dilerim!", "Tekrar beklerim!"],
         "adın ne": [f"Ben {APP_NAME}, versiyon {APP_VERSION}.", f"Bana {APP_NAME} diyebilirsiniz."],
         "ne yapabilirsin": ["Sorularınızı yanıtlayabilir, metin özetleyebilir, web'de arama yapabilir, yaratıcı metinler üretebilir ve basit görseller çizebilirim.", "Size çeşitli konularda yardımcı olabilirim. Ne merak ediyorsunuz?"],
-        # Dinamik fonksiyonlar için anahtarlar burada olabilir, ama değerleri basit stringler olmalı
-        # kb_chatbot_response bu anahtarları DYNAMIC_FUNCTIONS_MAP ile eşleştirecek.
         "saat kaç": ["Saat bilgisini sizin için alıyorum."],
         "bugün ayın kaçı": ["Tarih bilgisini sizin için alıyorum."],
         "tarih ne": ["Tarih bilgisini sizin için alıyorum."],
@@ -99,9 +95,6 @@ def load_knowledge_from_file(filename=KNOWLEDGE_BASE_FILE, user_name_for_greetin
         if os.path.exists(filename):
             with open(filename, "r", encoding="utf-8") as f:
                 loaded_kb = json.load(f)
-            # JSON'dan yüklenen KB'nin serileştirilebilir olduğundan emin ol.
-            # Eğer JSON'da "<function>" gibi özel işaretçiler varsa, bunlar string olarak kalmalı.
-            # kb_chatbot_response bunları yorumlayacak.
             knowledge_base_load_error = None
             return loaded_kb
         else:
@@ -117,33 +110,23 @@ def load_knowledge_from_file(filename=KNOWLEDGE_BASE_FILE, user_name_for_greetin
 
 def kb_chatbot_response(query, knowledge_base_static_dict):
     query_lower = query.lower().strip()
-
-    # Öncelik 1: Sorgu doğrudan DYNAMIC_FUNCTIONS_MAP içinde bir anahtara mı karşılık geliyor?
     if query_lower in DYNAMIC_FUNCTIONS_MAP:
-        return DYNAMIC_FUNCTIONS_MAP[query_lower]() # Fonksiyonu çağır ve sonucunu döndür
-
-    # Öncelik 2: Statik bilgi tabanında tam eşleşme var mı?
+        return DYNAMIC_FUNCTIONS_MAP[query_lower]()
     if query_lower in knowledge_base_static_dict:
         response_options = knowledge_base_static_dict[query_lower]
-        # Yanıt seçeneklerinin string listesi olduğunu varsayıyoruz.
         return random.choice(response_options)
 
-    # Öncelik 3: Statik bilgi tabanında kısmi anahtar eşleşmesi
     possible_static_responses = []
     for key, responses_list in knowledge_base_static_dict.items():
-        if key in query_lower: # Örn: "selamlar" içinde "selam" anahtarı
-            # Burada `key`'in DYNAMIC_FUNCTIONS_MAP içinde olup olmadığını tekrar kontrol etmeye gerek yok,
-            # çünkü o durum yukarıda halledildi.
+        if key in query_lower:
             if isinstance(responses_list, list):
                 possible_static_responses.extend(responses_list)
-            elif isinstance(responses_list, str): # Eğer tek bir string ise listeye ekle
+            elif isinstance(responses_list, str):
                  possible_static_responses.append(responses_list)
-
     if possible_static_responses:
-        return random.choice(list(set(possible_static_responses))) # Tekrarları engelle
+        return random.choice(list(set(possible_static_responses)))
 
-    # Öncelik 4: Kelime bazlı eşleştirme (daha az öncelikli)
-    query_words = set(re.findall(r'\b\w{3,}\b', query_lower)) # Anlamlı kelimeler
+    query_words = set(re.findall(r'\b\w{3,}\b', query_lower))
     best_match_score = 0
     best_static_responses_options = []
     for key, responses_list in knowledge_base_static_dict.items():
@@ -151,19 +134,16 @@ def kb_chatbot_response(query, knowledge_base_static_dict):
         if not key_words: continue
         common_words = query_words.intersection(key_words)
         score = len(common_words) / len(key_words) if len(key_words) > 0 else 0
-        if score > 0.6: # Eşleşme oranı %60'dan fazlaysa iyi bir adaydır
+        if score > 0.6:
             current_options_to_add = responses_list if isinstance(responses_list, list) else [responses_list]
             if score > best_match_score:
                 best_match_score = score
                 best_static_responses_options = current_options_to_add
             elif score == best_match_score:
                 best_static_responses_options.extend(current_options_to_add)
-    
     if best_static_responses_options:
-        return random.choice(list(set(best_static_responses_options))) # Tekrarları engelle
-
+        return random.choice(list(set(best_static_responses_options)))
     return None
-
 
 # --- API Anahtarı ve Gemini Yapılandırması ---
 gemini_model = None
@@ -320,7 +300,7 @@ def scrape_url_content(url: str, timeout: int = REQUEST_TIMEOUT, max_chars: int 
                 if len(" ".join(temp_content_list)) > 500:
                     potential_content_parts = temp_content_list
                     content_found_flag = True; break
-        
+
         if not content_found_flag:
             body_text_content = _clean_text(soup.body.get_text(separator=' ', strip=True) if soup.body else "")
             if len(body_text_content) > 300:
@@ -390,33 +370,59 @@ def search_web(query: str) -> str | None:
 
     st.toast(f"'{query}' için web'de kapsamlı bir yanıt bulunamadı.", icon="❌"); return None
 
-@st.cache_data(ttl=86400)
-def load_chat_history_cached(file_path: str = CHAT_HISTORY_FILE) -> list:
+@st.cache_data(ttl=86400) # Cache süresini artırabiliriz
+def load_all_chats_cached(file_path: str = CHAT_HISTORY_FILE) -> dict:
+    """Tüm sohbet geçmişlerini içeren sözlüğü dosyadan yükler."""
     if os.path.exists(file_path):
         try:
-            with open(file_path, "r", encoding="utf-8") as f: content_read = f.read()
-            if content_read and content_read.strip(): return json.loads(content_read)
-            else: return []
+            with open(file_path, "r", encoding="utf-8") as f:
+                content_read = f.read()
+            if content_read and content_read.strip():
+                data = json.loads(content_read)
+                if isinstance(data, dict):
+                    # Anahtarların string olduğundan emin olalım (JSON bazen int yapabilir)
+                    return {str(k): v for k, v in data.items()}
+                else:
+                    # Eski format (liste) ise, yeni formata dönüştür veya boş başlat
+                    st.warning(f"Eski sohbet geçmişi formatı ({file_path}) algılandı. Yeni yapıya geçiliyor. Eski sohbetler şu an gösterilmeyecek.", icon="⚠️")
+                    return {}
+            else:
+                return {}
         except json.JSONDecodeError:
             st.error(f"Sohbet geçmişi dosyası ({file_path}) bozuk veya hatalı formatta. Yeni bir geçmiş başlatılıyor.")
-            try: os.rename(file_path, f"{file_path}.backup_{int(time.time())}")
-            except OSError: pass
-            return []
+            try:
+                os.rename(file_path, f"{file_path}.backup_{int(time.time())}")
+            except OSError:
+                pass
+            return {}
         except Exception as e_load_hist:
-            st.error(f"Sohbet geçmişi dosyası ({file_path}) yüklenirken bir hata oluştu: {e_load_hist}"); return []
-    return []
+            st.error(f"Sohbet geçmişi dosyası ({file_path}) yüklenirken bir hata oluştu: {e_load_hist}")
+            return {}
+    return {} # Dosya yoksa boş sözlük döndür
 
-def save_chat_history(history_to_save: list, file_path: str = CHAT_HISTORY_FILE):
+def save_all_chats(all_chats_dict: dict, file_path: str = CHAT_HISTORY_FILE):
+    """Tüm sohbet geçmişlerini içeren sözlüğü dosyaya kaydeder."""
     try:
         with open(file_path, "w", encoding="utf-8") as f_save:
-            json.dump(history_to_save, f_save, ensure_ascii=False, indent=2)
-    except Exception as e_save_hist: st.error(f"Sohbet geçmişi kaydedilemedi: {e_save_hist}")
+            json.dump(all_chats_dict, f_save, ensure_ascii=False, indent=2)
+    except Exception as e_save_hist:
+        st.error(f"Sohbet geçmişi kaydedilemedi: {e_save_hist}")
 
 def get_gemini_response_cached(prompt_text: str, chat_history_for_gemini_model: list[dict], stream_output: bool = False) -> str | object:
     current_gemini_model = globals().get('gemini_model')
     if not current_gemini_model: return f"{GEMINI_ERROR_PREFIX} Gemini modeli aktif değil veya başlatılamadı."
     try:
-        chat_session = current_gemini_model.start_chat(history=chat_history_for_gemini_model)
+        # Önemli: Gemini'ye gönderilecek history formatının doğru olduğundan emin olalım
+        formatted_history_for_api = []
+        for msg in chat_history_for_gemini_model:
+             # 'parts' değerinin her zaman bir liste içinde string olduğundan emin ol
+             if isinstance(msg.get('parts'), list) and msg['parts'] and isinstance(msg['parts'][0], str):
+                 formatted_history_for_api.append(msg)
+             elif isinstance(msg.get('parts'), str): # Eğer string ise listeye çevir
+                 formatted_history_for_api.append({'role': msg.get('role'), 'parts': [msg.get('parts')]})
+             # else: Geçersiz formatı atla veya logla
+
+        chat_session = current_gemini_model.start_chat(history=formatted_history_for_api) # Düzeltilmiş history ile başlat
         response_from_gemini = chat_session.send_message(prompt_text, stream=stream_output)
 
         if stream_output: return response_from_gemini
@@ -449,7 +455,10 @@ def get_gemini_response_cached(prompt_text: str, chat_history_for_gemini_model: 
         if "API key not valid" in str(e_gemini_api).lower(): return f"{GEMINI_ERROR_PREFIX} Google API Anahtarı geçersiz veya hatalı."
         elif "Deadline Exceeded" in str(e_gemini_api).lower() or "504" in str(e_gemini_api).lower() or "timeout" in str(e_gemini_api).lower():
             return f"{GEMINI_ERROR_PREFIX} API isteği zaman aşımına uğradı. Lütfen tekrar deneyin."
+        # Hata mesajını daha detaylı loglama veya kullanıcıya gösterme
+        print(f"ERROR: Gemini API Exception: {type(e_gemini_api).__name__} - {e_gemini_api}") # Loglama için
         return f"{GEMINI_ERROR_PREFIX} API ile iletişim kurulamadı: {str(e_gemini_api)[:150]}..."
+
 
 def log_to_supabase(table_name: str, data_to_log: dict):
     current_supabase_client = globals().get('supabase')
@@ -479,11 +488,12 @@ def log_to_supabase(table_name: str, data_to_log: dict):
         st.error(f"Supabase '{table_name}' tablosuna loglama sırasında kritik bir hata oluştu! Detay: {type(e_supabase_log).__name__}: {e_supabase_log}")
         return False
 
-def log_interaction(user_prompt_text: str, ai_response_text: str, response_source_info: str, message_unique_id: str):
+def log_interaction(user_prompt_text: str, ai_response_text: str, response_source_info: str, message_unique_id: str, active_chat_id: str):
     interaction_log_data = {
         "user_prompt": user_prompt_text, "ai_response": ai_response_text, "response_source": response_source_info,
         "user_name": st.session_state.get('user_name', 'Bilinmiyor'),
-        "session_id": _get_session_id(), "app_version": APP_VERSION, "message_id": message_unique_id
+        "session_id": _get_session_id(), "app_version": APP_VERSION, "message_id": message_unique_id,
+        "chat_id": active_chat_id # Hangi sohbete ait olduğunu logla
     }
     return log_to_supabase(SUPABASE_TABLE_LOGS, interaction_log_data)
 
@@ -492,36 +502,40 @@ def log_feedback(message_unique_id: str, user_prompt_text: str, ai_response_text
         "message_id": message_unique_id, "user_prompt": user_prompt_text, "ai_response": ai_response_text,
         "feedback_type": feedback_category, "comment": user_comment,
         "user_name": st.session_state.get('user_name', 'Bilinmiyor'),
-        "session_id": _get_session_id(), "app_version": APP_VERSION
+        "session_id": _get_session_id(), "app_version": APP_VERSION,
+        "chat_id": st.session_state.get('active_chat_id', 'N/A') # Hangi sohbetle ilgili olduğunu logla
     }
     if log_to_supabase(SUPABASE_TABLE_FEEDBACK, feedback_log_data):
         st.toast(f"Geri bildiriminiz için teşekkür ederiz!", icon="💌"); return True
     else: st.toast(f"Üzgünüz, geri bildiriminiz gönderilemedi. Lütfen daha sonra tekrar deneyin.", icon="😔"); return False
 
-def get_hanogt_response_orchestrator(user_prompt_text: str, chat_history_for_model_processing: list[dict], current_message_unique_id: str, use_stream_output:bool = False) -> tuple[str | object, str]:
+def get_hanogt_response_orchestrator(user_prompt_text: str, chat_history_for_model_processing: list[dict], current_message_unique_id: str, active_chat_id: str, use_stream_output:bool = False) -> tuple[str | object, str]:
     ai_response_content = None; ai_sender_name = APP_NAME
 
-    # Öncelik 1: Bilgi Tabanı (Dinamik fonksiyonlar ve statik içerik bir arada)
     kb_response = kb_chatbot_response(user_prompt_text, KNOWLEDGE_BASE)
     if kb_response:
         source_detail = "Fonksiyonel" if user_prompt_text.lower() in DYNAMIC_FUNCTIONS_MAP else "Bilgi Tabanı"
         ai_sender_name = f"{APP_NAME} ({source_detail})"
-        log_interaction(user_prompt_text, kb_response, ai_sender_name, current_message_unique_id)
+        log_interaction(user_prompt_text, kb_response, ai_sender_name, current_message_unique_id, active_chat_id)
         return kb_response, ai_sender_name
 
-    # Öncelik 2: Gemini
     current_gemini_model = globals().get('gemini_model')
     if current_gemini_model:
-        ai_response_content = get_gemini_response_cached(user_prompt_text, chat_history_for_model_processing, stream=use_stream_output)
+        # Gemini'ye gönderilecek geçmişi hazırla
+        gemini_formatted_chat_history = [{'role': ("user" if sender.startswith("Sen") else "model"), 'parts': message}
+                                         for sender, message in chat_history_for_model_processing]
+
+        ai_response_content = get_gemini_response_cached(user_prompt_text, gemini_formatted_chat_history, stream=use_stream_output)
+
         if ai_response_content:
             if use_stream_output: return ai_response_content, f"{APP_NAME} (Gemini Stream)"
             elif not (isinstance(ai_response_content, str) and ai_response_content.startswith(GEMINI_ERROR_PREFIX)):
                 ai_sender_name = f"{APP_NAME} (Gemini)"
-                log_interaction(user_prompt_text, str(ai_response_content), ai_sender_name, current_message_unique_id)
+                log_interaction(user_prompt_text, str(ai_response_content), ai_sender_name, current_message_unique_id, active_chat_id)
                 return str(ai_response_content), ai_sender_name
-            ai_response_content = None # Hata durumu
+            # Hata durumu veya boş yanıt, response'u sıfırla ki diğer yöntemler denensin
+            ai_response_content = None
 
-    # Öncelik 3: Web Arama (Eğer KB ve Gemini yanıt vermediyse)
     if not ai_response_content:
         if len(user_prompt_text.split()) > 2 and \
            ("?" in user_prompt_text or \
@@ -530,12 +544,11 @@ def get_hanogt_response_orchestrator(user_prompt_text: str, chat_history_for_mod
             web_search_response = search_web(user_prompt_text)
             if web_search_response:
                 ai_response_content = web_search_response; ai_sender_name = f"{APP_NAME} (Web Arama)"
-                log_interaction(user_prompt_text, ai_response_content, ai_sender_name, current_message_unique_id)
+                log_interaction(user_prompt_text, ai_response_content, ai_sender_name, current_message_unique_id, active_chat_id)
                 return ai_response_content, ai_sender_name
         else:
             st.toast("ℹ️ Kısa veya genel bir istem olduğu için web araması atlandı.", icon="⏩")
 
-    # Öncelik 4: Varsayılan Yanıt
     if not ai_response_content:
         st.toast("🤔 Üzgünüm, bu isteğiniz için uygun bir yanıt bulamadım.", icon="🤷")
         default_responses_list = [
@@ -545,7 +558,7 @@ def get_hanogt_response_orchestrator(user_prompt_text: str, chat_history_for_mod
             "Yanıt veremiyorum ama her geçen gün yeni şeyler öğrenmeye devam ediyorum! Başka bir sorunuz var mı?",
         ]
         ai_response_content = random.choice(default_responses_list); ai_sender_name = f"{APP_NAME} (Varsayılan)"
-        log_interaction(user_prompt_text, ai_response_content, ai_sender_name, current_message_unique_id)
+        log_interaction(user_prompt_text, ai_response_content, ai_sender_name, current_message_unique_id, active_chat_id)
 
     return ai_response_content, ai_sender_name
 
@@ -572,10 +585,10 @@ def generate_new_idea_creative(seed_prompt_text: str, style:str = "genel") -> st
     elements_list = ["zaman kristalleri", "psişik ormanlar", "rüya mimarisi eserleri", "kuantum köpüğü okyanusları", "gölge enerjisi dansı", "yankılanan anıların fısıltısı", "kayıp yıldız haritalarının rehberliği", "fraktal düşünce kalıpları", "kozmik senfoninin yankıları", "unutulmuş kehanetlerin gizemi", "eterik varlıkların şarkıları"]
     actions_list = ["dokur", "çözer", "yansıtır", "inşa eder", "fısıldar", "dönüştürür", "keşfeder", "haritalarını çizer", "ile bağlantı kurar", "çağırır", "şekillendirir"]
     outcomes_list = ["kaderin gizli ipliklerini", "varoluşun unutulmuş kodunu", "bilincin en derin sınırlarını", "kayıp uygarlıkların kadim sırlarını", "evrenin ebedi melodisini", "gerçekliğin çok boyutlu dokusunu", "saklı kalmış sonsuz potansiyelleri", "yepyeni bir çağın şafağını", "ruhun aydınlanma yolculuğunu"]
-    
+
     prompt_words = re.findall(r'\b\w{3,}\b', seed_prompt_text.lower())
     seed_elements_for_idea = random.sample(prompt_words, k=min(len(prompt_words), 2)) if prompt_words else ["gizemli", "bir ışık"]
-    
+
     if style == "şiirsel":
         return f"{random.choice(elements_list).capitalize()} arasında süzülürken, {seed_elements_for_idea[0]} fısıldar usulca, {random.choice(outcomes_list)}."
     elif style == "hikaye":
@@ -589,7 +602,7 @@ def advanced_word_generator(base_word_input: str) -> str:
     if not cleaned_base_word: return "SözcükMimarUzmanı"
     prefixes_list = ["bio", "krono", "psiko", "tera", "neo", "mega", "nano", "astro", "poli", "eko", "meta", "trans", "ultra", "omni", "xeno", "kripto", "holo"]
     suffixes_list = ["genez", "sfer", "nomi", "tek", "loji", "tronik", "morf", "vers", "dinamik", "matik", "kinezis", "skop", "grafi", "mant", "krom", "faz", "sentez"]
-    
+
     if len(cleaned_base_word) > 3 and random.random() < 0.75:
         start_index = random.randint(0, max(0, len(cleaned_base_word) - 3))
         core_word_part = cleaned_base_word[start_index : start_index + random.randint(2,4)]
@@ -597,11 +610,11 @@ def advanced_word_generator(base_word_input: str) -> str:
         core_length = random.randint(3, 5)
         core_chars_list = [random.choice(consonants_set if random.random() > 0.4 else vowels_set) for _ in range(core_length)]
         core_word_part = "".join(core_chars_list)
-    
+
     new_generated_word = core_word_part
     if random.random() > 0.4: new_generated_word = random.choice(prefixes_list) + new_generated_word
     if random.random() > 0.4: new_generated_word += random.choice(suffixes_list)
-    
+
     return new_generated_word.capitalize() if len(new_generated_word) > 1 else new_generated_word
 
 def generate_prompt_influenced_image(prompt_text: str) -> Image.Image:
@@ -670,19 +683,16 @@ def generate_prompt_influenced_image(prompt_text: str) -> Image.Image:
             ellipse_height_pixels = int(ellipse_size_wh_ratios[1] * height)
             draw_context.ellipse((shape_center_x - ellipse_width_pixels // 2, shape_center_y - ellipse_height_pixels // 2, shape_center_x + ellipse_width_pixels // 2, shape_center_y + ellipse_height_pixels // 2), fill=shape_color, outline=shape_outline_color)
 
-    if num_themes_applied == 0: # Tema uygulanmadıysa rastgele şekiller
+    if num_themes_applied == 0:
         for _ in range(random.randint(3, 6)):
-            # Bu for döngüsünün içindeki tüm satırlar (x1_coord, y1_coord, random_shape_fill_color, if/else) aynı girintide olmalı
             x1_coord = random.randint(0, width)
             y1_coord = random.randint(0, height)
             random_shape_fill_color = (random.randint(50, 250), random.randint(50, 250), random.randint(50, 250), random.randint(150, 220))
-            
+
             if random.random() > 0.5:
-                # Bu blok if'in içinde, bir girinti daha içeride
                 random_radius = random.randint(25, 85)
                 draw_context.ellipse((x1_coord - random_radius, y1_coord - random_radius, x1_coord + random_radius, y1_coord + random_radius), fill=random_shape_fill_color)
             else:
-                # Bu blok else'in içinde, bir girinti daha içeride
                 random_rect_w, random_rect_h = random.randint(35, 125), random.randint(35, 125)
                 draw_context.rectangle((x1_coord - random_rect_w // 2, y1_coord - random_rect_h // 2, x1_coord + random_rect_w // 2, y1_coord + random_rect_h // 2), fill=random_shape_fill_color)
 
@@ -692,11 +702,13 @@ def generate_prompt_influenced_image(prompt_text: str) -> Image.Image:
         if os.path.exists(FONT_FILE):
             try:
                 font_object_to_use = ImageFont.truetype(FONT_FILE, calculated_font_size)
-            except IOError:
-                st.toast(f"Font dosyası '{FONT_FILE}' yüklenemedi. Varsayılan font kullanılacak.", icon="⚠️")
-        
-        if not font_object_to_use:
-            font_object_to_use = ImageFont.load_default()
+            except IOError: # Font dosyası var ama Pillow yükleyemiyorsa
+                st.toast(f"Belirtilen font dosyası '{FONT_FILE}' yüklenemedi veya bozuk. Pillow varsayılan fontu kullanılacak.", icon="⚠️")
+
+        if not font_object_to_use: # Özel font yüklenemedi VEYA FONT_FILE hiç yoktu
+            if FONT_FILE and not os.path.exists(FONT_FILE): # Eğer FONT_FILE tanımlı ama diskte yoksa ayrı bir uyarı
+                 st.toast(f"Font dosyası '{FONT_FILE}' bulunamadı. Pillow varsayılan fontu kullanılacak.", icon="⚠️")
+            font_object_to_use = ImageFont.load_default() # Pillow 10+ 'size' argümanı almaz, varsayılan boyutunda yükler
 
         text_to_display_on_image = prompt_text[:70]
         if hasattr(draw_context, 'textbbox'):
@@ -717,112 +729,190 @@ def generate_prompt_influenced_image(prompt_text: str) -> Image.Image:
 
 # --- Session State Başlatma ---
 DEFAULT_SESSION_STATE_VALUES = {
-    'chat_history': [], 'app_mode': "Yazılı Sohbet", 'user_name': None,
-    'user_avatar_bytes': None, 'show_main_app': False, 'greeting_message_shown': False,
-    'tts_enabled': True, 'theme': "Light",
-    'gemini_stream_enabled': True, 'gemini_temperature': 0.7, 'gemini_top_p': 0.95,
-    'gemini_top_k': 40, 'gemini_max_tokens': 4096, 'gemini_model_name': 'gemini-1.5-flash-latest',
-    'message_id_counter': 0, 'last_ai_response_for_feedback': None,
-    'last_user_prompt_for_feedback': None, 'current_message_id_for_feedback': None,
-    'feedback_comment_input': "", 'show_feedback_comment_form': False,
-    'session_id': str(uuid.uuid4())
+    # 'chat_history': [], # Bu artık kullanılmıyor
+    'all_chats': {}, # Tüm sohbetleri {chat_id: [{'role': 'user'/'model', 'parts': 'message'}, ...], ...} formatında saklar
+    'active_chat_id': None, # Şu an aktif olan sohbetin ID'si
+    'next_chat_id_counter': 0, # Yeni sohbet ID'leri için sayaç
+    'app_mode': "Yazılı Sohbet",
+    'user_name': None,
+    'user_avatar_bytes': None,
+    'show_main_app': False,
+    'greeting_message_shown': False,
+    'tts_enabled': True,
+    'theme': "Light", # Tema ayarı (şu an UI'da yok ama ileride eklenebilir)
+    'gemini_stream_enabled': True,
+    'gemini_temperature': 0.7,
+    'gemini_top_p': 0.95,
+    'gemini_top_k': 40,
+    'gemini_max_tokens': 4096,
+    'gemini_model_name': 'gemini-1.5-flash-latest',
+    'message_id_counter': 0, # Genel mesaj sayacı (loglama/unique id için)
+    'last_ai_response_for_feedback': None,
+    'last_user_prompt_for_feedback': None,
+    'current_message_id_for_feedback': None, # Geri bildirim verilen mesajın ID'si (örn: "chat_12")
+    'current_message_index_for_feedback': None, # Geri bildirim verilen mesajın *aktif sohbet listesindeki* index'i
+    'feedback_comment_input': "",
+    'show_feedback_comment_form': False,
+    'session_id': str(uuid.uuid4()),
+    'last_feedback_type': 'positive' # Son seçimi hatırlamak için
 }
 for key_ss, default_val_ss in DEFAULT_SESSION_STATE_VALUES.items():
     if key_ss not in st.session_state: st.session_state[key_ss] = default_val_ss
 
-# KNOWLEDGE_BASE'i session state'deki kullanıcı adını kullanarak yükle (eğer selamlamada kullanılacaksa)
-# Bu, load_knowledge_from_file'ın @st.cache_data ile düzgün çalışması için önemli.
-# Fonksiyon argümanları değişirse cache yenilenir.
 current_user_name_for_kb = st.session_state.get('user_name', "kullanıcı")
 KNOWLEDGE_BASE = load_knowledge_from_file(user_name_for_greeting=current_user_name_for_kb)
-if knowledge_base_load_error: st.toast(knowledge_base_load_error, icon="⚠️")
 
-
+# --- Modelleri ve İstemcileri Başlatma ---
 if 'models_initialized' not in st.session_state:
     gemini_model = initialize_gemini_model()
     supabase = init_supabase_client_cached()
     tts_engine = init_tts_engine_cached()
+    st.session_state.all_chats = load_all_chats_cached() # Geçmiş sohbetleri yükle
+    if not st.session_state.all_chats: # Eğer hiç sohbet yoksa veya dosya boşsa
+        # Otomatik olarak ilk sohbeti başlatabiliriz veya kullanıcıya bırakabiliriz
+        pass # Şimdilik boş bırakalım, kullanıcı "Yeni Sohbet" ile başlatsın
+    else:
+         # Eğer daha önceden kalma bir aktif ID yoksa ve sohbetler varsa, ilkini aktif yap
+         if not st.session_state.active_chat_id and st.session_state.all_chats:
+             st.session_state.active_chat_id = list(st.session_state.all_chats.keys())[0]
+
     st.session_state.models_initialized = True
-else:
+else: # Modeller daha önce başlatıldıysa global değişkenlerden al
     gemini_model = globals().get('gemini_model')
     supabase = globals().get('supabase')
     tts_engine = globals().get('tts_engine')
 
+# Hata mesajlarını globalden al (varsa)
 gemini_init_error = globals().get('gemini_init_error_global')
 supabase_error = globals().get('supabase_error_global')
 tts_init_error = globals().get('tts_init_error_global')
 
-if not st.session_state.chat_history:
-    st.session_state.chat_history = load_chat_history_cached()
+# Kullanıcı giriş yapmışsa ana uygulamayı göster
 if st.session_state.user_name and not st.session_state.show_main_app:
     st.session_state.show_main_app = True
 
-# --- ARAYÜZ BÖLÜMLERİ İÇİN FONKSİYONLAR ---
-def display_sidebar_content():
-    with st.sidebar:
-        st.markdown(f"### Hoş Geldin, {st.session_state.user_name}!")
+# --- YENİ UI FONKSİYONLARI (Sidebar yerine) ---
+
+def display_settings_section():
+    """Ayarlar ve Kişiselleştirme bölümünü ana alanda gösterir."""
+    with st.expander("⚙️ Ayarlar & Kişiselleştirme", expanded=False): # Başlangıçta kapalı
+        st.markdown(f"**Hoş Geldin, {st.session_state.user_name}!**")
         if st.session_state.user_avatar_bytes:
-            st.image(st.session_state.user_avatar_bytes, width=100, use_column_width='auto', caption="Avatarınız")
+            st.image(st.session_state.user_avatar_bytes, width=80, use_column_width='auto', caption="Avatarınız")
         else:
             st.caption("🖼️ _Henüz bir avatar yüklemediniz._")
-        st.markdown("---")
-        st.subheader("⚙️ Ayarlar ve Kişiselleştirme")
-
-        with st.expander("👤 Profil Ayarları", expanded=False):
-            new_user_name = st.text_input("Adınızı Değiştirin:", value=st.session_state.user_name, key="change_name_sidebar_input")
-            if new_user_name != st.session_state.user_name and new_user_name.strip():
-                st.session_state.user_name = new_user_name.strip()
-                # KNOWLEDGE_BASE'i yeni kullanıcı adıyla güncellemek için cache'i temizle ve yeniden yükle
-                load_knowledge_from_file.clear() # Cache'i temizle
-                global KNOWLEDGE_BASE # Global KNOWLEDGE_BASE'i güncelle
-                KNOWLEDGE_BASE = load_knowledge_from_file(user_name_for_greeting=st.session_state.user_name)
-                st.toast("Adınız başarıyla güncellendi!", icon="✏️"); st.rerun()
-
-            uploaded_avatar_file = st.file_uploader("Yeni Avatar Yükle (PNG, JPG - Maks 2MB):", type=["png", "jpg", "jpeg"], key="avatar_uploader_sidebar_file")
-            if uploaded_avatar_file:
-                if uploaded_avatar_file.size > 2 * 1024 * 1024:
-                    st.error("Dosya boyutu 2MB'den büyük olamaz! Lütfen daha küçük bir dosya seçin.", icon=" oversized_file:")
-                else:
-                    st.session_state.user_avatar_bytes = uploaded_avatar_file.getvalue()
-                    st.toast("Avatarınız başarıyla güncellendi!", icon="🖼️"); st.rerun()
-            
-            if st.session_state.user_avatar_bytes and st.button("🗑️ Mevcut Avatarı Kaldır", use_container_width=True, key="remove_avatar_sidebar_button"):
-                st.session_state.user_avatar_bytes = None
-                st.toast("Avatarınız kaldırıldı.", icon="🗑️"); st.rerun()
-            st.caption("Avatarınız sadece bu tarayıcı oturumunda saklanır.")
-
-        current_tts_engine_sidebar = globals().get('tts_engine')
-        st.session_state.tts_enabled = st.toggle("Metin Okuma (TTS) Aktif", value=st.session_state.tts_enabled, disabled=not current_tts_engine_sidebar, help="AI yanıtlarının sesli okunmasını açar veya kapatır.")
-        st.session_state.gemini_stream_enabled = st.toggle("Gemini Yanıt Akışını Etkinleştir", value=st.session_state.gemini_stream_enabled, help="Yanıtların kelime kelime gelmesini sağlar (daha hızlı ilk tepki).")
-
-        with st.expander("🤖 Gemini Gelişmiş Yapılandırma", expanded=False):
-            st.session_state.gemini_model_name = st.selectbox(
-                "Kullanılacak Gemini Modeli:",
-                ['gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'],
-                index=0 if st.session_state.gemini_model_name == 'gemini-1.5-flash-latest' else 1,
-                key="gemini_model_selector_sidebar",
-                help="Farklı modellerin yetenekleri ve maliyetleri değişebilir."
-            )
-            st.session_state.gemini_temperature = st.slider("Sıcaklık (Yaratıcılık Seviyesi):", 0.0, 1.0, st.session_state.gemini_temperature, 0.05, key="gemini_temp_slider_sidebar", help="Düşük değerler daha kesin, yüksek değerler daha yaratıcı yanıtlar üretir.")
-            st.session_state.gemini_top_p = st.slider("Top P (Odaklanma Düzeyi):", 0.0, 1.0, st.session_state.gemini_top_p, 0.05, key="gemini_top_p_slider_sidebar", help="Yanıtların ne kadar odaklı olacağını belirler. Genellikle 1.0 veya 0.95 kullanılır.")
-            st.session_state.gemini_top_k = st.slider("Top K (Çeşitlilik Filtresi):", 1, 100, st.session_state.gemini_top_k, 1, key="gemini_top_k_slider_sidebar", help="Yanıt oluşturulurken en olası K token arasından seçim yapılmasını sağlar.")
-            st.session_state.gemini_max_tokens = st.slider("Maksimum Çıktı Token Sayısı:", 256, 8192, st.session_state.gemini_max_tokens, 128, key="gemini_max_tokens_slider_sidebar", help="Modelin üreteceği yanıtın maksimum uzunluğunu sınırlar.")
-            
-            if st.button("⚙️ Gemini Ayarlarını Uygula ve Modeli Yeniden Başlat", key="reload_gemini_settings_sidebar_btn", use_container_width=True, type="primary"):
-                global gemini_model
-                gemini_model = initialize_gemini_model()
-                if gemini_model: st.toast("Gemini ayarları başarıyla güncellendi ve model yeniden yüklendi!", icon="✨")
-                else: st.error("Gemini modeli güncellenirken bir hata oluştu. Lütfen API anahtarınızı ve yapılandırma ayarlarınızı kontrol edin.")
 
         st.divider()
-        if st.button("🧹 Sohbet Geçmişini Temizle", use_container_width=True, type="secondary", key="clear_history_sidebar_main_btn"):
-            if st.session_state.chat_history:
-                st.session_state.chat_history = []
-                save_chat_history([])
-                st.toast("Sohbet geçmişi başarıyla temizlendi!", icon="🧹"); st.rerun()
+        st.subheader("👤 Profil Ayarları")
+        new_user_name = st.text_input("Adınızı Değiştirin:", value=st.session_state.user_name, key="change_name_main_input")
+        if new_user_name != st.session_state.user_name and new_user_name.strip():
+            st.session_state.user_name = new_user_name.strip()
+            load_knowledge_from_file.clear()
+            global KNOWLEDGE_BASE
+            KNOWLEDGE_BASE = load_knowledge_from_file(user_name_for_greeting=st.session_state.user_name)
+            st.toast("Adınız başarıyla güncellendi!", icon="✏️"); st.rerun()
+
+        uploaded_avatar_file = st.file_uploader("Yeni Avatar Yükle (PNG, JPG - Maks 2MB):", type=["png", "jpg", "jpeg"], key="avatar_uploader_main_file")
+        if uploaded_avatar_file:
+            if uploaded_avatar_file.size > 2 * 1024 * 1024:
+                st.error("Dosya boyutu 2MB'den büyük olamaz! Lütfen daha küçük bir dosya seçin.", icon=" oversized_file:")
+            else:
+                st.session_state.user_avatar_bytes = uploaded_avatar_file.getvalue()
+                st.toast("Avatarınız başarıyla güncellendi!", icon="🖼️"); st.rerun()
+
+        if st.session_state.user_avatar_bytes and st.button("🗑️ Mevcut Avatarı Kaldır", use_container_width=True, key="remove_avatar_main_button"):
+            st.session_state.user_avatar_bytes = None
+            st.toast("Avatarınız kaldırıldı.", icon="🗑️"); st.rerun()
+        st.caption("Avatarınız sadece bu tarayıcı oturumunda saklanır.")
+
+        st.divider()
+        st.subheader("🤖 Yapay Zeka ve Arayüz")
+        current_tts_engine_settings = globals().get('tts_engine')
+        st.session_state.tts_enabled = st.toggle("Metin Okuma (TTS) Aktif", value=st.session_state.tts_enabled, disabled=not current_tts_engine_settings, help="AI yanıtlarının sesli okunmasını açar veya kapatır.")
+        st.session_state.gemini_stream_enabled = st.toggle("Gemini Yanıt Akışını Etkinleştir", value=st.session_state.gemini_stream_enabled, help="Yanıtların kelime kelime gelmesini sağlar (daha hızlı ilk tepki).")
+
+        # Gemini Ayarları expander'ı buraya taşıdık
+        with st.expander("🧠 Hanogt AI (Gemini) Gelişmiş Yapılandırma", expanded=False):
+            st.session_state.gemini_model_name = st.selectbox(
+                "Kullanılacak AI Modeli:",
+                ['gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'],
+                index=0 if st.session_state.gemini_model_name == 'gemini-1.5-flash-latest' else 1,
+                key="gemini_model_selector_main",
+                help="Farklı modellerin yetenekleri ve maliyetleri değişebilir."
+            )
+            st.session_state.gemini_temperature = st.slider("Sıcaklık (Yaratıcılık Seviyesi):", 0.0, 1.0, st.session_state.gemini_temperature, 0.05, key="gemini_temp_slider_main", help="Düşük değerler daha kesin, yüksek değerler daha yaratıcı yanıtlar üretir.")
+            st.session_state.gemini_top_p = st.slider("Top P (Odaklanma Düzeyi):", 0.0, 1.0, st.session_state.gemini_top_p, 0.05, key="gemini_top_p_slider_main", help="Yanıtların ne kadar odaklı olacağını belirler. Genellikle 1.0 veya 0.95 kullanılır.")
+            st.session_state.gemini_top_k = st.slider("Top K (Çeşitlilik Filtresi):", 1, 100, st.session_state.gemini_top_k, 1, key="gemini_top_k_slider_main", help="Yanıt oluşturulurken en olası K token arasından seçim yapılmasını sağlar.")
+            st.session_state.gemini_max_tokens = st.slider("Maksimum Çıktı Token Sayısı:", 256, 8192, st.session_state.gemini_max_tokens, 128, key="gemini_max_tokens_slider_main", help="Modelin üreteceği yanıtın maksimum uzunluğunu sınırlar.")
+
+            if st.button("⚙️ AI Ayarlarını Uygula ve Modeli Yeniden Başlat", key="reload_gemini_settings_main_btn", use_container_width=True, type="primary"):
+                global gemini_model
+                gemini_model = initialize_gemini_model()
+                if gemini_model: st.toast("AI ayarları başarıyla güncellendi ve model yeniden yüklendi!", icon="✨")
+                else: st.error("AI modeli güncellenirken bir hata oluştu. Lütfen API anahtarınızı ve yapılandırma ayarlarınızı kontrol edin.")
+
+        st.divider()
+        st.subheader("🧼 Geçmiş Yönetimi")
+        if st.button("🧹 TÜM Sohbet Geçmişini Temizle", use_container_width=True, type="secondary", key="clear_all_history_main_btn", help="Dikkat! Bu işlem kaydedilmiş tüm sohbetlerinizi siler."):
+            if st.session_state.all_chats:
+                st.session_state.all_chats = {}
+                st.session_state.active_chat_id = None
+                save_all_chats({}) # Dosyayı da boşalt
+                st.toast("TÜM sohbet geçmişi başarıyla temizlendi!", icon="🗑️"); st.rerun()
             else:
                 st.toast("Sohbet geçmişi zaten boş.", icon="ℹ️")
 
+
+def display_chat_list_and_about(left_column):
+    """Sol kolonda sohbet listesini ve Hakkında bölümünü gösterir."""
+    with left_column:
+        st.markdown("#### Sohbet Geçmişi")
+
+        if st.button("➕ Yeni Sohbet Başlat", use_container_width=True, key="new_chat_button"):
+            st.session_state.next_chat_id_counter += 1
+            new_chat_id = f"chat_{st.session_state.next_chat_id_counter}_{int(time.time())}"
+            st.session_state.all_chats[new_chat_id] = [] # Yeni boş sohbet listesi ekle
+            st.session_state.active_chat_id = new_chat_id # Yeni sohbeti aktif yap
+            save_all_chats(st.session_state.all_chats) # Değişikliği kaydet
+            st.rerun()
+
+        st.markdown("---")
+
+        # Sohbetleri listele (en yeniden en eskiye doğru olabilir)
+        chat_ids_sorted = sorted(st.session_state.all_chats.keys(), reverse=True)
+
+        if not chat_ids_sorted:
+            st.caption("Henüz bir sohbet başlatılmadı.")
+        else:
+            for chat_id in chat_ids_sorted:
+                chat_history = st.session_state.all_chats.get(chat_id, [])
+                # Başlık oluşturma: İlk kullanıcı mesajını al veya varsayılan bir başlık kullan
+                chat_title = f"Sohbet {chat_id.split('_')[1]}" # Basit ID'li başlık
+                if chat_history:
+                     first_user_message = next((msg['parts'] for msg in chat_history if msg['role'] == 'user'), None)
+                     if first_user_message:
+                         chat_title = first_user_message[:30] + ("..." if len(first_user_message) > 30 else "")
+
+                col1, col2 = st.columns([0.8, 0.2])
+                button_type = "primary" if st.session_state.active_chat_id == chat_id else "secondary"
+                if col1.button(chat_title, key=f"select_chat_{chat_id}", use_container_width=True, type=button_type, help=f"'{chat_title}' sohbetini aç"):
+                    if st.session_state.active_chat_id != chat_id:
+                        st.session_state.active_chat_id = chat_id
+                        st.rerun() # Seçilen sohbeti yüklemek için yeniden çalıştır
+
+                if col2.button("❌", key=f"delete_chat_{chat_id}", use_container_width=True, help=f"'{chat_title}' sohbetini sil", type="secondary"):
+                     if chat_id in st.session_state.all_chats:
+                         del st.session_state.all_chats[chat_id]
+                         if st.session_state.active_chat_id == chat_id:
+                             # Eğer silinen sohbet aktifse, başka bir sohbeti aktif yap veya None yap
+                             remaining_chats = list(st.session_state.all_chats.keys())
+                             st.session_state.active_chat_id = remaining_chats[0] if remaining_chats else None
+                         save_all_chats(st.session_state.all_chats)
+                         st.toast(f"'{chat_title}' sohbeti silindi.", icon="🗑️")
+                         st.rerun()
+
+        # Hakkında Bölümü
+        st.markdown("<br><br>", unsafe_allow_html=True) # Biraz boşluk
         with st.expander("ℹ️ Uygulama Hakkında", expanded=True):
             st.markdown(f"""
             **{APP_NAME} v{APP_VERSION}**
@@ -833,170 +923,269 @@ def display_sidebar_content():
             Kullanıcı etkileşimleri ve geri bildirimler, isteğe bağlı olarak Supabase üzerinde güvenli bir şekilde saklanabilir.
             Tüm hakları saklıdır © 2024-{CURRENT_YEAR}
             """)
-        st.caption(f"{APP_NAME} v{APP_VERSION} - Oturum ID: {st.session_state.session_id[:8]}...")
+        st.caption(f"Oturum ID: {st.session_state.session_id[:8]}...")
 
-def display_chat_message_with_feedback(sender_name: str, message_text_content: str, message_unique_index: int, is_user_message: bool):
+
+def display_chat_message_with_feedback(sender_role: str, message_text_content: str, message_list_index: int, current_chat_id: str, is_user_message: bool):
+    """Mesajı gösterir ve AI mesajları için geri bildirim butonları ekler."""
     avatar_display_icon = "🧑"
+    sender_display_name = st.session_state.user_name if is_user_message else APP_NAME
+
+    # AI mesajı ise, gönderici adını ve ikonu belirle (KB, Web, Gemini vs.)
+    if not is_user_message:
+        # Gerçek gönderici bilgisini mesajın kendisinden veya başka bir yerden almamız gerekebilir.
+        # Şimdilik basitçe AI diyelim veya loglanan veriden çekelim.
+        # Bu örnekte, mesajın başına eklenen bilgiyi kullanabiliriz (eski koddan varsayım)
+        match = re.match(r"^(.*?) \((.*?)\):?\n\n(.*)", message_text_content, re.DOTALL)
+        if match:
+            sender_display_name = f"{match.group(1)} ({match.group(2)})"
+            message_text_content = match.group(3) # Sadece mesaj içeriğini göster
+            source_info = match.group(2).lower()
+            if "gemini" in source_info: avatar_display_icon = "✨"
+            elif "web" in source_info: avatar_display_icon = "🌐"
+            elif "bilgi tabanı" in source_info or "fonksiyonel" in source_info: avatar_display_icon = "📚"
+            else: avatar_display_icon = "🤖"
+        else: # Format eşleşmezse varsayılan AI
+            sender_display_name = APP_NAME
+            avatar_display_icon = "🤖"
+
+    # Kullanıcı mesajı ise avatarı kullan
     if is_user_message:
         if st.session_state.user_avatar_bytes:
             try: avatar_display_icon = Image.open(BytesIO(st.session_state.user_avatar_bytes))
-            except Exception: pass
-    else:
-        if "Gemini" in sender_name: avatar_display_icon = "✨"
-        elif "Web" in sender_name: avatar_display_icon = "🌐"
-        elif "Bilgi Tabanı" in sender_name or "Fonksiyonel" in sender_name: avatar_display_icon = "📚"
-        else: avatar_display_icon = "🤖"
+            except Exception: pass # Hata olursa varsayılan kalır
 
     with st.chat_message("user" if is_user_message else "assistant", avatar=avatar_display_icon):
+        # Mesaj içeriğini göster (Markdown ve Kod Blokları)
         if "```" in message_text_content:
             code_block_parts = message_text_content.split("```")
             for i, part_text in enumerate(code_block_parts):
-                if i % 2 == 1:
-                    language_match = re.match(r"(\w*)\n", part_text) # Dil etiketi boş olabilir
+                if i % 2 == 1: # Kod bloğu kısmı
+                    language_match = re.match(r"(\w*)\n", part_text)
                     code_language = language_match.group(1) if language_match else None
                     actual_code_content = part_text[len(code_language)+1:] if code_language and part_text.startswith(code_language+"\n") else part_text
-                    
-                    st.code(actual_code_content, language=code_language if code_language else None) # language None olabilir
-                    if st.button("📋 Kopyala", key=f"copy_code_btn_{message_unique_index}_{i}", help="Bu kod bloğunu panoya kopyala"):
+
+                    st.code(actual_code_content, language=code_language if code_language else None)
+                    # Kod kopyalama butonu (unique key lazım)
+                    unique_code_copy_key = f"copy_code_{current_chat_id}_{message_list_index}_{i}"
+                    if st.button("📋 Kopyala", key=unique_code_copy_key, help="Bu kod bloğunu panoya kopyala"):
                         st.write_to_clipboard(actual_code_content)
                         st.toast("Kod başarıyla panoya kopyalandı!", icon="✅")
-                else:
+                else: # Normal metin kısmı
                     st.markdown(part_text, unsafe_allow_html=True)
-        else:
+        else: # Kod bloğu yoksa direkt markdown
             st.markdown(message_text_content, unsafe_allow_html=True)
 
+        # Sadece AI mesajları için eylem butonları
         if not is_user_message:
-            ai_response_source_name = sender_name.split('(')[-1].replace(')','').strip() if '(' in sender_name else sender_name.replace(f'{APP_NAME} ','')
+            ai_response_source_name = sender_display_name # Yukarıda belirledik
+            # Eylem Butonları (Seslendir, Geri Bildirim)
             action_cols = st.columns([0.7, 0.15, 0.15])
             with action_cols[0]:
-                st.caption(f"Kaynak: {ai_response_source_name}")
-            with action_cols[1]:
+                 # Kaynak adı zaten gösteriliyor, burayı boş bırakabiliriz veya zaman damgası ekleyebiliriz
+                 # st.caption(f"Kaynak: {ai_response_source_name}") # Tekrar yazmaya gerek yok
+                 pass
+            with action_cols[1]: # Seslendir butonu
                 current_tts_engine_chat = globals().get('tts_engine')
                 if st.session_state.tts_enabled and current_tts_engine_chat and message_text_content:
-                    if st.button("🔊", key=f"speak_msg_btn_chat_{message_unique_index}", help="Bu mesajı sesli oku", use_container_width=True):
-                        speak(message_text_content)
-            with action_cols[2]:
-                if st.button("✍️", key=f"toggle_feedback_btn_chat_{message_unique_index}", help="Bu yanıt hakkında geri bildirimde bulunun", use_container_width=True):
-                    st.session_state.current_message_id_for_feedback = f"chat_{message_unique_index}"
-                    st.session_state.last_user_prompt_for_feedback = st.session_state.chat_history[message_unique_index-1][1] if message_unique_index > 0 else "N/A (Prompt bulunamadı)"
-                    st.session_state.last_ai_response_for_feedback = message_text_content
+                    unique_speak_key = f"speak_{current_chat_id}_{message_list_index}"
+                    if st.button("🔊", key=unique_speak_key, help="Bu mesajı sesli oku", use_container_width=True):
+                        speak(message_text_content) # Düzeltilmiş mesaj içeriğini oku
+            with action_cols[2]: # Geri Bildirim butonu
+                unique_feedback_key = f"feedback_{current_chat_id}_{message_list_index}"
+                if st.button("✍️", key=unique_feedback_key, help="Bu yanıt hakkında geri bildirimde bulunun", use_container_width=True):
+                    st.session_state.current_message_id_for_feedback = f"{current_chat_id}_{message_list_index}" # Unique ID formatı
+                    st.session_state.current_message_index_for_feedback = message_list_index # Index'i sakla
+                    # Bir önceki mesajın kullanıcı promptu olduğunu varsayalım (index kontrolü önemli)
+                    if message_list_index > 0 and st.session_state.all_chats[current_chat_id][message_list_index - 1]['role'] == 'user':
+                         st.session_state.last_user_prompt_for_feedback = st.session_state.all_chats[current_chat_id][message_list_index - 1]['parts']
+                    else:
+                         st.session_state.last_user_prompt_for_feedback = "N/A (Önceki prompt bulunamadı)"
+
+                    st.session_state.last_ai_response_for_feedback = message_text_content # Düzeltilmiş mesaj içeriği
                     st.session_state.show_feedback_comment_form = not st.session_state.get('show_feedback_comment_form', False)
                     if not st.session_state.show_feedback_comment_form:
-                        st.session_state.feedback_comment_input = ""
-                    st.rerun()
+                        st.session_state.feedback_comment_input = "" # Form kapanırsa yorumu temizle
+                    st.rerun() # Geri bildirim formunu göstermek/gizlemek için rerun
+
 
 def display_feedback_form_if_active():
+    """Aktifse geri bildirim formunu gösterir."""
+    # Sadece mevcut mesaj ID'si ile eşleşen form gösterilsin
     if st.session_state.get('show_feedback_comment_form') and st.session_state.current_message_id_for_feedback:
         st.markdown("---")
-        with st.form(key=f"feedback_submission_form_{st.session_state.current_message_id_for_feedback}"):
-            st.markdown(f"#### Geri Bildiriminiz")
+        # Form anahtarını da unique yapalım
+        form_key = f"feedback_form_{st.session_state.current_message_id_for_feedback}"
+        with st.form(key=form_key):
+            st.markdown(f"#### Yanıt Hakkında Geri Bildiriminiz")
             st.caption(f"**İstem:** `{st.session_state.last_user_prompt_for_feedback[:70]}...`")
             st.caption(f"**Yanıt:** `{st.session_state.last_ai_response_for_feedback[:70]}...`")
 
             feedback_rating_type = st.radio(
                 "Bu yanıtı nasıl değerlendirirsiniz?",
                 ["👍 Beğendim", "👎 Beğenmedim"],
-                horizontal=True, key="feedback_type_radio_form",
+                horizontal=True, key=f"feedback_type_{form_key}", # Key'i unique yap
                 index=0 if st.session_state.get('last_feedback_type', 'positive') == 'positive' else 1
             )
             user_feedback_comment = st.text_area(
                 "Yorumunuz (isteğe bağlı, özellikle beğenmediyseniz nedenini belirtmeniz çok yardımcı olur):",
                 value=st.session_state.get('feedback_comment_input', ""),
-                key="feedback_comment_textarea_form", height=100
+                key=f"feedback_comment_{form_key}", # Key'i unique yap
+                height=100
             )
-            st.session_state.feedback_comment_input = user_feedback_comment
+            st.session_state.feedback_comment_input = user_feedback_comment # Anlık değeri sakla
 
             submitted_feedback_button = st.form_submit_button("✅ Geri Bildirimi Gönder ve Formu Kapat", type="primary")
 
             if submitted_feedback_button:
                 parsed_feedback_category = "positive" if feedback_rating_type == "👍 Beğendim" else "negative"
-                st.session_state.last_feedback_type = parsed_feedback_category
+                st.session_state.last_feedback_type = parsed_feedback_category # Son seçimi hatırla
 
+                # Loglama fonksiyonuna gerekli bilgileri gönder
                 if log_feedback(
-                    st.session_state.current_message_id_for_feedback,
+                    st.session_state.current_message_id_for_feedback, # Bu ID log tablosu için unique olmalı
                     st.session_state.last_user_prompt_for_feedback,
                     st.session_state.last_ai_response_for_feedback,
                     parsed_feedback_category,
                     user_feedback_comment
                 ):
+                    # Başarılı loglama sonrası formu kapat
                     st.session_state.show_feedback_comment_form = False
                     st.session_state.feedback_comment_input = ""
                     st.session_state.current_message_id_for_feedback = None
-                    st.rerun()
+                    st.session_state.current_message_index_for_feedback = None
+                    st.rerun() # Formu gizlemek için rerun
         st.markdown("---")
 
-def display_chat_interface_main():
-    chat_display_container = st.container()
-    with chat_display_container:
-        if not st.session_state.chat_history:
-            st.info(f"Merhaba {st.session_state.user_name}! Size nasıl yardımcı olabilirim? Lütfen aşağıdan mesajınızı yazın.", icon="👋")
-        
-        for i, (sender_id_name, message_content_text) in enumerate(st.session_state.chat_history):
-            display_chat_message_with_feedback(sender_id_name, message_content_text, i, sender_id_name.startswith("Sen"))
+def display_chat_interface_main(main_column):
+    """Ana sohbet arayüzünü sağ kolonda gösterir."""
+    with main_column:
+        active_chat_id = st.session_state.get('active_chat_id')
 
-    display_feedback_form_if_active()
+        if active_chat_id is None:
+            st.info("💬 Başlamak için sol menüden **'➕ Yeni Sohbet Başlat'** butonuna tıklayın veya mevcut bir sohbeti seçin.", icon="👈")
+            return # Aktif sohbet yoksa fonksiyonun geri kalanını çalıştırma
 
-    if user_new_prompt := st.chat_input(f"{st.session_state.user_name} olarak mesajınızı yazın...", key="main_chat_input_field_bottom"):
-        current_message_unique_id = f"msg_{st.session_state.message_id_counter}_{int(time.time())}"
-        st.session_state.message_id_counter += 1
-        st.session_state.chat_history.append(("Sen", user_new_prompt))
+        # Aktif sohbet geçmişini al
+        current_chat_history = st.session_state.all_chats.get(active_chat_id, [])
 
-        raw_history_for_gemini = st.session_state.chat_history[-21:-1]
-        gemini_formatted_chat_history = [{'role': ("user" if sender.startswith("Sen") else "model"), 'parts': [message]} for sender, message in raw_history_for_gemini]
+        # Sohbet mesajlarını gösterecek konteyner
+        chat_display_container = st.container(height=500, border=False) # Yüksekliği ayarlayabilirsiniz
+        with chat_display_container:
+            if not current_chat_history:
+                st.info(f"Merhaba {st.session_state.user_name}! Bu yeni sohbete hoş geldiniz. Aşağıdan mesajınızı yazarak başlayın.", icon="👋")
 
-        with st.chat_message("assistant", avatar="⏳"):
-            thinking_placeholder = st.empty()
-            thinking_placeholder.markdown("🧠 _Düşünüyorum... Lütfen bekleyin..._")
-            time.sleep(0.05)
+            # Mesajları göster
+            for i, message_data in enumerate(current_chat_history):
+                 # message_data formatı: {'role': 'user'/'model', 'parts': 'message'}
+                 sender_role = message_data.get('role', 'model') # Varsayılan 'model'
+                 message_content = message_data.get('parts', '')
+                 is_user = (sender_role == 'user')
+                 # Önemli: display_chat_message_with_feedback fonksiyonu mesaj içeriğini direkt yazacak şekilde güncellendi.
+                 # Bu yüzden gönderici adını (APP_NAME vs.) mesajın başına eklemeye gerek YOKTUR.
+                 display_chat_message_with_feedback(sender_role, message_content, i, active_chat_id, is_user)
 
-        ai_response_data, ai_sender_identity = get_hanogt_response_orchestrator(
-            user_new_prompt,
-            gemini_formatted_chat_history,
-            current_message_unique_id,
-            use_stream_output=st.session_state.gemini_stream_enabled
-        )
+        # Geri bildirim formu aktifse göster (konteynerın dışında)
+        display_feedback_form_if_active()
 
-        if st.session_state.gemini_stream_enabled and ai_sender_identity == f"{APP_NAME} (Gemini Stream)":
-            streamed_full_response_text = ""
-            try:
-                for chunk_index, stream_chunk in enumerate(ai_response_data):
-                    if stream_chunk.parts:
-                        text_from_chunk = "".join(part.text for part in stream_chunk.parts if hasattr(part, 'text'))
-                        streamed_full_response_text += text_from_chunk
-                        thinking_placeholder.markdown(streamed_full_response_text + "▌")
-                        if chunk_index % 5 == 0: time.sleep(0.005) 
-                thinking_placeholder.markdown(streamed_full_response_text)
-                log_interaction(user_new_prompt, streamed_full_response_text, ai_sender_identity, current_message_unique_id)
-                st.session_state.chat_history.append((ai_sender_identity, streamed_full_response_text))
-            except Exception as e_stream_processing:
-                error_text_stream = f"Stream yanıtı işlenirken bir hata oluştu: {e_stream_processing}"
-                thinking_placeholder.error(error_text_stream)
-                st.session_state.chat_history.append((f"{APP_NAME} (Stream Hatası)", error_text_stream))
-        else:
-            thinking_placeholder.empty()
-            st.session_state.chat_history.append((ai_sender_identity, str(ai_response_data)))
+        # Sohbet giriş alanı
+        if user_new_prompt := st.chat_input(f"{st.session_state.user_name} olarak mesajınızı yazın...", key=f"chat_input_{active_chat_id}"):
+            # Kullanıcı mesajını aktif sohbete ekle
+            st.session_state.all_chats[active_chat_id].append({'role': 'user', 'parts': user_new_prompt})
+            save_all_chats(st.session_state.all_chats) # Değişikliği kaydet
 
-        save_chat_history(st.session_state.chat_history)
-        
-        if st.session_state.tts_enabled and globals().get('tts_engine') and \
-           isinstance(ai_response_data, str) and not \
-           (st.session_state.gemini_stream_enabled and ai_sender_identity == f"{APP_NAME} (Gemini Stream)"):
-            speak(ai_response_data)
-        
-        st.rerun()
+            # AI yanıtı için hazırlan
+            current_message_unique_id = f"msg_{st.session_state.message_id_counter}_{int(time.time())}"
+            st.session_state.message_id_counter += 1
+
+            # Gemini'ye gönderilecek geçmişi hazırla (sadece metinler)
+            # Son N mesajı almak daha iyi performans verebilir
+            raw_history_for_gemini = st.session_state.all_chats[active_chat_id][-21:-1] # Son 20 mesajı al (yeni eklenen hariç)
+            # Gemini formatına uygun geçmiş listesi (role ve parts)
+            # ÖNEMLİ DÜZELTME: get_hanogt_response_orchestrator zaten bu formatlamayı yapıyor gibi görünüyor.
+            # Bu yüzden sadece mesaj çiftlerini (sender, message) göndermek yeterli olabilir.
+            # Eğer orchestrator formatlama yapmıyorsa, aşağıdaki format doğru:
+            # gemini_formatted_chat_history = [{'role': msg['role'], 'parts': [msg['parts']]} for msg in raw_history_for_gemini]
+            # Şimdilik orchestrator'ın [('Sen', 'mesaj'), ('AI', 'yanıt')] formatını beklediğini varsayalım:
+            history_for_orchestrator = []
+            for msg in raw_history_for_gemini:
+                sender_name = "Sen" if msg['role'] == 'user' else APP_NAME # Basit gönderici adı
+                history_for_orchestrator.append((sender_name, msg['parts']))
+
+            # Yanıtı alırken gösterilecek yer tutucu
+            with st.chat_message("assistant", avatar="⏳"):
+                thinking_placeholder = st.empty()
+                thinking_placeholder.markdown("🧠 _Düşünüyorum... Lütfen bekleyin..._")
+                time.sleep(0.05) # Placeholder'ın görünmesi için küçük bir bekleme
+
+            # AI yanıtını al
+            ai_response_data, ai_sender_identity = get_hanogt_response_orchestrator(
+                user_new_prompt,
+                history_for_orchestrator, # Düzeltilmiş geçmiş formatı
+                current_message_unique_id,
+                active_chat_id, # Aktif sohbet ID'sini gönder
+                use_stream_output=st.session_state.gemini_stream_enabled
+            )
+
+            # Yanıtı işle ve göster
+            final_ai_message_content = ""
+            if st.session_state.gemini_stream_enabled and ai_sender_identity == f"{APP_NAME} (Gemini Stream)":
+                streamed_full_response_text = ""
+                try:
+                    chunk_count = 0
+                    for stream_chunk in ai_response_data:
+                        if stream_chunk.parts:
+                            text_from_chunk = "".join(part.text for part in stream_chunk.parts if hasattr(part, 'text'))
+                            streamed_full_response_text += text_from_chunk
+                            thinking_placeholder.markdown(streamed_full_response_text + "▌")
+                            chunk_count += 1
+                            if chunk_count % 5 == 0: time.sleep(0.005) # Çok sık update etme
+                    thinking_placeholder.markdown(streamed_full_response_text) # Son halini göster
+                    final_ai_message_content = streamed_full_response_text
+                    # Loglama stream bittikten sonra yapılır
+                    log_interaction(user_new_prompt, final_ai_message_content, ai_sender_identity, current_message_unique_id, active_chat_id)
+                except Exception as e_stream_processing:
+                    error_text_stream = f"Stream yanıtı işlenirken bir hata oluştu: {e_stream_processing}"
+                    thinking_placeholder.error(error_text_stream)
+                    final_ai_message_content = error_text_stream
+                    ai_sender_identity = f"{APP_NAME} (Stream Hatası)" # Göndericiyi güncelle
+                    # Hatalı yanıtı da logla
+                    log_interaction(user_new_prompt, final_ai_message_content, ai_sender_identity, current_message_unique_id, active_chat_id)
+
+            else: # Stream kapalıysa veya başka bir kaynaktan geldiyse
+                thinking_placeholder.empty() # Yer tutucuyu kaldır
+                final_ai_message_content = str(ai_response_data)
+                # Yanıt zaten orchestrator içinde loglandı (stream olmayan durumlar için)
+                # thinking_placeholder.markdown(final_ai_message_content) # Direkt göstermek yerine geçmişe ekleyip rerun yapalım
+
+            # AI yanıtını aktif sohbete ekle (role='model')
+            st.session_state.all_chats[active_chat_id].append({'role': 'model', 'parts': final_ai_message_content}) # Sender identity yerine role='model' kullan
+            save_all_chats(st.session_state.all_chats) # Son halini kaydet
+
+            # TTS (Stream olmayan yanıtlar için)
+            if st.session_state.tts_enabled and globals().get('tts_engine') and \
+               isinstance(final_ai_message_content, str) and \
+               not (st.session_state.gemini_stream_enabled and ai_sender_identity == f"{APP_NAME} (Gemini Stream)"):
+                speak(final_ai_message_content)
+
+            # Sayfayı yenileyerek yeni mesajları göster
+            st.rerun()
+
 
 # --- UYGULAMA ANA AKIŞI (MAIN FLOW) ---
-st.markdown(f"<h1 style='text-align: center; color: #0078D4;'>🚀 {APP_NAME} {APP_VERSION} 🚀</h1>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='text-align: center; color: #0078D4;'>{APP_NAME} {APP_VERSION}</h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='text-align: center; font-style: italic; color: #555;'>Yapay zeka destekli kişisel sohbet asistanınız!</p>", unsafe_allow_html=True)
 
+# Hata mesajlarını göster (varsa)
 if gemini_init_error: st.error(gemini_init_error, icon="🛑")
 if supabase_error: st.error(supabase_error, icon="🧱")
 if tts_init_error and st.session_state.tts_enabled:
     st.toast(tts_init_error, icon="🔇")
 
+# --- Kullanıcı Giriş Ekranı ---
 if not st.session_state.show_main_app:
     st.subheader("👋 Merhaba! Başlamadan Önce Sizi Tanıyabilir Miyim?")
-    login_form_cols = st.columns([0.15, 0.7, 0.15])
+    login_form_cols = st.columns([0.2, 0.6, 0.2]) # Ortadaki kolonu biraz daha geniş tutalım
     with login_form_cols[1]:
         with st.form("user_details_login_form"):
             user_name_input = st.text_input(
@@ -1006,219 +1195,291 @@ if not st.session_state.show_main_app:
                 key="user_name_login_input_field"
             )
             login_submitted_button = st.form_submit_button("✨ Başlayalım!", use_container_width=True, type="primary")
-            
+
             if login_submitted_button:
                 if user_name_input and user_name_input.strip():
                     st.session_state.user_name = user_name_input.strip()
                     st.session_state.show_main_app = True
-                    st.session_state.greeting_message_shown = False
-                    # KNOWLEDGE_BASE'i yeni kullanıcı adıyla güncellemek için cache'i temizle ve yeniden yükle
-                    load_knowledge_from_file.clear() # Cache'i temizle
-                    KNOWLEDGE_BASE = load_knowledge_from_file(user_name_for_greeting=st.session_state.user_name) # global KB'yi güncelle
+                    st.session_state.greeting_message_shown = False # Karşılama mesajı gösterilsin
+                    load_knowledge_from_file.clear() # Yeni isimle KB'yi yeniden yükle
+                    KNOWLEDGE_BASE = load_knowledge_from_file(user_name_for_greeting=st.session_state.user_name)
+                    # Eğer aktif sohbet yoksa ve geçmişte sohbetler varsa ilkini aktif yap
+                    if not st.session_state.active_chat_id and st.session_state.all_chats:
+                         st.session_state.active_chat_id = list(st.session_state.all_chats.keys())[0]
                     st.rerun()
                 else:
                     st.error("Lütfen geçerli bir isim veya takma ad girin.")
+
+# --- Ana Uygulama Ekranı ---
 else:
+    # Karşılama mesajı (sadece bir kere)
     if not st.session_state.greeting_message_shown and st.session_state.user_name:
         greeting_message = random.choice([
             f"Tekrar hoş geldiniz, Sayın {st.session_state.user_name}! Bugün size nasıl yardımcı olabilirim?",
             f"Merhaba {st.session_state.user_name}! Sizin için hazırım, ne merak ediyorsunuz?",
             f"Harika bir gün geçirmeniz dileğiyle, {st.session_state.user_name}! Ne yapmak istersiniz?"
         ])
-        st.success(greeting_message, icon="🎉"); st.session_state.greeting_message_shown = True
-        st.balloons()
+        st.success(greeting_message, icon="🎉")
+        st.session_state.greeting_message_shown = True
+        # st.balloons() # Balonlar kaldırıldı
 
-    display_sidebar_content()
+    # --- Ana Layout (Sol Kolon: Sohbet Listesi+Hakkında, Sağ Kolon: Ayarlar+Modlar+İçerik) ---
+    left_col, main_col = st.columns([1, 3]) # Sol kolon daha dar
 
-    app_mode_options_map = {
-        "Yazılı Sohbet": "💬", "Sesli Sohbet (Dosya Yükle)": "🎤",
-        "Yaratıcı Stüdyo": "🎨", "Görsel Oluşturucu": "🖼️"
-    }
-    selected_app_mode_key = st.radio(
-        "Uygulama Modunu Seçin:",
-        options=list(app_mode_options_map.keys()),
-        index=list(app_mode_options_map.keys()).index(st.session_state.app_mode),
-        format_func=lambda mode_key: f"{app_mode_options_map[mode_key]} {mode_key}",
-        horizontal=True, label_visibility="collapsed", key="app_mode_selector_radio"
-    )
-    if selected_app_mode_key != st.session_state.app_mode:
-        st.session_state.app_mode = selected_app_mode_key; st.rerun()
-    current_app_mode = st.session_state.app_mode
-    st.markdown("<hr style='margin-top: 0.5rem; margin-bottom: 0.5rem;'>", unsafe_allow_html=True)
+    # Sol Kolon içeriğini göster
+    display_chat_list_and_about(left_col)
 
-    if current_app_mode == "Yazılı Sohbet":
-        display_chat_interface_main()
+    # Sağ (Ana) Kolon içeriği
+    with main_col:
+        # Ayarlar Bölümü (expander içinde)
+        display_settings_section()
 
-    elif current_app_mode == "Sesli Sohbet (Dosya Yükle)":
-        st.info("Lütfen yanıtlamamı istediğiniz konuşmayı içeren bir ses dosyası (WAV, MP3, OGG, FLAC, M4A formatlarında) yükleyin.", icon="📢")
-        uploaded_audio_file = st.file_uploader(
-            "Ses Dosyası Seçin:", type=['wav', 'mp3', 'ogg', 'flac', 'm4a'],
-            label_visibility="collapsed", key="audio_file_uploader_page_main"
+        # Mod Seçimi
+        st.markdown("#### Uygulama Modu")
+        app_mode_options_map = {
+            "Yazılı Sohbet": "💬", "Sesli Sohbet (Dosya Yükle)": "🎤",
+            "Yaratıcı Stüdyo": "🎨", "Görsel Oluşturucu": "🖼️"
+        }
+        selected_app_mode_key = st.radio(
+            "Uygulama Modunu Seçin:",
+            options=list(app_mode_options_map.keys()),
+            index=list(app_mode_options_map.keys()).index(st.session_state.app_mode),
+            format_func=lambda mode_key: f"{app_mode_options_map[mode_key]} {mode_key}",
+            horizontal=True, label_visibility="collapsed", key="app_mode_selector_radio_main"
         )
-        if uploaded_audio_file:
-            st.audio(uploaded_audio_file, format=uploaded_audio_file.type)
-            user_prompt_from_audio = None; audio_file_name = uploaded_audio_file.name
-            temp_audio_file_path = f"temp_audio_{st.session_state.session_id}_{re.sub(r'[^a-zA-Z0-9_.-]', '', audio_file_name)[:20]}.wav"
+        if selected_app_mode_key != st.session_state.app_mode:
+            st.session_state.app_mode = selected_app_mode_key; st.rerun()
+        current_app_mode = st.session_state.app_mode
+        st.markdown("<hr style='margin-top: 0.5rem; margin-bottom: 0.5rem;'>", unsafe_allow_html=True)
 
-            with st.spinner(f"🔊 '{audio_file_name}' ses dosyası işleniyor... Lütfen bekleyin."):
-                speech_recognizer = sr.Recognizer();
-                try:
-                    with open(temp_audio_file_path, "wb") as temp_f: temp_f.write(uploaded_audio_file.getbuffer())
-                    with sr.AudioFile(temp_audio_file_path) as audio_source:
-                        audio_data_recorded = speech_recognizer.record(audio_source)
-                    user_prompt_from_audio = speech_recognizer.recognize_google(audio_data_recorded, language="tr-TR")
-                    st.success(f"**🎙️ Algılanan Metin:**\n\n> {user_prompt_from_audio}")
-                except sr.UnknownValueError:
-                    st.error("🔇 Üzgünüm, ses anlaşılamadı. Lütfen daha net bir ses dosyası deneyin veya ses kalitesini kontrol edin.")
-                except sr.RequestError as e_sr_request:
-                    st.error(f"🤖 Ses tanıma servisine ulaşılamadı: {e_sr_request}. Lütfen internet bağlantınızı kontrol edin.")
-                except Exception as e_audio_processing:
-                    st.error(f"Ses dosyası işlenirken beklenmedik bir hata oluştu: {e_audio_processing}")
-                finally:
-                    if os.path.exists(temp_audio_file_path): os.remove(temp_audio_file_path)
+        # Seçilen moda göre içeriği göster
+        if current_app_mode == "Yazılı Sohbet":
+            display_chat_interface_main(main_col) # Ana kolonu fonksiyona gönderiyoruz
 
-            if user_prompt_from_audio:
-                current_message_id_audio_mode = f"audio_msg_{st.session_state.message_id_counter}_{int(time.time())}"
-                st.session_state.message_id_counter += 1
-                st.session_state.chat_history.append(("Sen (Ses Dosyasından)", user_prompt_from_audio))
-                raw_history_for_gemini_audio = st.session_state.chat_history[-21:-1]
-                gemini_formatted_history_audio = [{'role': ("user" if sender.startswith("Sen") else "model"), 'parts': [message]} for sender, message in raw_history_for_gemini_audio]
-                
-                with st.spinner("🤖 Yapay zeka yanıtınızı hazırlıyor..."):
-                    ai_response_audio, ai_sender_audio_mode = get_hanogt_response_orchestrator(user_prompt_from_audio, gemini_formatted_history_audio, current_message_id_audio_mode, use_stream_output=False)
-                
-                st.markdown(f"#### {ai_sender_audio_mode} Yanıtı:")
-                st.markdown(ai_response_audio)
-                
-                current_tts_engine_audio = globals().get('tts_engine')
-                if st.session_state.tts_enabled and current_tts_engine_audio and ai_response_audio:
-                    if st.button("🔊 AI Yanıtını Seslendir", key="speak_audio_response_button_page"):
-                        speak(str(ai_response_audio))
-                
-                st.session_state.chat_history.append((ai_sender_audio_mode, str(ai_response_audio)))
-                save_chat_history(st.session_state.chat_history)
-                st.success("✅ Yanıt başarıyla oluşturuldu ve genel sohbet geçmişine eklendi!")
-
-    elif current_app_mode == "Yaratıcı Stüdyo":
-        st.markdown("Bir fikir, bir kelime veya bir cümle yazın. Hanogt AI size ilham verici ve yaratıcı bir yanıt oluştursun!", icon="💡")
-        user_creative_prompt_text = st.text_area(
-            "Yaratıcılık Tohumunuzu Buraya Ekleyin:",
-            key="creative_input_studio_main_page",
-            placeholder="Örneğin: 'Ay ışığında dans eden bir tilkinin rüyası hakkında kısa bir şiirsel metin'",
-            height=120
-        )
-        creative_options_cols = st.columns(2)
-        with creative_options_cols[0]:
-            response_length_preference = st.selectbox(
-                "İstenen Yanıt Uzunluğu:",
-                ["kısa", "orta", "uzun"], index=1,
-                key="creative_length_preference_selector_page",
-                help="Yapay zekanın üreteceği metnin yaklaşık uzunluğunu belirler."
+        elif current_app_mode == "Sesli Sohbet (Dosya Yükle)":
+            st.info("Lütfen yanıtlamamı istediğiniz konuşmayı içeren bir ses dosyası (WAV, MP3, OGG, FLAC, M4A formatlarında) yükleyin.", icon="📢")
+            uploaded_audio_file = st.file_uploader(
+                "Ses Dosyası Seçin:", type=['wav', 'mp3', 'ogg', 'flac', 'm4a'],
+                label_visibility="collapsed", key="audio_file_uploader_page_main"
             )
-        with creative_options_cols[1]:
-            response_style_preference = st.selectbox(
-                "İstenen Yaratıcılık Stili:",
-                ["genel", "şiirsel", "hikaye"], index=0,
-                key="creative_style_preference_selector_page",
-                help="Yapay zekanın kullanacağı yazım üslubunu seçin."
+            if uploaded_audio_file:
+                st.audio(uploaded_audio_file, format=uploaded_audio_file.type)
+                user_prompt_from_audio = None; audio_file_name = uploaded_audio_file.name
+                # Geçici dosya adı için daha güvenli yol
+                temp_audio_file_path = os.path.join(".", f"temp_audio_{st.session_state.session_id}_{uuid.uuid4().hex[:8]}.wav")
+
+                with st.spinner(f"🔊 '{audio_file_name}' ses dosyası işleniyor... Lütfen bekleyin."):
+                    speech_recognizer = sr.Recognizer();
+                    try:
+                        # Dosyayı kaydet ve işle
+                        with open(temp_audio_file_path, "wb") as temp_f: temp_f.write(uploaded_audio_file.getbuffer())
+                        with sr.AudioFile(temp_audio_file_path) as audio_source:
+                            audio_data_recorded = speech_recognizer.record(audio_source)
+                        user_prompt_from_audio = speech_recognizer.recognize_google(audio_data_recorded, language="tr-TR")
+                        st.success(f"**🎙️ Algılanan Metin:**\n\n> {user_prompt_from_audio}")
+                    except sr.UnknownValueError:
+                        st.error("🔇 Üzgünüm, ses anlaşılamadı. Lütfen daha net bir ses dosyası deneyin veya ses kalitesini kontrol edin.")
+                    except sr.RequestError as e_sr_request:
+                        st.error(f"🤖 Ses tanıma servisine ulaşılamadı: {e_sr_request}. Lütfen internet bağlantınızı kontrol edin.")
+                    except Exception as e_audio_processing:
+                        st.error(f"Ses dosyası işlenirken beklenmedik bir hata oluştu: {e_audio_processing}")
+                    finally:
+                        # Geçici dosyayı sil
+                        if os.path.exists(temp_audio_file_path):
+                            try: os.remove(temp_audio_file_path)
+                            except OSError as e_remove: print(f"Error removing temp audio file: {e_remove}")
+
+
+                if user_prompt_from_audio:
+                    # Aktif sohbet ID'sini al, yoksa yeni bir tane oluştur (veya hata ver?)
+                    active_chat_id = st.session_state.get('active_chat_id')
+                    if not active_chat_id:
+                         st.warning("Lütfen önce sol menüden bir sohbet seçin veya yeni bir sohbet başlatın.", icon="⚠️")
+                    else:
+                         current_message_id_audio_mode = f"audio_msg_{st.session_state.message_id_counter}_{int(time.time())}"
+                         st.session_state.message_id_counter += 1
+                         # Algılanan metni aktif sohbete ekle (Kullanıcı mesajı olarak)
+                         st.session_state.all_chats[active_chat_id].append({'role': 'user', 'parts': f"(Ses Dosyasından: {audio_file_name}) {user_prompt_from_audio}"})
+
+                         # AI yanıtı için geçmişi hazırla
+                         raw_history_for_gemini_audio = st.session_state.all_chats[active_chat_id][-21:-1] # Son 20 mesaj
+                         history_for_orchestrator_audio = []
+                         for msg in raw_history_for_gemini_audio:
+                             sender_name = "Sen" if msg['role'] == 'user' else APP_NAME
+                             history_for_orchestrator_audio.append((sender_name, msg['parts']))
+
+                         with st.spinner("🤖 Yapay zeka yanıtınızı hazırlıyor..."):
+                             ai_response_audio, ai_sender_audio_mode = get_hanogt_response_orchestrator(user_prompt_from_audio, history_for_orchestrator_audio, current_message_id_audio_mode, active_chat_id, use_stream_output=False)
+
+                         st.markdown(f"#### {ai_sender_audio_mode} Yanıtı:")
+                         st.markdown(str(ai_response_audio))
+
+                         current_tts_engine_audio = globals().get('tts_engine')
+                         if st.session_state.tts_enabled and current_tts_engine_audio and ai_response_audio:
+                             if st.button("🔊 AI Yanıtını Seslendir", key="speak_audio_response_button_page"):
+                                 speak(str(ai_response_audio))
+
+                         # AI yanıtını aktif sohbete ekle
+                         st.session_state.all_chats[active_chat_id].append({'role': 'model', 'parts': str(ai_response_audio)})
+                         save_all_chats(st.session_state.all_chats) # Kaydet
+                         st.success("✅ Yanıt başarıyla oluşturuldu ve aktif sohbet geçmişine eklendi!")
+                         # Belki otomatik olarak Yazılı Sohbet moduna geri dönülebilir?
+                         # st.session_state.app_mode = "Yazılı Sohbet"
+                         # st.rerun()
+
+
+        elif current_app_mode == "Yaratıcı Stüdyo":
+            st.markdown("💡 Bir fikir, bir kelime veya bir cümle yazın. Hanogt AI size ilham verici ve yaratıcı bir yanıt oluştursun!")
+            user_creative_prompt_text = st.text_area(
+                "Yaratıcılık Tohumunuzu Buraya Ekleyin:",
+                key="creative_input_studio_main_page",
+                placeholder="Örneğin: 'Ay ışığında dans eden bir tilkinin rüyası hakkında kısa bir şiirsel metin'",
+                height=120
+            )
+            creative_options_cols = st.columns(2)
+            with creative_options_cols[0]:
+                response_length_preference = st.selectbox(
+                    "İstenen Yanıt Uzunluğu:",
+                    ["kısa", "orta", "uzun"], index=1,
+                    key="creative_length_preference_selector_page",
+                    help="Yapay zekanın üreteceği metnin yaklaşık uzunluğunu belirler."
+                )
+            with creative_options_cols[1]:
+                response_style_preference = st.selectbox(
+                    "İstenen Yaratıcılık Stili:",
+                    ["genel", "şiirsel", "hikaye"], index=0,
+                    key="creative_style_preference_selector_page",
+                    help="Yapay zekanın kullanacağı yazım üslubunu seçin."
+                )
+
+            if st.button("✨ İlham Veren Fikri Üret!", key="generate_creative_response_button_page", type="primary", use_container_width=True):
+                if user_creative_prompt_text and user_creative_prompt_text.strip():
+                    final_creative_response_text = None; ai_sender_creative_mode = f"{APP_NAME} (Yaratıcı)"
+                    # Yaratıcı yanıtlar için de bir sohbet ID'si ve loglama ID'si lazım
+                    active_chat_id = st.session_state.get('active_chat_id', 'creative_mode_no_chat') # Varsa aktif sohbet, yoksa özel ID
+                    current_message_id_creative_mode = f"creative_msg_{st.session_state.message_id_counter}_{int(time.time())}"
+                    st.session_state.message_id_counter += 1
+
+                    current_gemini_model_creative = globals().get('gemini_model')
+                    if current_gemini_model_creative:
+                        with st.spinner("✨ Gemini ilham perileriyle fısıldaşıyor ve sizin için özel bir metin hazırlıyor..."):
+                            gemini_creative_system_prompt_text = (
+                                f"Sen çok yaratıcı, hayal gücü geniş ve edebi yönü kuvvetli bir asistansın. "
+                                f"Sana verilen şu isteme: '{user_creative_prompt_text}' dayanarak, "
+                                f"'{response_style_preference}' stilinde ve yaklaşık '{response_length_preference}' uzunlukta özgün, ilginç ve sanatsal bir metin oluştur. "
+                                "Sıradanlıktan kaçın, okuyucuyu etkileyecek ve düşündürecek bir dil kullan. Eğer uygunsa, metaforlar ve benzetmeler de kullanabilirsin."
+                            )
+                            # Yaratıcı modda geçmiş göndermeyelim, her seferinde sıfırdan başlasın
+                            gemini_creative_response = get_gemini_response_cached(gemini_creative_system_prompt_text, [], stream_output=False)
+
+                            if gemini_creative_response and not (isinstance(gemini_creative_response, str) and gemini_creative_response.startswith(GEMINI_ERROR_PREFIX)):
+                                final_creative_response_text = str(gemini_creative_response)
+                                ai_sender_creative_mode = f"{APP_NAME} (Gemini Yaratıcı)"
+                            else:
+                                error_msg_creative = gemini_creative_response if isinstance(gemini_creative_response, str) else "Bilinmeyen bir sorun oluştu."
+                                st.warning(f"Gemini yaratıcı yanıtı alınamadı. Yerel modül kullanılacak. (Detay: {error_msg_creative.replace(GEMINI_ERROR_PREFIX, '').strip()})", icon="⚠️")
+
+                    if not final_creative_response_text:
+                        with st.spinner("✨ Kendi fikirlerimi demliyorum ve hayal gücümün sınırlarını zorluyorum..."):
+                            time.sleep(0.2)
+                            local_creative_generated_text = creative_response_generator(user_creative_prompt_text, length_preference=response_length_preference, style_preference=response_style_preference)
+                            newly_generated_word = advanced_word_generator(user_creative_prompt_text.split()[0] if user_creative_prompt_text else "kelime")
+                            final_creative_response_text = f"{local_creative_generated_text}\n\n---\n🔮 **Kelimatörden Türetilen Özel Sözcük:** {newly_generated_word}"
+                            ai_sender_creative_mode = f"{APP_NAME} (Yerel Yaratıcı)"
+
+                    st.markdown(f"#### {ai_sender_creative_mode} İlhamı:")
+                    st.markdown(final_creative_response_text)
+
+                    current_tts_engine_creative = globals().get('tts_engine')
+                    if st.session_state.tts_enabled and current_tts_engine_creative and final_creative_response_text:
+                        if st.button("🔊 Bu İlham Veren Metni Dinle", key="speak_creative_response_button_page"):
+                            text_to_speak_creative = final_creative_response_text.split("🔮 **Kelimatörden Türetilen Özel Sözcük:**")[0].strip()
+                            speak(text_to_speak_creative)
+
+                    # Yaratıcı yanıtı logla (aktif sohbet ID'si ile veya özel ID ile)
+                    log_interaction(user_creative_prompt_text, final_creative_response_text, ai_sender_creative_mode, current_message_id_creative_mode, active_chat_id)
+                    st.success("✨ Yaratıcı yanıtınız başarıyla oluşturuldu!")
+
+                    # İsteğe bağlı: Yaratıcı yanıtı aktif sohbete ekleyebilir miyiz?
+                    # if active_chat_id != 'creative_mode_no_chat':
+                    #    st.session_state.all_chats[active_chat_id].append({'role': 'user', 'parts': f"(Yaratıcı Stüdyo İstemi: {user_creative_prompt_text})"})
+                    #    st.session_state.all_chats[active_chat_id].append({'role': 'model', 'parts': final_creative_response_text})
+                    #    save_all_chats(st.session_state.all_chats)
+                    #    st.info("Bu yaratıcı yanıt aktif sohbet geçmişinize de eklendi.", icon="💾")
+
+                else:
+                    st.error("Lütfen yaratıcılığınızı ateşleyecek bir fikir, kelime veya cümle yazın!", icon="✍️")
+
+        elif current_app_mode == "Görsel Oluşturucu":
+            st.markdown("🎨 Hayalinizdeki görseli tarif edin, Hanogt AI anahtar kelimelere göre sizin için (sembolik olarak) çizecektir!")
+            st.info("ℹ️ **Not:** Bu mod, girdiğiniz metindeki anahtar kelimelere (örneğin: güneş, deniz, ağaç, ay, gökyüzü, orman, dağ, şehir vb.) göre basit, kural tabanlı ve sembolik çizimler yapar. Lütfen fotogerçekçi veya karmaşık sanat eserleri beklemeyin; bu daha çok prompt'unuzun eğlenceli bir yorumlayıcısıdır.", icon="💡")
+
+            user_image_prompt_text = st.text_input(
+                "Ne tür bir görsel hayal ediyorsunuz? (Anahtar kelimelerle tarif edin)",
+                key="image_prompt_input_generator_page",
+                placeholder="Örnek: 'Gece vakti karlı dağların üzerinde parlayan bir dolunay ve birkaç çam ağacı'"
             )
 
-        if st.button("✨ İlham Veren Fikri Üret!", key="generate_creative_response_button_page", type="primary", use_container_width=True):
-            if user_creative_prompt_text and user_creative_prompt_text.strip():
-                final_creative_response_text = None; ai_sender_creative_mode = f"{APP_NAME} (Yaratıcı)"
-                current_message_id_creative_mode = f"creative_msg_{st.session_state.message_id_counter}_{int(time.time())}"
-                st.session_state.message_id_counter += 1
+            if st.button("🖼️ Hayalimdeki Görseli Oluştur!", key="generate_rule_based_image_button_page", type="primary", use_container_width=True):
+                if user_image_prompt_text and user_image_prompt_text.strip():
+                    with st.spinner("🖌️ Fırçalarım ve renklerim hazırlanıyor... Hayaliniz tuvale aktarılıyor..."):
+                        time.sleep(0.3)
+                        generated_image_object = generate_prompt_influenced_image(user_image_prompt_text)
 
-                current_gemini_model_creative = globals().get('gemini_model')
-                if current_gemini_model_creative:
-                    with st.spinner("✨ Gemini ilham perileriyle fısıldaşıyor ve sizin için özel bir metin hazırlıyor..."):
-                        gemini_creative_system_prompt_text = (
-                            f"Sen çok yaratıcı, hayal gücü geniş ve edebi yönü kuvvetli bir asistansın. "
-                            f"Sana verilen şu isteme: '{user_creative_prompt_text}' dayanarak, "
-                            f"'{response_style_preference}' stilinde ve yaklaşık '{response_length_preference}' uzunlukta özgün, ilginç ve sanatsal bir metin oluştur. "
-                            "Sıradanlıktan kaçın, okuyucuyu etkileyecek ve düşündürecek bir dil kullan. Eğer uygunsa, metaforlar ve benzetmeler de kullanabilirsin."
+                    st.image(generated_image_object, caption=f"{APP_NAME}'ın '{user_image_prompt_text[:60]}' yorumu (Kural Tabanlı Çizim)", use_container_width=True)
+
+                    try:
+                        image_buffer = BytesIO()
+                        generated_image_object.save(image_buffer, format="PNG")
+                        image_bytes_for_download = image_buffer.getvalue()
+
+                        cleaned_prompt_for_filename = re.sub(r'[^\w\s-]', '', user_image_prompt_text.lower())
+                        cleaned_prompt_for_filename = re.sub(r'\s+', '_', cleaned_prompt_for_filename).strip('_')[:35]
+                        downloadable_file_name = f"hanogt_ai_cizim_{cleaned_prompt_for_filename or 'gorsel'}_{int(time.time())}.png"
+
+                        st.download_button(
+                            label="🖼️ Oluşturulan Görseli İndir (PNG)",
+                            data=image_bytes_for_download,
+                            file_name=downloadable_file_name,
+                            mime="image/png",
+                            use_container_width=True
                         )
-                        gemini_creative_response = get_gemini_response_cached(gemini_creative_system_prompt_text, [], stream_output=False)
-                        
-                        if gemini_creative_response and not (isinstance(gemini_creative_response, str) and gemini_creative_response.startswith(GEMINI_ERROR_PREFIX)):
-                            final_creative_response_text = str(gemini_creative_response)
-                            ai_sender_creative_mode = f"{APP_NAME} (Gemini Yaratıcı)"
-                        else:
-                            error_msg_creative = gemini_creative_response if isinstance(gemini_creative_response, str) else "Bilinmeyen bir sorun oluştu."
-                            st.warning(f"Gemini yaratıcı yanıtı alınamadı. Yerel modül kullanılacak. (Detay: {error_msg_creative.replace(GEMINI_ERROR_PREFIX, '').strip()})", icon="⚠️")
-                
-                if not final_creative_response_text:
-                    with st.spinner("✨ Kendi fikirlerimi demliyorum ve hayal gücümün sınırlarını zorluyorum..."):
-                        time.sleep(0.2)
-                        local_creative_generated_text = creative_response_generator(user_creative_prompt_text, length_preference=response_length_preference, style_preference=response_style_preference)
-                        newly_generated_word = advanced_word_generator(user_creative_prompt_text.split()[0] if user_creative_prompt_text else "kelime")
-                        final_creative_response_text = f"{local_creative_generated_text}\n\n---\n🔮 **Kelimatörden Türetilen Özel Sözcük:** {newly_generated_word}"
-                        ai_sender_creative_mode = f"{APP_NAME} (Yerel Yaratıcı)"
-                
-                st.markdown(f"#### {ai_sender_creative_mode} İlhamı:")
-                st.markdown(final_creative_response_text)
-                
-                current_tts_engine_creative = globals().get('tts_engine')
-                if st.session_state.tts_enabled and current_tts_engine_creative and final_creative_response_text:
-                    if st.button("🔊 Bu İlham Veren Metni Dinle", key="speak_creative_response_button_page"):
-                        text_to_speak_creative = final_creative_response_text.split("🔮 **Kelimatörden Türetilen Özel Sözcük:**")[0].strip()
-                        speak(text_to_speak_creative)
-                
-                log_interaction(user_creative_prompt_text, final_creative_response_text, ai_sender_creative_mode, current_message_id_creative_mode)
-                st.success("✨ Yaratıcı yanıtınız başarıyla oluşturuldu!")
-            else:
-                st.error("Lütfen yaratıcılığınızı ateşleyecek bir fikir, kelime veya cümle yazın!", icon="✍️")
+                        # İsteğe bağlı: Görseli ve promptu aktif sohbete ekle
+                        active_chat_id = st.session_state.get('active_chat_id')
+                        if active_chat_id and active_chat_id in st.session_state.all_chats:
+                            # Görseli base64'e çevirip markdown ile ekleyebiliriz ama çok yer kaplar.
+                            # Şimdilik sadece prompt ve bir not ekleyelim.
+                            st.session_state.all_chats[active_chat_id].append({'role': 'user', 'parts': f"(Görsel Oluşturucu İstemi: {user_image_prompt_text})"})
+                            st.session_state.all_chats[active_chat_id].append({'role': 'model', 'parts': f"(Yukarıdaki istemle bir görsel oluşturuldu - İndirme butonu yukarıda mevcut.)"})
+                            save_all_chats(st.session_state.all_chats)
+                            st.info("Bu görsel istemi ve notu aktif sohbet geçmişinize eklendi.", icon="💾")
 
-    elif current_app_mode == "Görsel Oluşturucu":
-        st.markdown("Hayalinizdeki görseli tarif edin, Hanogt AI anahtar kelimelere göre sizin için (sembolik olarak) çizecektir!", icon="🎨")
-        st.info("ℹ️ **Not:** Bu mod, girdiğiniz metindeki anahtar kelimelere (örneğin: güneş, deniz, ağaç, ay, gökyüzü, orman, dağ, şehir vb.) göre basit, kural tabanlı ve sembolik çizimler yapar. Lütfen fotogerçekçi veya karmaşık sanat eserleri beklemeyin; bu daha çok prompt'unuzun eğlenceli bir yorumlayıcısıdır.", icon="💡")
-        
-        user_image_prompt_text = st.text_input(
-            "Ne tür bir görsel hayal ediyorsunuz? (Anahtar kelimelerle tarif edin)",
-            key="image_prompt_input_generator_page",
-            placeholder="Örnek: 'Gece vakti karlı dağların üzerinde parlayan bir dolunay ve birkaç çam ağacı'"
+
+                    except Exception as e_image_download:
+                        st.error(f"Görsel indirilirken bir hata oluştu: {e_image_download}", icon="⚠️")
+                else:
+                    st.error("Lütfen ne tür bir görsel çizmemi istediğinizi açıklayan bir metin girin!", icon="✍️")
+
+
+    # --- Alt Bilgi (Footer) - Ana Kolonun En Altında ---
+    with main_col:
+        st.markdown("<hr style='margin-top: 1rem; margin-bottom: 0.5rem;'>", unsafe_allow_html=True)
+        # Gemini Modeli -> Hanogt AI Modeli olarak değiştirildi
+        gemini_status_color = 'green' if globals().get('gemini_model') else 'red'
+        gemini_status_text = st.session_state.gemini_model_name if globals().get('gemini_model') else 'Devre Dışı'
+        supabase_status_color = 'green' if globals().get('supabase') else 'red'
+        supabase_status_text = 'Aktif' if globals().get('supabase') else 'Devre Dışı'
+
+        st.markdown(
+            f"""
+            <p style='text-align: center; font-size: 0.8rem; color: #777;'>
+                {APP_NAME} v{APP_VERSION} &nbsp;&nbsp;|&nbsp;&nbsp;
+                Kullanıcı: {st.session_state.get('user_name', 'Misafir')} &nbsp;&nbsp;|&nbsp;&nbsp;
+                © 2024-{CURRENT_YEAR}
+                <br>
+                Hanogt AI Modeli: <span style="color: {gemini_status_color};">{gemini_status_text}</span> &nbsp;&nbsp;|&nbsp;&nbsp;
+                Supabase Loglama: <span style="color: {supabase_status_color};">{supabase_status_text}</span>
+            </p>
+            """, unsafe_allow_html=True
         )
-        
-        if st.button("🖼️ Hayalimdeki Görseli Oluştur!", key="generate_rule_based_image_button_page", type="primary", use_container_width=True):
-            if user_image_prompt_text and user_image_prompt_text.strip():
-                with st.spinner("🖌️ Fırçalarım ve renklerim hazırlanıyor... Hayaliniz tuvale aktarılıyor..."):
-                    time.sleep(0.3)
-                    generated_image_object = generate_prompt_influenced_image(user_image_prompt_text)
-                
-                st.image(generated_image_object, caption=f"{APP_NAME}'ın '{user_image_prompt_text[:60]}' yorumu (Kural Tabanlı Çizim)", use_container_width=True)
-                
-                try:
-                    image_buffer = BytesIO()
-                    generated_image_object.save(image_buffer, format="PNG")
-                    image_bytes_for_download = image_buffer.getvalue()
-                    
-                    cleaned_prompt_for_filename = re.sub(r'[^\w\s-]', '', user_image_prompt_text.lower())
-                    cleaned_prompt_for_filename = re.sub(r'\s+', '_', cleaned_prompt_for_filename).strip('_')[:35]
-                    downloadable_file_name = f"hanogt_ai_cizim_{cleaned_prompt_for_filename or 'gorsel'}_{int(time.time())}.png"
-                    
-                    st.download_button(
-                        label="🖼️ Oluşturulan Görseli İndir (PNG)",
-                        data=image_bytes_for_download,
-                        file_name=downloadable_file_name,
-                        mime="image/png",
-                        use_container_width=True
-                    )
-                except Exception as e_image_download:
-                    st.error(f"Görsel indirilirken bir hata oluştu: {e_image_download}", icon="⚠️")
-            else:
-                st.error("Lütfen ne tür bir görsel çizmemi istediğinizi açıklayan bir metin girin!", icon="✍️")
 
-    # --- Alt Bilgi (Footer) ---
-    st.markdown("<hr style='margin-top: 1rem; margin-bottom: 0.5rem;'>", unsafe_allow_html=True)
-    st.markdown(
-        f"""
-        <p style='text-align: center; font-size: 0.8rem; color: #777;'>
-            {APP_NAME} v{APP_VERSION} &nbsp;&nbsp;|&nbsp;&nbsp; 
-            Kullanıcı: {st.session_state.get('user_name', 'Misafir')} &nbsp;&nbsp;|&nbsp;&nbsp;
-            © 2024-{CURRENT_YEAR}
-            <br>
-            Gemini Modeli: <span style="color: {'green' if globals().get('gemini_model') else 'red'};">{st.session_state.gemini_model_name if globals().get('gemini_model') else 'Devre Dışı'}</span> &nbsp;&nbsp;|&nbsp;&nbsp;
-            Supabase Loglama: <span style="color: {'green' if globals().get('supabase') else 'red'};">{'Aktif' if globals().get('supabase') else 'Devre Dışı'}</span>
-        </p>
-        """, unsafe_allow_html=True
-    )
