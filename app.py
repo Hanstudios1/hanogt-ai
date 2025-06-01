@@ -122,8 +122,7 @@ def kb_chatbot_response(query, knowledge_base_dict):
             st.error(f"Fonksiyon hatası ({query_lower}): {e}")
             return DEFAULT_ERROR_MESSAGE
     
-    # knowledge_base_dict boş veya None ise hata vermemesi için kontrol
-    if not knowledge_base_dict:
+    if not knowledge_base_dict: # Bilgi tabanı boşsa veya yüklenememişse
         return None
 
     if query_lower in knowledge_base_dict:
@@ -146,7 +145,7 @@ def kb_chatbot_response(query, knowledge_base_dict):
         if not key_words:
             continue
         score = len(query_words.intersection(key_words)) / len(key_words) if key_words else 0
-        if score > 0.6: # Eşleşme eşiği
+        if score > 0.6: 
             options = resp_list if isinstance(resp_list, list) else [resp_list]
             if score > best_score:
                 best_score, best_responses = score, options
@@ -161,7 +160,7 @@ gemini_model = None
 gemini_init_error_global = None
 
 def initialize_gemini_model():
-    global gemini_init_error_global # Global değişkeni değiştirmek için
+    global gemini_init_error_global 
     api_key = st.secrets.get("GOOGLE_API_KEY")
     if not api_key:
         gemini_init_error_global = "🛑 Google API Anahtarı Secrets'ta bulunamadı! Gemini özellikleri devre dışı."
@@ -190,7 +189,7 @@ def initialize_gemini_model():
             model_args["system_instruction"] = system_prompt.strip()
         
         model = genai.GenerativeModel(**model_args)
-        gemini_init_error_global = None # Başarılıysa hatayı temizle
+        gemini_init_error_global = None 
         print(f"INFO: Gemini modeli ({model_name}) başarıyla yapılandırıldı ve yüklendi!")
         return model, None
     except Exception as e:
@@ -206,7 +205,7 @@ supabase_init_error_global = None
 
 @st.cache_resource(ttl=3600)
 def init_supabase_client_cached():
-    if not create_client: # Kütüphane yüklenememişse
+    if not create_client: 
         error_msg = "Supabase kütüphanesi yüklenemediğinden Supabase başlatılamadı. Loglama devre dışı."
         print(f"ERROR: {error_msg}")
         return None, error_msg
@@ -221,7 +220,7 @@ def init_supabase_client_cached():
     try:
         client: Client = create_client(url, key)
         print("INFO: Supabase client created successfully via cache function.")
-        return client, None # Başarılıysa None (hata yok) dön
+        return client, None 
     except Exception as e:
         error_msg = f"Supabase bağlantısı sırasında kritik hata: {e}. Loglama ve geri bildirim devre dışı."
         print(f"CRITICAL_ERROR: Supabase connection failed: {e}")
@@ -243,9 +242,6 @@ tts_init_error_global = None
 def init_tts_engine_cached():
     try:
         engine = pyttsx3.init()
-        # Motoru test etmek için kısa bir şey söyletebiliriz (opsiyonel, logda görülebilir)
-        # engine.say("TTS hazır") 
-        # engine.runAndWait()
         print("INFO: TTS motoru başarıyla başlatıldı.")
         return engine, None
     except Exception as e:
@@ -261,13 +257,12 @@ def speak(text):
         st.toast("TTS motoru aktif değil, sesli yanıt verilemiyor.", icon="🔇")
         return
     if not st.session_state.get('tts_enabled', True):
-        return # Ayarlardan kapalıysa sessizce geç
+        return 
     try:
-        # Metni temizle (istenmeyen karakterler TTS'i bozabilir)
         cleaned_text = re.sub(r'[^\w\s.,!?-]', '', text)
         engine.say(cleaned_text)
         engine.runAndWait()
-    except RuntimeError as e: # pyttsx3'e özgü çalışma zamanı hatası
+    except RuntimeError as e: 
         st.warning(f"TTS çalışma zamanı sorunu (tekrar deneyin): {e}.", icon="🔊")
         print(f"WARNING: TTS runtime error: {e}")
     except Exception as e:
@@ -277,31 +272,29 @@ def speak(text):
 # --- Metin Temizleme ---
 def _clean_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
-    text = re.sub(r'\n\s*\n', '\n\n', text) # Çoklu boş satırları tek boş satıra indir
+    text = re.sub(r'\n\s*\n', '\n\n', text) 
     return text
 
 # --- Web Kazıma (Cache'li)---
-@st.cache_data(ttl=600) # 10 dakika cache
+@st.cache_data(ttl=600)
 def scrape_url_content(url, timeout=REQUEST_TIMEOUT, max_chars=SCRAPE_MAX_CHARS):
     print(f"INFO: Web içeriği kazınıyor: {url}")
-    messages_to_show_outside = [] # UI mesajları için liste
+    messages_to_show_outside = []
     try:
         parsed_url = urlparse(url)
         headers = {
             'User-Agent': USER_AGENT,
-            'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8', # Türkçe içeriğe öncelik ver
+            'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8', 
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'DNT': '1', # Do Not Track
+            'DNT': '1', 
             'Upgrade-Insecure-Requests': '1'
         }
-        # URL geçerlilik kontrolü
         if not all([parsed_url.scheme, parsed_url.netloc]) or parsed_url.scheme not in ['http', 'https']:
             messages_to_show_outside.append({'type': 'warning', 'text': f"Geçersiz veya desteklenmeyen URL şeması: {url}", 'icon': "🔗"})
             return None, messages_to_show_outside
         
-        # Stream ile büyük dosyaları parça parça al
         response = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True, stream=True)
-        response.raise_for_status() # HTTP hatalarını yakala (4xx, 5xx)
+        response.raise_for_status()
 
         content_type = response.headers.get('content-type', '').lower()
         if 'html' not in content_type:
@@ -311,34 +304,29 @@ def scrape_url_content(url, timeout=REQUEST_TIMEOUT, max_chars=SCRAPE_MAX_CHARS)
 
         html_content = ""
         current_size_bytes = 0
-        # Maksimum byte boyutu (çok büyük HTML'leri erken kesmek için, max_chars'tan bağımsız)
-        # Karakter başına ortalama 2-4 byte UTF-8 varsayımıyla.
         absolute_max_html_bytes = max_chars * 6 
         
         try:
-            for chunk in response.iter_content(chunk_size=8192, decode_unicode=True, errors='ignore'): # decode_unicode ile string chunk'lar
+            for chunk in response.iter_content(chunk_size=8192, decode_unicode=True, errors='ignore'): 
                 if chunk:
                     html_content += chunk
-                    current_size_bytes += len(chunk.encode('utf-8', 'ignore')) # Byte boyutunu kontrol et
+                    current_size_bytes += len(chunk.encode('utf-8', 'ignore')) 
                 if current_size_bytes > absolute_max_html_bytes:
                     messages_to_show_outside.append({'type': 'warning', 'text': f"HTML içeriği çok büyük ({current_size_bytes // 1024}KB), tamamı işlenmeden kesiliyor: {url}", 'icon': "✂️"})
                     break
         finally:
-            response.close() # Bağlantıyı kapat
+            response.close() 
 
         if not html_content.strip():
             messages_to_show_outside.append({'type': 'warning', 'text': f"URL'den boş HTML içeriği alındı: {url}", 'icon': "📄"})
             return None, messages_to_show_outside
 
-        soup = BeautifulSoup(html_content, 'lxml') # lxml parser daha hızlı olabilir
-        
-        # Kaldırılacak gereksiz etiketler (daha kapsamlı liste)
+        soup = BeautifulSoup(html_content, 'lxml') 
         tags_to_remove = ["script", "style", "nav", "footer", "aside", "form", "button", "iframe", "header", "noscript", "link", "meta", "img", "svg", "video", "audio", "figure", "input", "select", "textarea", "path", "canvas", "figcaption", "details", "summary", "template", "dialog"]
         for tag in soup.find_all(tags_to_remove):
             tag.decompose()
         
         content_parts = []
-        # Ana içerik alanlarını bulmak için daha fazla CSS seçici
         selectors = [
             'article[class*="content"]', 'article[class*="post"]', 'article[itemprop="articleBody"]',
             'main[id*="content"]', 'main[role="main"]', 'main',
@@ -348,34 +336,28 @@ def scrape_url_content(url, timeout=REQUEST_TIMEOUT, max_chars=SCRAPE_MAX_CHARS)
         ]
         main_container = next((found[0] for sel in selectors if (found := soup.select(sel, limit=1))), None)
         
-        min_paragraph_len = 50 # Paragraf için minimum karakter uzunluğu
-        min_meaningful_chars_in_paragraph = 3 # Nokta, virgül vb.
+        min_paragraph_len = 50 
+        min_meaningful_chars_in_paragraph = 3 
 
-        target_element = main_container if main_container else soup.body # Ana konteyner yoksa body'yi kullan
+        target_element = main_container if main_container else soup.body 
         
         if target_element:
-            # Paragrafları (p), bölümleri (div), liste elemanlarını (li) ve başlıkları (h1-h6) al
-            for tag in target_element.find_all(['p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'td'], limit=100): # limit eklendi
+            for tag in target_element.find_all(['p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'td'], limit=100): 
                 text = _clean_text(tag.get_text(separator=' ', strip=True))
-                # Çok kısa veya anlamsız metinleri atla
                 if len(text) > min_paragraph_len and (text.count('.') + text.count(',') + text.count('!') + text.count('?')) >= min_meaningful_chars_in_paragraph:
                     content_parts.append(text)
-                elif tag.name.startswith('h') and len(text) > 10: # Başlıklar daha kısa olabilir
+                elif tag.name.startswith('h') and len(text) > 10: 
                     content_parts.append(text)
 
-
-        if not content_parts or len(" ".join(content_parts)) < 150: # Yeterli içerik yoksa
-             # Eğer body'den de bir şey çıkmazsa, tüm görünür metni almayı dene (son çare)
+        if not content_parts or len(" ".join(content_parts)) < 150: 
             all_visible_text = _clean_text(soup.get_text(separator='\n', strip=True))
-            if all_visible_text and len(all_visible_text) > 200: # Eğer tüm metin anlamlıysa
+            if all_visible_text and len(all_visible_text) > 200: 
                 messages_to_show_outside.append({'type': 'info', 'text': f"Sayfadan genel görünür metin kullanıldı (düşük özgüllük): {url}", 'icon': "ℹ️"})
-                # Bu metni paragraflara bölmeye çalış
                 content_parts = [p.strip() for p in all_visible_text.split('\n') if len(p.strip()) > min_paragraph_len][:70]
             else:
                 messages_to_show_outside.append({'type': 'info', 'text': f"Sayfadan anlamlı metin çıkarılamadı: {url}", 'icon': "📄"})
                 return None, messages_to_show_outside
 
-        # Tekrarlanan içerik parçalarını kaldır (sırayı koruyarak)
         unique_content_parts = list(dict.fromkeys(content_parts))
         final_cleaned_content = _clean_text("\n\n".join(unique_content_parts))
 
@@ -383,9 +365,7 @@ def scrape_url_content(url, timeout=REQUEST_TIMEOUT, max_chars=SCRAPE_MAX_CHARS)
             messages_to_show_outside.append({'type': 'info', 'text': f"Kazıma sonucu anlamlı içerik bulunamadı: {url}", 'icon': "📄"})
             return None, messages_to_show_outside
         
-        # Son olarak karakter limitine göre kırp
         truncated_content = final_cleaned_content[:max_chars] + ("..." if len(final_cleaned_content) > max_chars else "")
-        
         messages_to_show_outside.append({'type': 'toast', 'text': f"'{urlparse(url).netloc}' sitesinden içerik başarıyla alındı.", 'icon': "✅"})
         return truncated_content, messages_to_show_outside
 
@@ -393,12 +373,12 @@ def scrape_url_content(url, timeout=REQUEST_TIMEOUT, max_chars=SCRAPE_MAX_CHARS)
         messages_to_show_outside.append({'type': 'toast', 'text': f"⏳ İstek zaman aşımına uğradı: {url}", 'icon': '🌐'})
         print(f"ERROR: Timeout scraping '{url}'")
         return None, messages_to_show_outside
-    except requests.exceptions.RequestException as e: # Diğer ağ hataları
-        error_short = str(e).split('\n')[0][:100] # Hata mesajını kısalt
+    except requests.exceptions.RequestException as e: 
+        error_short = str(e).split('\n')[0][:100] 
         messages_to_show_outside.append({'type': 'toast', 'text': f"⚠️ Ağ hatası oluştu: {url} - {error_short}", 'icon': '🌐'})
         print(f"ERROR: Network error scraping '{url}': {e}")
         return None, messages_to_show_outside
-    except Exception as e: # Diğer beklenmedik kazıma hataları
+    except Exception as e: 
         error_short = str(e)[:100]
         messages_to_show_outside.append({'type': 'toast', 'text': f"⚠️ Kazıma sırasında beklenmedik bir hata: {error_short}", 'icon': '🔥'})
         print(f"CRITICAL_ERROR: Scraping '{url}' failed: {e}")
@@ -410,87 +390,72 @@ def scrape_url_content(url, timeout=REQUEST_TIMEOUT, max_chars=SCRAPE_MAX_CHARS)
 @st.cache_data(ttl=600)
 def search_web(query):
     print(f"INFO: Web'de '{query}' için arama yapılıyor...")
-    messages_to_show_outside = [] # UI mesajları için
-    wikipedia.set_lang("tr") # Wikipedia dilini Türkçe yap
-    search_result_text = None # Nihai metin sonucunu tutacak
+    messages_to_show_outside = [] 
+    wikipedia.set_lang("tr") 
+    search_result_text = None 
 
-    # 1. Wikipedia Araması
     try:
-        # Önce arama yapıp en iyi sonucu bul, sonra o sayfanın özetini al
         wp_search_titles = wikipedia.search(query, results=1) 
         if wp_search_titles:
             page_title = wp_search_titles[0]
-            wp_page = wikipedia.page(page_title, auto_suggest=False, redirect=True) # Sayfayı al
-            wp_summary = wikipedia.summary(page_title, sentences=4, auto_suggest=False, redirect=True) # Daha kısa özet
-            
+            wp_page = wikipedia.page(page_title, auto_suggest=False, redirect=True) 
+            wp_summary = wikipedia.summary(page_title, sentences=4, auto_suggest=False, redirect=True) 
             search_result_text = f"**Wikipedia ({wp_page.title}):**\n\n{_clean_text(wp_summary)}\n\nKaynak: {wp_page.url}"
             messages_to_show_outside.append({'type': 'toast', 'text': f"✅ Wikipedia'dan '{wp_page.title}' bulundu.", 'icon': "📚"})
-    except wikipedia.exceptions.PageError: # Sayfa bulunamazsa
+    except wikipedia.exceptions.PageError: 
         messages_to_show_outside.append({'type': 'info', 'text': f"ℹ️ Wikipedia'da '{query}' için direkt sayfa bulunamadı.", 'icon': "🤷"})
-    except wikipedia.exceptions.DisambiguationError as e: # Çok anlamlılık durumu
-        options = e.options[:3] # İlk 3 seçeneği göster
+    except wikipedia.exceptions.DisambiguationError as e: 
+        options = e.options[:3] 
         search_result_text = (f"**Wikipedia Çok Anlamlı ({query}):**\n"
                               f"'{query}' için birden fazla anlam bulundu. Olası başlıklar: {', '.join(options)}...\n"
                               f"Daha spesifik bir arama yapmayı deneyin.")
         messages_to_show_outside.append({'type': 'toast', 'text': f"ℹ️ Wikipedia'da '{query}' için birden fazla sonuç var.", 'icon': "📚"})
-    except Exception as e: # Diğer Wikipedia hataları
+    except Exception as e: 
         error_short = str(e)[:100]
         messages_to_show_outside.append({'type': 'toast', 'text': f"⚠️ Wikipedia araması sırasında bir hata oluştu: {error_short}", 'icon': "🔥"})
         print(f"ERROR: Wikipedia search error for '{query}': {e}")
 
-    # 2. DuckDuckGo Araması (Snippet ve kazınacak URL için)
     ddg_url_to_scrape = None
     ddg_snippet_used = False
     try:
         with DDGS(headers={'User-Agent': USER_AGENT}, timeout=REQUEST_TIMEOUT) as ddgs:
-            ddg_results = list(ddgs.text(query, region='tr-tr', safesearch='Strict', max_results=3)) # Daha güvenli arama
+            ddg_results = list(ddgs.text(query, region='tr-tr', safesearch='Strict', max_results=3)) 
             if ddg_results:
-                best_ddg_result = ddg_results[0] # Genellikle ilk sonuç en iyisidir
+                best_ddg_result = ddg_results[0] 
                 snippet_text = best_ddg_result.get('body')
                 href_url = best_ddg_result.get('href')
 
-                if href_url: # Geçerli bir URL varsa
-                    ddg_url_to_scrape = unquote(href_url) # URL'yi kazımak için sakla
+                if href_url: 
+                    ddg_url_to_scrape = unquote(href_url) 
                     domain_name = urlparse(ddg_url_to_scrape).netloc
-                    
-                    # Eğer Wikipedia sonucu yoksa veya çok kısaysa, DDG snippet'ini kullan
                     if snippet_text and (not search_result_text or len(search_result_text) < 150):
                         search_result_text = (f"**Web Özeti (DuckDuckGo - {domain_name}):**\n\n"
                                               f"{_clean_text(snippet_text)}\n\n"
                                               f"Kaynak: {ddg_url_to_scrape}")
                         ddg_snippet_used = True
                         messages_to_show_outside.append({'type': 'toast', 'text': f"ℹ️ DuckDuckGo'dan web özeti bulundu.", 'icon': "🦆"})
-
     except Exception as e:
         error_short = str(e)[:100]
         messages_to_show_outside.append({'type': 'toast', 'text': f"⚠️ DuckDuckGo araması sırasında bir hata: {error_short}", 'icon': "🔥"})
         print(f"ERROR: DDG search error for '{query}': {e}")
 
-    # 3. Web Sayfası Kazıma (Eğer DDG'den URL alındıysa)
     if ddg_url_to_scrape:
-        scraped_content, scrape_messages = scrape_url_content(ddg_url_to_scrape) # URL'yi kazı
-        messages_to_show_outside.extend(scrape_messages) # Kazıma mesajlarını ekle
-        
+        scraped_content, scrape_messages = scrape_url_content(ddg_url_to_scrape) 
+        messages_to_show_outside.extend(scrape_messages) 
         if scraped_content:
             domain_name = urlparse(ddg_url_to_scrape).netloc
             scraped_text_prefix = f"**Web Sayfası İçeriği ({domain_name}):**\n\n"
             full_scraped_text = f"{scraped_text_prefix}{scraped_content}\n\nKaynak: {ddg_url_to_scrape}"
-            
-            # Eğer DDG snippet'i zaten kullanılmadıysa ve Wikipedia sonucu varsa, ona ekle
-            # Ya da Wikipedia sonucu yoksa, kazınan içeriği ana sonuç yap
             if not ddg_snippet_used and search_result_text and "Wikipedia" in search_result_text and len(search_result_text) > 200:
-                 search_result_text += f"\n\n---\n\n{full_scraped_text}" # Wikipedia'ya ekle
-            elif not search_result_text or ddg_snippet_used: # Wikipedia sonucu yoksa veya DDG snippet zaten ana sonuçsa
-                search_result_text = full_scraped_text # Kazınan içeriği ana sonuç yap
-            # scrape_url_content zaten kendi başarılı kazıma mesajını ekliyor (eklendi)
-
-    # Sonuç yoksa bildirim
+                 search_result_text += f"\n\n---\n\n{full_scraped_text}" 
+            elif not search_result_text or ddg_snippet_used: 
+                search_result_text = full_scraped_text 
+            
     if not search_result_text:
         messages_to_show_outside.append({'type': 'toast', 'text': f"'{query}' için web'de anlamlı bir sonuç bulunamadı. Farklı anahtar kelimelerle deneyin.", 'icon': "❌"})
-        return None, messages_to_show_outside # Sonuç yoksa None dön
+        return None, messages_to_show_outside 
         
     return search_result_text, messages_to_show_outside
-
 
 # --- Sohbet Geçmişi Yönetimi ---
 @st.cache_data(ttl=86400)
@@ -593,7 +558,7 @@ def get_gemini_response(prompt_text, history_list, stream_output=False):
                 block_reason = block_reason_obj.name if hasattr(block_reason_obj, 'name') else str(block_reason_obj)
                 
                 finish_reason_str = "Bilinmiyor"
-                if response.candidates: # Bazen candidate boş olabilir
+                if response.candidates: 
                     finish_reason_obj = getattr(response.candidates[0], 'finish_reason', None)
                     finish_reason_str = finish_reason_obj.name if hasattr(finish_reason_obj, 'name') else str(finish_reason_obj)
                 
@@ -612,9 +577,6 @@ def get_gemini_response(prompt_text, history_list, stream_output=False):
 # --- Supabase Loglama ---
 def log_to_supabase(table_name, data_dict):
     client = globals().get('supabase')
-    # SupabaseAPIError globalde tanımlı (Exception'a fallback yapabilir)
-    # specific_supabase_error = globals().get('SupabaseAPIError', Exception)
-
     if not client:
         print(f"INFO: Supabase client not available. Skipping log to table: {table_name}")
         return False
@@ -628,22 +590,18 @@ def log_to_supabase(table_name, data_dict):
         final_data_to_log = {**default_data, **data_dict}
         response = client.table(table_name).insert(final_data_to_log).execute()
         
-        # Modern Supabase client (v1 üzeri) hata durumunda exception fırlatır.
-        # Bu nedenle, 'response.error' kontrolü genellikle gereksizdir.
-        # Başarılı olup olmadığını 'response.data' varlığıyla kontrol edebiliriz.
-        if response.data: # Veri döndüyse başarılıdır
+        if response.data: 
             print(f"INFO: Successfully logged to Supabase table: {table_name}, data: {response.data}")
             return True
-        else: # Veri yoksa veya beklenmedik bir durumsa
+        else: 
             print(f"WARNING: Supabase log to table {table_name} did not return data, response: {response}")
-            # st.toast(f"⚠️ Supabase loglama yanıtı beklenmedik ({table_name}).", icon="💾") # Çok fazla toast olabilir
             return False
 
-    except SupabaseAPIError as api_err: # Tanımladığımız SupabaseAPIError'u yakala
+    except SupabaseAPIError as api_err: 
         st.toast(f"⚠️ Supabase API hatası ({table_name}): {str(api_err)[:150]}", icon="💾")
         print(f"ERROR: Supabase API error on table {table_name}: {api_err}")
         return False
-    except Exception as e: # Diğer tüm hatalar
+    except Exception as e: 
         st.toast(f"⚠️ Supabase loglama sırasında genel bir hata oluştu ({table_name}): {str(e)[:150]}", icon="💾")
         print(f"ERROR: Supabase log ({table_name}) general exception: {e}")
         import traceback
@@ -651,13 +609,12 @@ def log_to_supabase(table_name, data_dict):
         return False
 
 def log_interaction(prompt, ai_response, source, message_id, chat_id_val):
-    MAX_LOG_LENGTH = 10000 # Supabase'deki alan boyutuna göre ayarla
+    MAX_LOG_LENGTH = 10000 
     return log_to_supabase(SUPABASE_TABLE_LOGS, {
         "user_prompt": str(prompt)[:MAX_LOG_LENGTH],
         "ai_response": str(ai_response)[:MAX_LOG_LENGTH],
         "response_source": source,
         "message_id": message_id,
-        # "chat_id": chat_id_val # Bu zaten default_data'da var
     })
 
 def log_feedback(message_id, user_prompt, ai_response, feedback_type, comment=""):
@@ -693,7 +650,7 @@ def get_hanogt_response_orchestrator(prompt, history, msg_id, chat_id_val, use_s
                 return gemini_response, f"{APP_NAME} (Gemini)"
             elif isinstance(gemini_response, str) and gemini_response.startswith(GEMINI_ERROR_PREFIX):
                 print(f"INFO: Gemini returned an error message to orchestrator: {gemini_response}")
-                response_text = gemini_response # Hata mesajını sakla, belki sonra kullanılır
+                response_text = gemini_response 
     
     is_question_like = "?" in prompt or \
                        any(keyword in prompt.lower() for keyword in ["nedir", "kimdir", "nasıl", "bilgi", "araştır", "haber", "anlamı", "tanımı", "açıkla", "bul", "söyle"])
@@ -717,11 +674,8 @@ def get_hanogt_response_orchestrator(prompt, history, msg_id, chat_id_val, use_s
         "Hmm, bu ilginç bir soru. Biraz daha düşünmem gerekebilir."
     ]
     
-    # Eğer Gemini'den bir hata mesajı geldiyse ve başka yanıt bulunamadıysa onu kullanabiliriz.
-    # Ancak genellikle daha kullanıcı dostu bir varsayılan yanıt daha iyi olabilir.
-    # Şimdilik, response_text (Gemini hatası olabilir) hala None ise varsayılanı seç.
-    if response_text and response_text.startswith(GEMINI_ERROR_PREFIX) and not web_search_result_text: # Eğer Gemini hatası varsa ve web araması da boşsa
-        final_default_response = response_text # Gemini'den gelen hata mesajını göster
+    if response_text and response_text.startswith(GEMINI_ERROR_PREFIX) and not web_search_result_text: 
+        final_default_response = response_text 
         source_display_name = f"{APP_NAME} (Hata)"
     else:
         final_default_response = random.choice(default_responses)
@@ -730,7 +684,7 @@ def get_hanogt_response_orchestrator(prompt, history, msg_id, chat_id_val, use_s
     log_interaction(prompt, final_default_response, source_display_name.split('(')[-1].replace(')','').strip(), msg_id, chat_id_val)
     return final_default_response, source_display_name
 
-# --- Yaratıcı Modüller (İçerik önceki gibi) ---
+# --- Yaratıcı Modüller ---
 def creative_response_generator(prompt_text, length_mode="orta", style_mode="genel"):
     templates = {
         "genel": ["İşte bir fikir: {}", "Şöyle bir düşünce: {}", "Belki de: {}"],
@@ -748,7 +702,7 @@ def creative_response_generator(prompt_text, length_mode="orta", style_mode="gen
     elif length_mode == "uzun":
         additional_idea = generate_new_idea_creative(prompt_text[::-1] + " farklı", style_mode) 
         final_idea = creative_idea + f"\n\nAyrıca, bir de şöyle bir bakış açısı var:\n{additional_idea}"
-    else: # orta
+    else: 
         final_idea = creative_idea
     
     selected_template = random.choice(templates.get(style_mode, templates["genel"]))
@@ -765,7 +719,6 @@ def generate_new_idea_creative(seed_text, style="genel"):
     e1, a1, o1 = random.choice(elements), random.choice(actions), random.choice(objects)
     e2, a2 = random.choice(elements), random.choice(actions)
 
-    # Stil parametresine göre farklı yapılar eklenebilir (gelecekte)
     if style == "şiirsel":
         structures = [
             f"{chosen_seed_word.capitalize()} rüzgarında, {e1} fısıldar,\n{o1} {a1} usulca.",
@@ -776,7 +729,7 @@ def generate_new_idea_creative(seed_text, style="genel"):
             f"{chosen_seed_word.capitalize()}, {e1} derinliklerinde kaybolmuştu. Amacı {o1}'nı bulmak ve onunla {a1} idi.",
             f"Her şey {chosen_seed_word} ile başladı. {e1} diyarında, {o1} adında gizemli bir varlık {a2} ve dünyayı değiştirdi.",
         ]
-    else: # genel, bilgilendirici, esprili için benzer yapılar
+    else: 
         structures = [
             f"{chosen_seed_word.capitalize()} konusunu ele alırsak, {e1} genellikle {a1} ve bu durum {o1} ile sonuçlanır.",
             f"Eğer {chosen_seed_word} ve {e1} bir araya gelirse, {o1}'nın {a1} olasılığı yüksektir.",
@@ -794,24 +747,22 @@ def advanced_word_generator(base_word):
     core_part = ""
     if len(cleaned_base) > 2 and random.random() < 0.7:
         start_index = random.randint(0, max(0, len(cleaned_base) - 3))
-        core_part = cleaned_base[start_index : start_index + random.randint(2,4)] # 2-4 harflik çekirdek
+        core_part = cleaned_base[start_index : start_index + random.randint(2,4)] 
     else:
-        core_part = "".join(random.choice(consonants if i % 2 else vowels) for i in range(random.randint(3,5))) # 3-5 harflik rastgele çekirdek
+        core_part = "".join(random.choice(consonants if i % 2 else vowels) for i in range(random.randint(3,5))) 
     
     new_word = core_part
     has_prefix = False
-    if random.random() > 0.4: # Prefix ekleme olasılığı
+    if random.random() > 0.4: 
         new_word = random.choice(prefixes) + new_word
         has_prefix = True
     
-    # Suffix ekleme (eğer prefix yoksa veya rastgele)
     if random.random() > 0.4 or not has_prefix: 
         new_word += random.choice(suffixes)
         
     return new_word.capitalize() if len(new_word) > 2 else f"{base_word.capitalize()}atron"
 
-
-# --- Görsel Oluşturucu (İçerik önceki gibi) ---
+# --- Görsel Oluşturucu ---
 def generate_prompt_influenced_image(prompt):
     width, height = 512, 512
     prompt_lower = prompt.lower()
@@ -977,11 +928,9 @@ if not st.session_state.models_initialized:
              print(f"WARNING: Aktif sohbet ID'si belirlenirken sorun: {e}. İlk geçerli ID'ye veya None'a ayarlanacak.")
              st.session_state.active_chat_id = next((cid for cid in st.session_state.all_chats.keys() if cid.startswith("chat_")), None)
 
-
     user_greeting_name = st.session_state.get('user_name', "kullanıcı")
-    # KNOWLEDGE_BASE global değişkenini burada tanımla ve ata
     kb_data, kb_error = load_knowledge_from_file(user_name_for_greeting=user_greeting_name)
-    globals()['KNOWLEDGE_BASE'] = kb_data
+    globals()['KNOWLEDGE_BASE'] = kb_data # KNOWLEDGE_BASE global değişkenine atama
     globals()['knowledge_base_load_error_global'] = kb_error
     
     st.session_state.models_initialized = True
@@ -989,9 +938,9 @@ if not st.session_state.models_initialized:
 else:
     user_greeting_name = st.session_state.get('user_name', "kullanıcı")
     current_kb, kb_load_err_rerun = load_knowledge_from_file(user_name_for_greeting=user_greeting_name)
-    if kb_load_err_rerun and kb_load_err_rerun != knowledge_base_load_error_global:
+    if kb_load_err_rerun and kb_load_err_rerun != globals().get('knowledge_base_load_error_global'): # Önceki global ile karşılaştır
         globals()['knowledge_base_load_error_global'] = kb_load_err_rerun
-    elif not kb_load_err_rerun and knowledge_base_load_error_global:
+    elif not kb_load_err_rerun and globals().get('knowledge_base_load_error_global'):
         globals()['knowledge_base_load_error_global'] = None
         st.toast("Bilgi tabanı başarıyla güncellendi/yüklendi.", icon="📚")
     globals()['KNOWLEDGE_BASE'] = current_kb
@@ -1109,11 +1058,12 @@ def display_settings_section():
             )
             if st.button("⚙️ AI Ayarlarını Uygula & Modeli Yeniden Başlat", key="reload_ai_model_button", use_container_width=True, type="primary", help="Seçili AI modelini ve parametreleri yeniden yükler."):
                 with st.spinner("AI modeli yeni ayarlarla yeniden başlatılıyor..."):
+                    # Global değişkenleri güncelle
                     new_model, new_error = initialize_gemini_model()
                     globals()['gemini_model'] = new_model
                     globals()['gemini_init_error_global'] = new_error
                 
-                if not globals()['gemini_model']:
+                if not globals()['gemini_model']: # Güncellenmiş global değişkene bak
                     st.error(f"AI modeli yüklenemedi: {globals()['gemini_init_error_global']}")
                 else:
                     st.success("AI ayarları başarıyla uygulandı ve model yeniden başlatıldı!", icon="⚙️")
@@ -1135,45 +1085,40 @@ def display_settings_section():
         with clear_all_col:
             is_clear_all_disabled = not bool(st.session_state.all_chats)
             
-            # --- HATA AYIKLAMA İÇİN BUTON BÖLÜMÜ ---
-            st.markdown("--- *Buton Hata Ayıklama Alanı* ---")
-            st.write(f"DEBUG: `is_clear_all_disabled` = {is_clear_all_disabled} (Tip: {type(is_clear_all_disabled)})")
-            st.write(f"DEBUG: `st.session_state.all_chats` boş mu? = {not bool(st.session_state.all_chats)} (Tip: {type(st.session_state.all_chats)})")
+            # --- HATA AYIKLAMA İÇİN BUTON BÖLÜMÜ (Önceki yanıttaki gibi) ---
+            st.markdown("--- *Buton Hata Ayıklama Alanı (Lütfen Streamlit Cloud Loglarını Kontrol Edin!)* ---")
+            st.write(f"DEBUG (Buton Öncesi): `is_clear_all_disabled` = {is_clear_all_disabled} (Tip: {type(is_clear_all_disabled)})")
+            st.write(f"DEBUG (Buton Öncesi): `st.session_state.all_chats` boş mu? = {not bool(st.session_state.all_chats)} (Tip: {type(st.session_state.all_chats)})")
 
-            # Önce en basit haliyle butonu deneyin:
-            st.write("Aşağıdaki BASİT TEST butonu çalışıyorsa, sorun orijinal butonun parametrelerindedir.")
-            if st.button("🗑️ TÜM Geçmişi Sil (Basit Test)", key="clear_all_chats_button_simple_test_v2", disabled=is_clear_all_disabled):
+            st.write("Aşağıdaki **BASİT TEST** butonu çalışıyorsa, sorun orijinal butonun diğer parametrelerindedir (type, use_container_width, help).")
+            if st.button("🗑️ TÜM Geçmişi Sil (Basit Test Butonu)", key="clear_all_chats_button_simple_test_v3", disabled=is_clear_all_disabled): # Key güncellendi
                 st.session_state.all_chats = {}
                 st.session_state.active_chat_id = None
                 save_all_chats({})
                 st.toast("TÜM sohbet geçmişi silindi! (Basit Test ile)", icon="🗑️")
                 st.rerun()
             
-            st.write("Eğer yukarıdaki Basit Test butonu StreamlitAPIException veriyorsa, sorun daha derindedir (key, disabled durumu veya Streamlit iç hatası).")
+            st.write("Eğer yukarıdaki Basit Test butonu `StreamlitAPIException` veriyorsa, sorun daha derindedir. **Lütfen Streamlit Cloud loglarındaki tam hata mesajını paylaşın.**")
             st.write("Eğer Basit Test butonu ÇALIŞIYORSA, aşağıdaki orijinal butonu YORUMDAN ÇIKARIP deneyin. Hata verirse, parametreleri (type, use_container_width, help) tek tek kaldırarak test edin.")
 
-            # Orijinal buton (şimdilik yorumda bırakılabilir veya test için açılabilir):
-            # if st.button("🗑️ TÜM Sohbet Geçmişini Kalıcı Olarak Sil", 
-            #                use_container_width=True, 
-            #                type="danger", 
-            #                key="clear_all_chats_button_original",  # Key'i değiştirdim (çakışma olmasın diye)
-            #                help="Dikkat! Tüm sohbet geçmişini kalıcı olarak siler.", 
-            #                disabled=is_clear_all_disabled):
-            #     st.session_state.all_chats = {}
-            #     st.session_state.active_chat_id = None 
-            #     save_all_chats({}) 
-            #     st.toast("TÜM sohbet geçmişi kalıcı olarak silindi! (Orijinal Buton ile)", icon="🗑️")
-            #     st.rerun()
+            # Orijinal buton (şimdilik yorumda):
+            """
+            if st.button("🗑️ TÜM Sohbet Geçmişini Kalıcı Olarak Sil", 
+                           use_container_width=True, 
+                           type="danger", 
+                           key="clear_all_chats_button_original_v2", # Key'i değiştirdim
+                           help="Dikkat! Tüm sohbet geçmişini kalıcı olarak siler.", 
+                           disabled=is_clear_all_disabled):
+                st.session_state.all_chats = {}
+                st.session_state.active_chat_id = None 
+                save_all_chats({}) 
+                st.toast("TÜM sohbet geçmişi kalıcı olarak silindi! (Orijinal Buton ile)", icon="🗑️")
+                st.rerun()
+            """
             st.markdown("--- *Buton Hata Ayıklama Alanı Sonu* ---")
             # --- HATA AYIKLAMA BİTİŞ ---
 
-
-# Diğer fonksiyonlar (display_chat_list_and_about, display_chat_message_with_feedback, vb.)
-# önceki yanıttaki gibi devam eder. Uzunluğu nedeniyle buraya tekrar eklemiyorum.
-# Lütfen bu fonksiyonları bir önceki yanıttaki güncellenmiş halleriyle kullanın.
-# Sadece display_settings_section fonksiyonu yukarıdaki gibi güncellenmiştir.
-
-# --- display_chat_list_and_about (Önceki yanıttan) ---
+# --- display_chat_list_and_about ---
 def display_chat_list_and_about(left_column_ref):
     with left_column_ref:
         st.markdown("#### Sohbetler")
@@ -1190,13 +1135,13 @@ def display_chat_list_and_about(left_column_ref):
         with chat_list_container:
             current_chats = st.session_state.all_chats
             try:
-                valid_chat_ids = [cid for cid in current_chats.keys() if cid.startswith("chat_") and len(cid.split('_')) > 1]
+                valid_chat_ids = [cid for cid in current_chats.keys() if cid.startswith("chat_") and len(cid.split('_')) > 1 and cid.split('_')[-1].isdigit()]
                 sorted_chat_ids = sorted(
                     valid_chat_ids, 
                     key=lambda x: int(x.split('_')[-1]), 
                     reverse=True
                 )
-            except (ValueError, TypeError):
+            except (ValueError, TypeError): # Hatalı ID formatı veya liste boşsa
                 sorted_chat_ids = sorted([cid for cid in current_chats.keys() if cid.startswith("chat_")], reverse=True)
 
             if not sorted_chat_ids:
@@ -1207,7 +1152,12 @@ def display_chat_list_and_about(left_column_ref):
                     chat_history = current_chats.get(chat_id_item, [])
                     first_user_message = next((msg.get('parts', '') for msg in chat_history if msg.get('role') == 'user'), None)
                     
-                    chat_title_prefix = f"Sohbet {chat_id_item.split('_')[1]}" if len(chat_id_item.split('_')) > 1 and chat_id_item.split('_')[1].isdigit() else chat_id_item.replace("chat_","Sohbet ")
+                    try:
+                        chat_title_num_part = chat_id_item.split('_')[1] if len(chat_id_item.split('_')) > 1 and chat_id_item.split('_')[1].isdigit() else ""
+                        chat_title_prefix = f"Sohbet {chat_title_num_part}" if chat_title_num_part else chat_id_item.replace("chat_","Sohbet ")
+                    except:
+                        chat_title_prefix = chat_id_item # Fallback
+
                     if first_user_message:
                         chat_display_title = first_user_message[:30] + ("..." if len(first_user_message) > 30 else "")
                     elif chat_history:
@@ -1228,10 +1178,11 @@ def display_chat_list_and_about(left_column_ref):
                         sender_name = st.session_state.get('user_name', 'Kullanıcı') if message_item.get('role') == 'user' else message_item.get('sender_display', APP_NAME)
                         chat_content_for_download += f"{sender_name}: {message_item.get('parts', '')}\n--------------------------------\n"
                     
+                    safe_display_title = re.sub(r'[^\w\s-]', '', chat_display_title).strip().replace(' ', '_')
                     download_col.download_button(
                         "⬇️", 
                         data=chat_content_for_download.encode('utf-8'), 
-                        file_name=f"{chat_display_title.replace(' ', '_').replace('(', '').replace(')', '')}_{chat_id_item}.txt", 
+                        file_name=f"{safe_display_title or 'sohbet'}_{chat_id_item}.txt", 
                         mime="text/plain", 
                         key=f"download_chat_{chat_id_item}", 
                         help=f"'{chat_display_title}' sohbetini indir (.txt)", 
@@ -1243,14 +1194,14 @@ def display_chat_list_and_about(left_column_ref):
                         if chat_id_item in current_chats:
                             del current_chats[chat_id_item]
                             if active_chat_id_display == chat_id_item:
-                                remaining_valid_ids = [cid for cid in current_chats.keys() if cid.startswith("chat_") and len(cid.split('_')) > 1]
+                                remaining_valid_ids = [cid for cid in current_chats.keys() if cid.startswith("chat_") and len(cid.split('_')) > 1 and cid.split('_')[-1].isdigit()]
                                 if remaining_valid_ids:
                                     st.session_state.active_chat_id = sorted(
                                         remaining_valid_ids, 
                                         key=lambda x: int(x.split('_')[-1]), 
                                         reverse=True
                                     )[0]
-                                else:
+                                else: # Başka geçerli sohbet kalmadıysa
                                     st.session_state.active_chat_id = None
                             save_all_chats(current_chats)
                             st.toast(f"'{chat_display_title}' sohbeti silindi.", icon="🗑️")
@@ -1265,7 +1216,7 @@ def display_chat_list_and_about(left_column_ref):
             """)
             st.caption(f"Aktif Oturum ID: `{_get_session_id()[:12]}...`")
 
-# --- display_chat_message_with_feedback (Önceki yanıttan) ---
+# --- display_chat_message_with_feedback ---
 def display_chat_message_with_feedback(message_data, message_index, current_chat_id):
     role = message_data.get('role', 'model')
     content_text = str(message_data.get('parts', ''))
@@ -1334,7 +1285,7 @@ def display_chat_message_with_feedback(message_data, message_index, current_chat
                     st.session_state.feedback_comment_input = ""
                     st.rerun()
 
-# --- display_feedback_form_if_active (Önceki yanıttan) ---
+# --- display_feedback_form_if_active ---
 def display_feedback_form_if_active():
     if st.session_state.get('show_feedback_comment_form') and st.session_state.current_message_id_for_feedback:
         st.markdown("---")
@@ -1359,7 +1310,7 @@ def display_feedback_form_if_active():
                 height=100,
                 placeholder="Yanıtla ilgili düşüncelerinizi paylaşın..."
             )
-            st.session_state.feedback_comment_input = feedback_user_comment # Anlık güncelle
+            st.session_state.feedback_comment_input = feedback_user_comment
             
             submit_col, cancel_col = st.columns(2)
             submitted_feedback = submit_col.form_submit_button("✅ Geri Bildirimi Gönder", use_container_width=True, type="primary")
@@ -1387,8 +1338,8 @@ def display_feedback_form_if_active():
                 st.rerun()
         st.markdown("---")
 
-# --- display_chat_interface_main (Önceki yanıttan) ---
-def display_chat_interface_main(main_column_container_ref=None): # Parametre opsiyonel yapıldı
+# --- display_chat_interface_main ---
+def display_chat_interface_main(main_column_container_ref=None):
     active_chat_id_main = st.session_state.get('active_chat_id')
     if active_chat_id_main is None:
         st.info("💬 Başlamak için sol menüden **'➕ Yeni Sohbet Oluştur'** butonuna tıklayın veya var olan bir sohbeti seçin.", icon="👈")
@@ -1468,10 +1419,11 @@ st.markdown(f"<h1 style='text-align:center;color:#0078D4;'>{APP_NAME} <sup style
 st.markdown(f"<p style='text-align:center;font-style:italic;color:#555;'>Yapay Zeka Destekli Kişisel Asistanınız</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-if gemini_init_error_global: st.warning(gemini_init_error_global, icon="🗝️")
-if supabase_init_error_global: st.warning(supabase_init_error_global, icon="🧱")
-if tts_init_error_global: st.warning(tts_init_error_global, icon="🔇")
-if knowledge_base_load_error_global: st.warning(knowledge_base_load_error_global, icon="📚")
+if globals().get('gemini_init_error_global'): st.warning(globals().get('gemini_init_error_global'), icon="🗝️")
+if globals().get('supabase_init_error_global'): st.warning(globals().get('supabase_init_error_global'), icon="🧱")
+if globals().get('tts_init_error_global'): st.warning(globals().get('tts_init_error_global'), icon="🔇")
+if globals().get('knowledge_base_load_error_global'): st.warning(globals().get('knowledge_base_load_error_global'), icon="📚")
+
 
 if not st.session_state.show_main_app:
     st.subheader("👋 Merhaba! Başlamadan Önce Sizi Tanıyalım")
