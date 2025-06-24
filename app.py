@@ -11,45 +11,45 @@ import datetime
 from PIL import Image
 import numpy as np
 import logging
-import json # json modülünü ekledik
+import json
 
-# --- İsteğe Bağlı Kütüphaneler (Platforma özel kurulum gerektirebilir) ---
+# --- Optional Libraries (May require platform-specific installation) ---
 try:
     import pyttsx3
     import speech_recognition as sr
     TTS_SR_AVAILABLE = True
 except ImportError:
     TTS_SR_AVAILABLE = False
-    logging.warning("pyttsx3 veya speech_recognition modülleri bulunamadı. Sesli özellikler devre dışı bırakıldı.")
+    logging.warning("pyttsx3 or speech_recognition modules not found. Voice features disabled.")
 
-# --- Global Değişkenler ve Ayarlar ---
+# --- Global Variables and Settings ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# API Anahtarı Kontrolü
+# API Key Check
 GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY") if st.secrets else os.environ.get("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY:
-    st.error("GOOGLE_API_KEY bulunamadı. Lütfen Streamlit Secrets'ı veya ortam değişkenlerini kontrol edin.")
-    logger.error("GOOGLE_API_KEY bulunamadı. Uygulama durduruluyor.")
+    st.error("GOOGLE_API_KEY not found. Please check Streamlit Secrets or environment variables.")
+    logger.error("GOOGLE_API_KEY not found. Application stopping.")
     st.stop()
 
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
-    logger.info("Google API Anahtarı başarıyla yapılandırıldı.")
+    logger.info("Google API Key successfully configured.")
 except Exception as e:
-    logger.error(f"Genel API Yapılandırma Hatası: {e}")
-    st.error(f"API anahtarı yapılandırılamadı: {e}. Lütfen anahtarınızı kontrol edin.")
+    logger.error(f"General API Configuration Error: {e}")
+    st.error(f"API key could not be configured: {e}. Please check your key.")
     st.stop()
 
-# Gemini Model Parametreleri
+# Gemini Model Parameters
 GLOBAL_MODEL_NAME = 'gemini-1.5-flash-latest'
 GLOBAL_TEMPERATURE = 0.7
 GLOBAL_TOP_P = 0.95
 GLOBAL_TOP_K = 40
 GLOBAL_MAX_OUTPUT_TOKENS = 4096
 
-# --- Dil Ayarları ---
+# --- Language Settings ---
 LANGUAGES = {
     "TR": {"name": "Türkçe", "emoji": "🇹🇷"},
     "EN": {"name": "English", "emoji": "🇬🇧"},
@@ -63,10 +63,10 @@ LANGUAGES = {
     "KR": {"name": "한국어", "emoji": "🇰🇷"},
 }
 
-# --- Yardımcı Fonksiyonlar ---
+# --- Helper Functions ---
 
 def get_text(key):
-    """Seçili dile göre metin döndürür."""
+    """Returns text based on the selected language."""
     texts = {
         "TR": {
             "welcome_title": "Hanogt AI",
@@ -978,49 +978,42 @@ def get_text(key):
             "turkish_voice_not_found": "터키어 음성을 찾을 수 없습니다. 기본 음성이 사용됩니다. 운영 체제의 사운드 설정을 확인하십시오."
         },
     }
-    return texts.get(st.session_state.current_language, texts["TR"]).get(key, "TEXT_MISSING")
+    return texts.get(st.session_state.current_language, texts["TR"]).get(key, f"TEXT_MISSING: {key}")
 
 def initialize_session_state():
-    """Uygulama oturum durumunu başlatır."""
-    if "user_name" not in st.session_state:
-        st.session_state.user_name = ""
-    if "user_avatar" not in st.session_state:
-        st.session_state.user_avatar = None
-    if "models_initialized" not in st.session_state:
-        st.session_state.models_initialized = False
-    if "all_chats" not in st.session_state:
-        st.session_state.all_chats = {}
-    if "active_chat_id" not in st.session_state:
-        st.session_state.active_chat_id = "chat_0"
-        if "chat_0" not in st.session_state.all_chats:
-            st.session_state.all_chats["chat_0"] = []
-    if "chat_mode" not in st.session_state:
-        st.session_state.chat_mode = "💬 Yazılı Sohbet" # Updated to include emoji
-    if "current_mode_index" not in st.session_state:
-        st.session_state.current_mode_index = 0
-    if "show_settings" not in st.session_state: # Ayarlar bölümünü gösterme kontrolü
-        st.session_state.show_settings = False
-    if "show_about" not in st.session_state: # Hakkında bölümünü gösterme kontrolü
-        st.session_state.show_about = False
-    if "current_language" not in st.session_state:
-        st.session_state.current_language = "TR" # Varsayılan dil Türkçe
-    
-    # EKLENEN KISIM: gemini_model'i burada kontrol et ve başlat
-    # Bu kontrol, uygulamanın her yeniden yüklenmesinde modeli tekrar başlatmaktan kaçınır
-    if "gemini_model" not in st.session_state or not st.session_state.models_initialized:
-        initialize_gemini_model() # Modeli başlatma fonksiyonunu çağır
+    """Initializes the application session state."""
+    defaults = {
+        "user_name": "",
+        "user_avatar": None,
+        "models_initialized": False,
+        "all_chats": {},
+        "active_chat_id": "chat_0",
+        "chat_mode": "💬 Yazılı Sohbet",
+        "current_mode_index": 0,
+        "show_settings": False,
+        "show_about": False,
+        "current_language": "TR",
+        "chat_session": None, # Initialize chat_session here
+    }
 
-    load_chat_history()
+    for key, default_value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = default_value
+
+    if st.session_state.active_chat_id not in st.session_state.all_chats:
+        st.session_state.all_chats[st.session_state.active_chat_id] = []
+    
+    # Initialize Gemini model if not already done
+    if not st.session_state.models_initialized:
+        initialize_gemini_model()
 
 def initialize_gemini_model():
-    """Gemini modelini başlatır ve oturum durumuna kaydeder."""
-    # Sadece 'gemini_model' None ise veya models_initialized False ise başlat
+    """Initializes the Gemini model and stores it in session state."""
     if st.session_state.get("gemini_model") is None or not st.session_state.get("models_initialized", False):
         try:
             st.session_state.gemini_model = genai.GenerativeModel(
                 model_name=GLOBAL_MODEL_NAME,
-                # Düzeltme: 'Generation_config' yerine 'GenerationConfig' kullanıldı.
-                generation_config=genai.GenerationConfig( 
+                generation_config=genai.GenerationConfig(
                     temperature=GLOBAL_TEMPERATURE,
                     top_p=GLOBAL_TOP_P,
                     top_k=GLOBAL_TOP_K,
@@ -1029,14 +1022,14 @@ def initialize_gemini_model():
             )
             st.session_state.models_initialized = True
             st.toast(get_text("model_init_success"), icon="✅")
-            logger.info(f"Gemini Modeli başlatıldı: {GLOBAL_MODEL_NAME}")
+            logger.info(f"Gemini Model initialized: {GLOBAL_MODEL_NAME}")
         except Exception as e:
             st.error(get_text("model_init_error").format(error=e))
             st.session_state.models_initialized = False
-            logger.error(f"Gemini modeli başlatma hatası: {e}")
+            logger.error(f"Gemini model initialization error: {e}")
 
 def add_to_chat_history(chat_id, role, content):
-    """Sohbet geçmişine mesaj ekler."""
+    """Adds a message to the chat history."""
     if chat_id not in st.session_state.all_chats:
         st.session_state.all_chats[chat_id] = []
     
@@ -1049,25 +1042,19 @@ def add_to_chat_history(chat_id, role, content):
     else:
         st.session_state.all_chats[chat_id].append({"role": role, "parts": [content]})
     
-    logger.info(f"Sohbet geçmişine eklendi: Chat ID: {chat_id}, Rol: {role}, İçerik Türü: {type(content)}")
-
-def load_chat_history():
-    """Sohbet geçmişini yükler."""
-    if st.session_state.active_chat_id not in st.session_state.all_chats:
-        st.session_state.all_chats[st.session_state.active_chat_id] = []
+    logger.info(f"Added to chat history: Chat ID: {chat_id}, Role: {role}, Content Type: {type(content)}")
 
 def clear_active_chat():
-    """Aktif sohbetin içeriğini temizler."""
+    """Clears the content of the active chat."""
     if st.session_state.active_chat_id in st.session_state.all_chats:
         st.session_state.all_chats[st.session_state.active_chat_id] = []
-        if "chat_session" in st.session_state:
-            del st.session_state.chat_session
+        st.session_state.chat_session = None # Reset chat session when chat history is cleared
         st.toast(get_text("chat_cleared_toast"), icon="🧹")
-        logger.info(f"Aktif sohbet ({st.session_state.active_chat_id}) temizlendi.")
+        logger.info(f"Active chat ({st.session_state.active_chat_id}) cleared.")
     st.rerun()
 
 def text_to_speech(text):
-    """Metni konuşmaya çevirir ve sesi oynatır."""
+    """Converts text to speech and plays the audio."""
     if not TTS_SR_AVAILABLE:
         st.warning(get_text("tts_sr_not_available"))
         return False
@@ -1085,15 +1072,15 @@ def text_to_speech(text):
 
         engine.say(text)
         engine.runAndWait()
-        logger.info("Metinden sese çevirme başarılı.")
+        logger.info("Text-to-speech successful.")
         return True
     except Exception as e:
         st.error(get_text("unexpected_response_error").format(error=e))
-        logger.error(f"Metinden sese çevirme hatası: {e}")
+        logger.error(f"Text-to-speech error: {e}")
         return False
 
 def record_audio():
-    """Kullanıcıdan ses girişi alır."""
+    """Records audio input from the user."""
     if not TTS_SR_AVAILABLE:
         st.warning(get_text("tts_sr_not_available"))
         return ""
@@ -1110,9 +1097,11 @@ def record_audio():
             return ""
             
     try:
-        text = r.recognize_google(audio, language="tr-TR") # Always use TR for recognition
+        # Using the current language for speech recognition if supported by Google Speech Recognition
+        language_code = "tr-TR" if st.session_state.current_language == "TR" else st.session_state.current_language.lower() + "-" + st.session_state.current_language.upper()
+        text = r.recognize_google(audio, language=language_code) 
         st.write(get_text("voice_heard").format(text=text))
-        logger.info(f"Tanınan ses: {text}")
+        logger.info(f"Recognized audio: {text}")
         return text
     except sr.UnknownValueError:
         st.warning(get_text("voice_unknown"))
@@ -1126,7 +1115,7 @@ def record_audio():
 
 @st.cache_data(ttl=3600)
 def duckduckgo_search(query):
-    """DuckDuckGo kullanarak web araması yapar."""
+    """Performs a web search using DuckDuckGo."""
     try:
         with DDGS() as ddgs:
             results = [r for r in ddgs.text(query, max_results=5)]
@@ -1137,9 +1126,11 @@ def duckduckgo_search(query):
 
 @st.cache_data(ttl=3600)
 def wikipedia_search(query):
-    """Wikipedia'da arama yapar."""
+    """Performs a search on Wikipedia."""
     try:
-        response = requests.get(f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json")
+        # Use the selected language for Wikipedia search if available, otherwise default to English
+        lang_code = st.session_state.current_language.lower()
+        response = requests.get(f"https://{lang_code}.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json")
         response.raise_for_status()
         data = response.json()
         if data and "query" in data and "search" in data["query"]:
@@ -1156,14 +1147,14 @@ def wikipedia_search(query):
         return []
 
 def generate_image(prompt):
-    """Görsel oluşturma (örnek - placeholder)."""
+    """Image generation (example - placeholder)."""
     st.warning(get_text("image_gen_warning_placeholder"))
-    placeholder_image_url = "https://via.placeholder.com/400x300.png?text=Görsel+Oluşturuldu"
+    placeholder_image_url = "https://via.placeholder.com/400x300.png?text=Image+Generated"
     st.image(placeholder_image_url, caption=prompt)
     add_to_chat_history(st.session_state.active_chat_id, "model", get_text("image_generated_example").format(prompt=prompt))
 
 def process_image_input(uploaded_file):
-    """Yüklenen görseli işler ve metne dönüştürür."""
+    """Processes the uploaded image and converts it to text (vision model)."""
     if uploaded_file is not None:
         try:
             image = Image.open(uploaded_file)
@@ -1171,7 +1162,7 @@ def process_image_input(uploaded_file):
             add_to_chat_history(st.session_state.active_chat_id, "user", image)
             
             if st.session_state.gemini_model:
-                vision_chat_session = st.session_state.gemini_model.start_chat(history=[])
+                vision_chat_session = st.session_state.gemini_model.start_chat(history=[]) # New session for vision query
                 response = vision_chat_session.send_message([image, get_text("image_vision_query")])
                 response_text = response.text
                 st.markdown(response_text)
@@ -1181,10 +1172,10 @@ def process_image_input(uploaded_file):
         except Exception as e:
             st.error(get_text("image_processing_error").format(error=e))
 
-# --- UI Bileşenleri ---
+# --- UI Components ---
 
 def display_welcome_and_profile_setup():
-    """Hoş geldiniz mesajı ve profil oluşturma/düzenleme."""
+    """Displays welcome message and profile creation/editing."""
     st.markdown("<h1 style='text-align: center;'>Hanogt AI</h1>", unsafe_allow_html=True)
     st.markdown(f"<h4 style='text-align: center; color: gray;'>{get_text('welcome_subtitle')}</h4>", unsafe_allow_html=True)
     st.write("---")
@@ -1207,16 +1198,15 @@ def display_welcome_and_profile_setup():
         st.markdown(f"<h3 style='text-align: center;'>{get_text('welcome_title')}</h3>", unsafe_allow_html=True)
         st.subheader(get_text("profile_title"))
         
-        # Profil resmi gösterimi
         if st.session_state.user_avatar:
             try:
                 profile_image = Image.open(io.BytesIO(st.session_state.user_avatar))
-                st.image(profile_image, caption=st.session_state.user_name if st.session_state.user_name else "Kullanıcı", width=150)
+                st.image(profile_image, caption=st.session_state.user_name if st.session_state.user_name else "User", width=150)
             except Exception as e:
                 st.warning(get_text("profile_image_load_error").format(error=e))
-                st.image("https://via.placeholder.com/150?text=Profil", width=150)
+                st.image("https://via.placeholder.com/150?text=Profile", width=150)
         else:
-            st.image("https://via.placeholder.com/150?text=Profil", width=150)
+            st.image("https://via.placeholder.com/150?text=Profile", width=150)
         
         new_name = st.text_input(get_text("profile_name_label"), key="initial_name_input")
         uploaded_avatar = st.file_uploader(get_text("profile_upload_label"), type=["png", "jpg", "jpeg"], key="initial_avatar_upload")
@@ -1231,7 +1221,7 @@ def display_welcome_and_profile_setup():
     st.write("---")
 
 def display_settings_and_personalization():
-    """Ayarlar ve Kişiselleştirme bölümünü gösterir."""
+    """Displays the Settings and Personalization section."""
     st.markdown(f"## {get_text('settings_personalization_title')}")
 
     new_name = st.text_input(get_text("settings_name_change_label"), value=st.session_state.user_name, key="settings_name_input")
@@ -1252,24 +1242,23 @@ def display_settings_and_personalization():
     st.write("---")
 
 def display_about_section():
-    """'Hakkımızda' bölümünü gösterir."""
+    """Displays the 'About Us' section."""
     st.markdown(f"## {get_text('about_us_title')}")
     st.markdown(get_text("about_us_text"))
     st.write("---")
 
 def display_main_chat_interface():
-    """Ana sohbet arayüzünü gösterir."""
+    """Displays the main chat interface."""
     
-    # Ayarlar ve Hakkımızda butonları
     col_settings, col_about = st.columns(2)
     with col_settings:
         if st.button(get_text("settings_button"), key="toggle_settings"):
             st.session_state.show_settings = not st.session_state.show_settings
-            st.session_state.show_about = False # Diğerini kapat
+            st.session_state.show_about = False
     with col_about:
         if st.button(get_text("about_button"), key="toggle_about"):
             st.session_state.show_about = not st.session_state.show_about
-            st.session_state.show_settings = False # Diğerini kapat
+            st.session_state.show_settings = False
 
     if st.session_state.show_settings:
         display_settings_and_personalization()
@@ -1286,7 +1275,7 @@ def display_main_chat_interface():
         get_text("chat_mode_creative")
     ]
     st.session_state.chat_mode = st.radio(
-        "Mod Seçimi", # Etiket Streamlit tarafından gösterilmeyecek olsa da, erişilebilirlik için dolu olmalı.
+        "Select Application Mode", # Added a non-empty label for accessibility
         mode_options,
         horizontal=True,
         index=mode_options.index(st.session_state.chat_mode) if st.session_state.chat_mode in mode_options else 0,
@@ -1305,7 +1294,7 @@ def display_main_chat_interface():
         handle_creative_studio()
 
 def handle_text_chat():
-    """Yazılı sohbet modunu yönetir."""
+    """Manages the text chat mode."""
     chat_messages = st.session_state.all_chats.get(st.session_state.active_chat_id, [])
 
     for message_index, message in enumerate(chat_messages):
@@ -1368,7 +1357,6 @@ def handle_text_chat():
             image_prompt = prompt[len("görsel oluştur:"):].strip()
             generate_image(image_prompt)
         else:
-            # Buradaki kontrolü doğrudan kullanabilirsiniz çünkü initialize_session_state() içinde zaten başlatılıyor.
             if st.session_state.gemini_model: 
                 with st.spinner(get_text("generating_response")):
                     try:
@@ -1382,9 +1370,9 @@ def handle_text_chat():
                             else:
                                 processed_history.append(msg)
 
-                        # chat_session'ı yalnızca ilk kez başlat veya sıfırla
-                        if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
-                             st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+                        # Start a new chat session only if it's not initialized or history has changed
+                        if st.session_state.chat_session is None or st.session_state.chat_session.history != processed_history:
+                            st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
                         
                         response = st.session_state.chat_session.send_message(prompt, stream=True)
                         
@@ -1404,7 +1392,7 @@ def handle_text_chat():
         st.rerun()
 
 def handle_image_generation():
-    """Görsel oluşturma modunu yönetir."""
+    """Manages the image generation mode."""
     st.subheader(get_text("image_gen_title"))
     image_prompt = st.text_input(get_text("image_gen_input_label"), key="image_prompt_input")
     if st.button(get_text("image_gen_button"), key="generate_image_button"):
@@ -1414,7 +1402,7 @@ def handle_image_generation():
             st.warning(get_text("image_gen_warning_prompt_missing"))
 
 def handle_voice_chat():
-    """Sesli sohbet modunu yönetir."""
+    """Manages the voice chat mode."""
     st.subheader(get_text("voice_chat_title"))
     
     if not TTS_SR_AVAILABLE:
@@ -1445,8 +1433,7 @@ def handle_voice_chat():
                                 else:
                                     processed_history.append(msg)
 
-                            # chat_session'ı yalnızca ilk kez başlat veya sıfırla
-                            if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
+                            if st.session_state.chat_session is None or st.session_state.chat_session.history != processed_history:
                                 st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
                             
                             response = st.session_state.chat_session.send_message(recognized_text, stream=True)
@@ -1467,7 +1454,7 @@ def handle_voice_chat():
                     st.warning(get_text("gemini_model_not_initialized"))
 
 def handle_creative_studio():
-    """Yaratıcı stüdyo modunu yönetir."""
+    """Manages the creative studio mode."""
     st.subheader(get_text("creative_studio_title"))
     st.write(get_text("creative_studio_info"))
     
@@ -1477,10 +1464,9 @@ def handle_creative_studio():
             if st.session_state.gemini_model:
                 with st.spinner(get_text("generating_response")):
                     try:
-                        # Creative studio için her zaman yeni bir session başlatılabilir veya önceki session kullanılabilir.
-                        # Eğer geçmişi tutmak istemiyorsanız 'history=[]' ile başlatmak mantıklıdır.
+                        # For creative studio, it's often better to start a fresh session for each new creative request
                         creative_chat_session = st.session_state.gemini_model.start_chat(history=[])
-                        response = creative_chat_session.send_message(f"Yaratıcı metin oluştur: {creative_prompt}", stream=True)
+                        response = creative_chat_session.send_message(f"Creative text generation request: {creative_prompt}", stream=True)
                         
                         response_text = ""
                         response_placeholder = st.empty()
@@ -1498,12 +1484,12 @@ def handle_creative_studio():
             st.warning(get_text("creative_studio_warning_prompt_missing"))
 
 
-# --- Ana Uygulama Mantığı ---
+# --- Main Application Logic ---
 
 def main():
-    """Ana Streamlit uygulamasını çalıştırır."""
+    """Runs the main Streamlit application."""
     st.set_page_config(
-        page_title="Hanogt AI Asistan",
+        page_title="Hanogt AI Assistant",
         page_icon="✨",
         layout="wide",
         initial_sidebar_state="collapsed"
@@ -1511,18 +1497,18 @@ def main():
 
     initialize_session_state()
 
-    # CSS enjeksiyonu (Streamlit üzerinde sınırlı etki)
+    # CSS injection for visual adjustments
     st.markdown("""
         <style>
-            /* Streamlit header'ı gizle - sağ üstteki menüleri içerir */
+            /* Hide Streamlit header (top-right menu items) */
             header.st-emotion-cache-zq5bqg.ezrtsby0 {
                 display: none;
             }
-            /* Sol üstteki menü açma butonunu gizle */
+            /* Hide the top-left menu open button */
             .st-emotion-cache-1avcm0k.e1tzin5v2 {
                 display: none;
             }
-            /* Uygulama başlığını ortala */
+            /* Center the app title */
             h1 {
                 text-align: center;
             }
@@ -1530,25 +1516,24 @@ def main():
     """, unsafe_allow_html=True)
 
 
-    # Dil Seçici Butonu (Sol üst köşede)
+    # Language Selector Button (Top-left corner)
     col_lang, _ = st.columns([0.1, 0.9])
     with col_lang:
         current_lang_display = f"{LANGUAGES[st.session_state.current_language]['emoji']} {st.session_state.current_language}"
         lang_options = [f"{v['emoji']} {k}" for k, v in LANGUAGES.items()]
         
-        # Seçili dilin index'ini bul, yoksa ilk seçeneği varsay
-        selected_lang_index = 0 # Varsayılan olarak ilk öğeyi seç
+        selected_lang_index = 0
         if current_lang_display in lang_options:
             selected_lang_index = lang_options.index(current_lang_display)
 
-        # Düzeltme: label parametresine anlamlı bir değer verildi ve görsel olarak gizlendi.
+        # Corrected: Provided a non-empty label for st.selectbox and hid it visually
         selected_lang_display = st.selectbox(
-            label="Uygulama dilini seçin", # Boş olmayan bir etiket
+            label="Select Application Language", # Non-empty label for accessibility
             options=lang_options,
             index=selected_lang_index,
             key="language_selector",
-            help="Uygulama dilini seçin",
-            label_visibility="hidden" # Etiketi görsel olarak gizle
+            help="Select Application Language",
+            label_visibility="hidden" # Hide the label visually
         )
         
         new_lang_code = selected_lang_display.split(" ")[1] 
@@ -1556,11 +1541,11 @@ def main():
             st.session_state.current_language = new_lang_code
             st.rerun()
 
-    # Profil bilgisi girilmediyse, başlangıç ekranını göster
+    # If profile information is not set, display the initial setup screen
     if st.session_state.user_name == "":
         display_welcome_and_profile_setup()
     else:
-        # Uygulamanın ana başlığı
+        # Main application title and subtitle
         st.markdown("<h1 style='text-align: center;'>Hanogt AI</h1>", unsafe_allow_html=True)
         st.markdown(f"<h4 style='text-align: center; color: gray;'>{get_text('welcome_subtitle')}</h4>", unsafe_allow_html=True)
         st.write("---")
@@ -1571,7 +1556,7 @@ def main():
     st.markdown("---")
     st.markdown(f"""
         <div style="text-align: center; font-size: 12px; color: gray;">
-            {get_text('footer_user').format(user_name=st.session_state.user_name if st.session_state.user_name else "Misafir")} <br>
+            {get_text('footer_user').format(user_name=st.session_state.user_name if st.session_state.user_name else "Guest")} <br>
             {get_text('footer_version').format(year=datetime.datetime.now().year)} <br>
             {get_text('footer_ai_status').format(model_name=GLOBAL_MODEL_NAME)}
         </div>
@@ -1579,3 +1564,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
