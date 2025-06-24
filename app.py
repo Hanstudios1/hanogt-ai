@@ -111,6 +111,7 @@ def get_text(key):
             "voice_listening": "Dinleniyor...",
             "voice_heard": "Sen dedin: {text}",
             "voice_no_audio": "Ses algılanamadı, lütfen tekrar deneyin.",
+            "voice_unknown": "Ne dediğini anlayamadım.",
             "voice_api_error": "Ses tanıma servisine ulaşılamıyor; {error}",
             "creative_studio_title": "Yaratıcı Stüdyo",
             "creative_studio_info": "Bu bölüm, yaratıcı metin üretimi gibi gelişmiş özellikler için tasarlanmıştır.",
@@ -888,7 +889,7 @@ def get_text(key):
         },
         "KR": {
             "welcome_title": "Hanogt AI",
-            "welcome_subtitle": "새로운 개인 AI 어시스턴트!",
+            "welcome_subtitle": "新しい 개인 AI 어시스턴트!",
             "profile_title": "어떻게 불러드릴까요?",
             "profile_name_label": "이름:",
             "profile_upload_label": "프로필 사진 업로드 (선택 사항)",
@@ -978,42 +979,49 @@ def get_text(key):
             "turkish_voice_not_found": "터키어 음성을 찾을 수 없습니다. 기본 음성이 사용됩니다. 운영 체제의 사운드 설정을 확인하십시오."
         },
     }
-    return texts.get(st.session_state.current_language, texts["TR"]).get(key, f"TEXT_MISSING: {key}")
+    return texts.get(st.session_state.current_language, texts["TR"]).get(key, "TEXT_MISSING")
 
 def initialize_session_state():
     """Initializes the application session state."""
-    defaults = {
-        "user_name": "",
-        "user_avatar": None,
-        "models_initialized": False,
-        "all_chats": {},
-        "active_chat_id": "chat_0",
-        "chat_mode": "💬 Yazılı Sohbet",
-        "current_mode_index": 0,
-        "show_settings": False,
-        "show_about": False,
-        "current_language": "TR",
-        "chat_session": None, # Initialize chat_session here
-    }
-
-    for key, default_value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = default_value
-
-    if st.session_state.active_chat_id not in st.session_state.all_chats:
-        st.session_state.all_chats[st.session_state.active_chat_id] = []
+    if "user_name" not in st.session_state:
+        st.session_state.user_name = ""
+    if "user_avatar" not in st.session_state:
+        st.session_state.user_avatar = None
+    if "models_initialized" not in st.session_state:
+        st.session_state.models_initialized = False
+    if "all_chats" not in st.session_state:
+        st.session_state.all_chats = {}
+    if "active_chat_id" not in st.session_state:
+        st.session_state.active_chat_id = "chat_0"
+        if "chat_0" not in st.session_state.all_chats:
+            st.session_state.all_chats["chat_0"] = []
+    if "chat_mode" not in st.session_state:
+        st.session_state.chat_mode = "💬 Yazılı Sohbet" # Updated to include emoji
+    if "current_mode_index" not in st.session_state:
+        st.session_state.current_mode_index = 0
+    if "show_settings" not in st.session_state: # Control to show settings section
+        st.session_state.show_settings = False
+    if "show_about" not in st.session_state: # Control to show about section
+        st.session_state.show_about = False
+    if "current_language" not in st.session_state:
+        st.session_state.current_language = "TR" # Default language Turkish
     
-    # Initialize Gemini model if not already done
-    if not st.session_state.models_initialized:
-        initialize_gemini_model()
+    # ADDED PART: Check and initialize gemini_model here
+    # This check avoids re-initializing the model on every app reload
+    if "gemini_model" not in st.session_state or not st.session_state.models_initialized:
+        initialize_gemini_model() # Call the model initialization function
+
+    load_chat_history()
 
 def initialize_gemini_model():
-    """Initializes the Gemini model and stores it in session state."""
+    """Initializes the Gemini model and saves it to session state."""
+    # Only initialize if 'gemini_model' is None or models_initialized is False
     if st.session_state.get("gemini_model") is None or not st.session_state.get("models_initialized", False):
         try:
             st.session_state.gemini_model = genai.GenerativeModel(
                 model_name=GLOBAL_MODEL_NAME,
-                generation_config=genai.GenerationConfig(
+                # Correction: Used 'GenerationConfig' instead of 'Generation_config'.
+                generation_config=genai.GenerationConfig( 
                     temperature=GLOBAL_TEMPERATURE,
                     top_p=GLOBAL_TOP_P,
                     top_k=GLOBAL_TOP_K,
@@ -1044,11 +1052,17 @@ def add_to_chat_history(chat_id, role, content):
     
     logger.info(f"Added to chat history: Chat ID: {chat_id}, Role: {role}, Content Type: {type(content)}")
 
+def load_chat_history():
+    """Loads chat history."""
+    if st.session_state.active_chat_id not in st.session_state.all_chats:
+        st.session_state.all_chats[st.session_state.active_chat_id] = []
+
 def clear_active_chat():
     """Clears the content of the active chat."""
     if st.session_state.active_chat_id in st.session_state.all_chats:
         st.session_state.all_chats[st.session_state.active_chat_id] = []
-        st.session_state.chat_session = None # Reset chat session when chat history is cleared
+        if "chat_session" in st.session_state:
+            del st.session_state.chat_session
         st.toast(get_text("chat_cleared_toast"), icon="🧹")
         logger.info(f"Active chat ({st.session_state.active_chat_id}) cleared.")
     st.rerun()
@@ -1080,7 +1094,7 @@ def text_to_speech(text):
         return False
 
 def record_audio():
-    """Records audio input from the user."""
+    """Captures audio input from the user."""
     if not TTS_SR_AVAILABLE:
         st.warning(get_text("tts_sr_not_available"))
         return ""
@@ -1097,9 +1111,7 @@ def record_audio():
             return ""
             
     try:
-        # Using the current language for speech recognition if supported by Google Speech Recognition
-        language_code = "tr-TR" if st.session_state.current_language == "TR" else st.session_state.current_language.lower() + "-" + st.session_state.current_language.upper()
-        text = r.recognize_google(audio, language=language_code) 
+        text = r.recognize_google(audio, language="tr-TR") # Always use TR for recognition
         st.write(get_text("voice_heard").format(text=text))
         logger.info(f"Recognized audio: {text}")
         return text
@@ -1126,11 +1138,9 @@ def duckduckgo_search(query):
 
 @st.cache_data(ttl=3600)
 def wikipedia_search(query):
-    """Performs a search on Wikipedia."""
+    """Searches Wikipedia."""
     try:
-        # Use the selected language for Wikipedia search if available, otherwise default to English
-        lang_code = st.session_state.current_language.lower()
-        response = requests.get(f"https://{lang_code}.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json")
+        response = requests.get(f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json")
         response.raise_for_status()
         data = response.json()
         if data and "query" in data and "search" in data["query"]:
@@ -1149,12 +1159,12 @@ def wikipedia_search(query):
 def generate_image(prompt):
     """Image generation (example - placeholder)."""
     st.warning(get_text("image_gen_warning_placeholder"))
-    placeholder_image_url = "https://via.placeholder.com/400x300.png?text=Image+Generated"
+    placeholder_image_url = "https://via.placeholder.com/400x300.png?text=Görsel+Oluşturuldu"
     st.image(placeholder_image_url, caption=prompt)
     add_to_chat_history(st.session_state.active_chat_id, "model", get_text("image_generated_example").format(prompt=prompt))
 
 def process_image_input(uploaded_file):
-    """Processes the uploaded image and converts it to text (vision model)."""
+    """Processes the uploaded image and converts it to text."""
     if uploaded_file is not None:
         try:
             image = Image.open(uploaded_file)
@@ -1162,7 +1172,7 @@ def process_image_input(uploaded_file):
             add_to_chat_history(st.session_state.active_chat_id, "user", image)
             
             if st.session_state.gemini_model:
-                vision_chat_session = st.session_state.gemini_model.start_chat(history=[]) # New session for vision query
+                vision_chat_session = st.session_state.gemini_model.start_chat(history=[])
                 response = vision_chat_session.send_message([image, get_text("image_vision_query")])
                 response_text = response.text
                 st.markdown(response_text)
@@ -1198,6 +1208,7 @@ def display_welcome_and_profile_setup():
         st.markdown(f"<h3 style='text-align: center;'>{get_text('welcome_title')}</h3>", unsafe_allow_html=True)
         st.subheader(get_text("profile_title"))
         
+        # Display profile picture
         if st.session_state.user_avatar:
             try:
                 profile_image = Image.open(io.BytesIO(st.session_state.user_avatar))
@@ -1250,15 +1261,16 @@ def display_about_section():
 def display_main_chat_interface():
     """Displays the main chat interface."""
     
+    # Settings and About buttons
     col_settings, col_about = st.columns(2)
     with col_settings:
         if st.button(get_text("settings_button"), key="toggle_settings"):
             st.session_state.show_settings = not st.session_state.show_settings
-            st.session_state.show_about = False
+            st.session_state.show_about = False # Close the other
     with col_about:
         if st.button(get_text("about_button"), key="toggle_about"):
             st.session_state.show_about = not st.session_state.show_about
-            st.session_state.show_settings = False
+            st.session_state.show_settings = False # Close the other
 
     if st.session_state.show_settings:
         display_settings_and_personalization()
@@ -1275,7 +1287,7 @@ def display_main_chat_interface():
         get_text("chat_mode_creative")
     ]
     st.session_state.chat_mode = st.radio(
-        "Select Application Mode", # Added a non-empty label for accessibility
+        "Mode Selection", # Label should be filled for accessibility, even if hidden
         mode_options,
         horizontal=True,
         index=mode_options.index(st.session_state.chat_mode) if st.session_state.chat_mode in mode_options else 0,
@@ -1333,8 +1345,8 @@ def handle_text_chat():
     if prompt:
         add_to_chat_history(st.session_state.active_chat_id, "user", prompt)
         
-        if prompt.lower().startswith("web ara:"):
-            query = prompt[len("web ara:"):].strip()
+        if prompt.lower().startswith("web ara:") or prompt.lower().startswith("web search:"):
+            query = prompt[prompt.find(":")+1:].strip()
             results = duckduckgo_search(query)
             if results:
                 response_text = get_text("web_search_results") + "\n"
@@ -1343,8 +1355,8 @@ def handle_text_chat():
             else:
                 response_text = get_text("web_search_no_results")
             add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-        elif prompt.lower().startswith("wiki ara:"):
-            query = prompt[len("wiki ara:"):].strip()
+        elif prompt.lower().startswith("wiki ara:") or prompt.lower().startswith("wiki search:"):
+            query = prompt[prompt.find(":")+1:].strip()
             results = wikipedia_search(query)
             if results:
                 response_text = get_text("wikipedia_search_results") + "\n"
@@ -1353,10 +1365,11 @@ def handle_text_chat():
             else:
                 response_text = get_text("wikipedia_search_no_results")
             add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-        elif prompt.lower().startswith("görsel oluştur:"):
-            image_prompt = prompt[len("görsel oluştur:"):].strip()
+        elif prompt.lower().startswith("görsel oluştur:") or prompt.lower().startswith("generate image:"):
+            image_prompt = prompt[prompt.find(":")+1:].strip()
             generate_image(image_prompt)
         else:
+            # You can directly use this check here because it's already initialized in initialize_session_state().
             if st.session_state.gemini_model: 
                 with st.spinner(get_text("generating_response")):
                     try:
@@ -1370,9 +1383,9 @@ def handle_text_chat():
                             else:
                                 processed_history.append(msg)
 
-                        # Start a new chat session only if it's not initialized or history has changed
-                        if st.session_state.chat_session is None or st.session_state.chat_session.history != processed_history:
-                            st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+                        # Initialize or reset chat_session only the first time or if history changes
+                        if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
+                             st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
                         
                         response = st.session_state.chat_session.send_message(prompt, stream=True)
                         
@@ -1433,7 +1446,8 @@ def handle_voice_chat():
                                 else:
                                     processed_history.append(msg)
 
-                            if st.session_state.chat_session is None or st.session_state.chat_session.history != processed_history:
+                            # Initialize or reset chat_session only the first time or if history changes
+                            if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
                                 st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
                             
                             response = st.session_state.chat_session.send_message(recognized_text, stream=True)
@@ -1464,9 +1478,10 @@ def handle_creative_studio():
             if st.session_state.gemini_model:
                 with st.spinner(get_text("generating_response")):
                     try:
-                        # For creative studio, it's often better to start a fresh session for each new creative request
+                        # For creative studio, a new session can always be started or the previous one can be used.
+                        # If you don't want to keep history, starting with 'history=[]' makes sense.
                         creative_chat_session = st.session_state.gemini_model.start_chat(history=[])
-                        response = creative_chat_session.send_message(f"Creative text generation request: {creative_prompt}", stream=True)
+                        response = creative_chat_session.send_message(f"Creative text generation: {creative_prompt}", stream=True)
                         
                         response_text = ""
                         response_placeholder = st.empty()
@@ -1497,14 +1512,14 @@ def main():
 
     initialize_session_state()
 
-    # CSS injection for visual adjustments
+    # CSS injection (limited effect on Streamlit)
     st.markdown("""
         <style>
-            /* Hide Streamlit header (top-right menu items) */
+            /* Hide Streamlit header - includes top-right menus */
             header.st-emotion-cache-zq5bqg.ezrtsby0 {
                 display: none;
             }
-            /* Hide the top-left menu open button */
+            /* Hide top-left menu open button */
             .st-emotion-cache-1avcm0k.e1tzin5v2 {
                 display: none;
             }
@@ -1522,18 +1537,19 @@ def main():
         current_lang_display = f"{LANGUAGES[st.session_state.current_language]['emoji']} {st.session_state.current_language}"
         lang_options = [f"{v['emoji']} {k}" for k, v in LANGUAGES.items()]
         
-        selected_lang_index = 0
+        # Find the index of the selected language, default to the first option if not found
+        selected_lang_index = 0 
         if current_lang_display in lang_options:
             selected_lang_index = lang_options.index(current_lang_display)
 
-        # Corrected: Provided a non-empty label for st.selectbox and hid it visually
+        # Correction: A meaningful value was given to the 'label' parameter and visually hidden.
         selected_lang_display = st.selectbox(
-            label="Select Application Language", # Non-empty label for accessibility
+            label="Select application language", # Non-empty label
             options=lang_options,
             index=selected_lang_index,
             key="language_selector",
-            help="Select Application Language",
-            label_visibility="hidden" # Hide the label visually
+            help="Select application language",
+            label_visibility="hidden" # Visually hide the label
         )
         
         new_lang_code = selected_lang_display.split(" ")[1] 
@@ -1541,11 +1557,11 @@ def main():
             st.session_state.current_language = new_lang_code
             st.rerun()
 
-    # If profile information is not set, display the initial setup screen
+    # If profile information is not entered, show the initial screen
     if st.session_state.user_name == "":
         display_welcome_and_profile_setup()
     else:
-        # Main application title and subtitle
+        # Main title of the application
         st.markdown("<h1 style='text-align: center;'>Hanogt AI</h1>", unsafe_allow_html=True)
         st.markdown(f"<h4 style='text-align: center; color: gray;'>{get_text('welcome_subtitle')}</h4>", unsafe_allow_html=True)
         st.write("---")
@@ -1564,4 +1580,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
