@@ -1019,7 +1019,8 @@ def initialize_gemini_model():
         try:
             st.session_state.gemini_model = genai.GenerativeModel(
                 model_name=GLOBAL_MODEL_NAME,
-                generation_config=genai.Generation_config(
+                # Düzeltme: 'Generation_config' yerine 'GenerationConfig' kullanıldı.
+                generation_config=genai.GenerationConfig( 
                     temperature=GLOBAL_TEMPERATURE,
                     top_p=GLOBAL_TOP_P,
                     top_k=GLOBAL_TOP_K,
@@ -1285,7 +1286,7 @@ def display_main_chat_interface():
         get_text("chat_mode_creative")
     ]
     st.session_state.chat_mode = st.radio(
-        "Mod Seçimi",
+        "Mod Seçimi", # Etiket Streamlit tarafından gösterilmeyecek olsa da, erişilebilirlik için dolu olmalı.
         mode_options,
         horizontal=True,
         index=mode_options.index(st.session_state.chat_mode) if st.session_state.chat_mode in mode_options else 0,
@@ -1540,12 +1541,14 @@ def main():
         if current_lang_display in lang_options:
             selected_lang_index = lang_options.index(current_lang_display)
 
+        # Düzeltme: label parametresine anlamlı bir değer verildi ve görsel olarak gizlendi.
         selected_lang_display = st.selectbox(
-            label="",
+            label="Uygulama dilini seçin", # Boş olmayan bir etiket
             options=lang_options,
             index=selected_lang_index,
             key="language_selector",
-            help="Uygulama dilini seçin"
+            help="Uygulama dilini seçin",
+            label_visibility="hidden" # Etiketi görsel olarak gizle
         )
         
         new_lang_code = selected_lang_display.split(" ")[1] 
