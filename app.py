@@ -10,11 +10,9 @@ import re
 import datetime
 from PIL import Image
 import numpy as np
-import logging # Loglama için
+import logging
 
 # --- İsteğe Bağlı Kütüphaneler (Platforma özel kurulum gerektirebilir) ---
-# pyttsx3 ve speech_recognition genellikle Streamlit Cloud'da ek yapılandırma gerektirir.
-# Yerel geliştirme için uygundur.
 try:
     import pyttsx3
     import speech_recognition as sr
@@ -22,15 +20,12 @@ try:
 except ImportError:
     TTS_SR_AVAILABLE = False
     logging.warning("pyttsx3 veya speech_recognition modülleri bulunamadı. Sesli özellikler devre dışı bırakıldı.")
-    st.warning("Sesli sohbet ve metin okuma özellikleri şu anda kullanılamıyor. Gerekli kütüphaneler yüklenmemiş veya uyumlu değil.")
 
 # --- Global Değişkenler ve Ayarlar ---
-# Loglama yapılandırması
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # API Anahtarı Kontrolü
-# Streamlit Secrets (Cloud) veya .env (Yerel) kullanımı
 GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY") if st.secrets else os.environ.get("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY:
@@ -46,22 +41,40 @@ except Exception as e:
     st.error(f"API anahtarı yapılandırılamadı: {e}. Lütfen anahtarınızı kontrol edin.")
     st.stop()
 
-
-# Gemini Model Parametreleri (Global olarak tanımlandı)
+# Gemini Model Parametreleri
 GLOBAL_MODEL_NAME = 'gemini-1.5-flash-latest'
 GLOBAL_TEMPERATURE = 0.7
 GLOBAL_TOP_P = 0.95
 GLOBAL_TOP_K = 40
 GLOBAL_MAX_OUTPUT_TOKENS = 4096
 
-# --- Yardımcı Fonksiyonlar (Helper Functions) ---
+# --- Yardımcı Fonksiyonlar ---
+
+def initialize_session_state():
+    """Uygulama oturum durumunu başlatır."""
+    if "user_name" not in st.session_state:
+        st.session_state.user_name = ""
+    if "user_avatar" not in st.session_state:
+        st.session_state.user_avatar = None # Bytes formatında sakla
+    if "models_initialized" not in st.session_state:
+        st.session_state.models_initialized = False
+    if "all_chats" not in st.session_state:
+        st.session_state.all_chats = {}
+    if "active_chat_id" not in st.session_state:
+        st.session_state.active_chat_id = "chat_0"
+        if "chat_0" not in st.session_state.all_chats:
+            st.session_state.all_chats["chat_0"] = []
+    if "chat_mode" not in st.session_state:
+        st.session_state.chat_mode = "Yazılı Sohbet"
+    if "current_mode_index" not in st.session_state:
+        st.session_state.current_mode_index = 0
+
+    load_chat_history()
+    initialize_gemini_model()
 
 def initialize_gemini_model():
     """Gemini modelini başlatır ve oturum durumuna kaydeder."""
-    if "gemini_model" not in st.session_state:
-        st.session_state.gemini_model = None # Başlangıçta None olarak ayarla
-    
-    if st.session_state.gemini_model is None:
+    if st.session_state.get("gemini_model") is None: # Sadece henüz başlatılmamışsa başlat
         try:
             st.session_state.gemini_model = genai.GenerativeModel(
                 model_name=GLOBAL_MODEL_NAME,
@@ -85,40 +98,28 @@ def add_to_chat_history(chat_id, role, content):
     if chat_id not in st.session_state.all_chats:
         st.session_state.all_chats[chat_id] = []
     
-    # Eğer içerik bir PIL Image nesnesi ise, byte'a dönüştürerek kaydet
     if isinstance(content, Image.Image):
         img_byte_arr = io.BytesIO()
-        content.save(img_byte_arr, format='PNG') # PNG daha iyi şeffaflık/kalite sunar, JPEG de olabilir
+        content.save(img_byte_arr, format='PNG')
         st.session_state.all_chats[chat_id].append({"role": role, "parts": [img_byte_arr.getvalue()]})
-    elif isinstance(content, bytes): # Eğer zaten bytes ise doğrudan ekle
+    elif isinstance(content, bytes):
         st.session_state.all_chats[chat_id].append({"role": role, "parts": [content]})
-    else: # Metin ise
+    else:
         st.session_state.all_chats[chat_id].append({"role": role, "parts": [content]})
     
-    # Sohbet geçmişini güncelledikten sonra logla
     logger.info(f"Sohbet geçmişine eklendi: Chat ID: {chat_id}, Rol: {role}, İçerik Türü: {type(content)}")
 
-
 def load_chat_history():
-    """Sohbet geçmişini yükler (uygulama başlatıldığında veya yeniden yüklendiğinde)."""
-    if "all_chats" not in st.session_state:
-        st.session_state.all_chats = {}
-        logger.info("all_chats oturum durumu başlatıldı.")
-    if "active_chat_id" not in st.session_state:
-        # Tek sohbet modu için varsayılan olarak 'chat_0'
-        st.session_state.active_chat_id = "chat_0"
-        logger.info("active_chat_id varsayılan olarak 'chat_0' olarak ayarlandı.")
-    
-    # Mevcut aktif sohbetin boş olduğundan emin ol
+    """Sohbet geçmişini yükler."""
+    # Bu fonksiyon şimdi initialize_session_state içinde çağrılıyor.
+    # Burada sadece mevcut sohbetin varlığını garanti ediyoruz.
     if st.session_state.active_chat_id not in st.session_state.all_chats:
         st.session_state.all_chats[st.session_state.active_chat_id] = []
-        logger.info(f"Aktif sohbet ID'si {st.session_state.active_chat_id} için boş bir liste oluşturuldu.")
 
 def clear_active_chat():
     """Aktif sohbetin içeriğini temizler."""
     if st.session_state.active_chat_id in st.session_state.all_chats:
         st.session_state.all_chats[st.session_state.active_chat_id] = []
-        # Chat session'ı da temizle, aksi takdirde eski geçmişi hatırlayabilir
         if "chat_session" in st.session_state:
             del st.session_state.chat_session
         st.toast("Aktif sohbet temizlendi!", icon="🧹")
@@ -138,11 +139,9 @@ def text_to_speech(text):
             if "turkish" in voice.name.lower() or "tr-tr" in voice.id.lower():
                 engine.setProperty('voice', voice.id)
                 found_turkish_voice = True
-                logger.info(f"Türkçe ses bulundu ve ayarlandı: {voice.name}")
                 break
         if not found_turkish_voice:
-            logger.warning("Türkçe ses bulunamadı, varsayılan ses kullanılacak.")
-            st.warning("Türkçe ses bulunamadı, varsayılan ses kullanılacak. İşletim sisteminizin ses ayarlarını kontrol ediniz.")
+            st.warning("Türkçe ses bulunamadı, varsayılan ses kullanılacak.")
 
         engine.say(text)
         engine.runAndWait()
@@ -161,17 +160,13 @@ def record_audio():
     r = sr.Recognizer()
     with sr.Microphone() as source:
         st.write("Dinleniyor...")
-        logger.info("Mikrofondan dinleniyor...")
         try:
             audio = r.listen(source, timeout=5, phrase_time_limit=10)
-            logger.info("Ses kaydı tamamlandı.")
         except sr.WaitTimeoutError:
             st.warning("Ses algılanamadı, lütfen tekrar deneyin.")
-            logger.warning("Ses algılama zaman aşımına uğradı.")
             return ""
         except Exception as e:
             st.error(f"Ses kaydı sırasında bir hata oluştu: {e}")
-            logger.error(f"Ses kaydı hatası: {e}")
             return ""
             
     try:
@@ -181,55 +176,43 @@ def record_audio():
         return text
     except sr.UnknownValueError:
         st.warning("Ne dediğini anlayamadım.")
-        logger.warning("Google Speech Recognition anlaşılamayan ses.")
         return ""
     except sr.RequestError as e:
         st.error(f"Ses tanıma servisine ulaşılamıyor; {e}")
-        logger.error(f"Google Speech Recognition API hatası: {e}")
         return ""
     except Exception as e:
         st.error(f"Ses tanıma sırasında beklenmeyen bir hata oluştu: {e}")
-        logger.error(f"Genel ses tanıma hatası: {e}")
         return ""
 
-@st.cache_data(ttl=3600) # Bir saat önbelleğe al
+@st.cache_data(ttl=3600)
 def duckduckgo_search(query):
     """DuckDuckGo kullanarak web araması yapar."""
-    logger.info(f"DuckDuckGo araması başlatılıyor: {query}")
     try:
         with DDGS() as ddgs:
             results = [r for r in ddgs.text(query, max_results=5)]
-            logger.info(f"DuckDuckGo araması tamamlandı, {len(results)} sonuç bulundu.")
             return results
     except Exception as e:
         st.error(f"DuckDuckGo araması yapılırken hata oluştu: {e}")
-        logger.error(f"DuckDuckGo arama hatası: {e}")
         return []
 
-@st.cache_data(ttl=3600) # Bir saat önbelleğe al
+@st.cache_data(ttl=3600)
 def wikipedia_search(query):
     """Wikipedia'da arama yapar."""
-    logger.info(f"Wikipedia araması başlatılıyor: {query}")
     try:
         response = requests.get(f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json")
-        response.raise_for_status() # HTTP hatalarını yakala
+        response.raise_for_status()
         data = response.json()
         if data and "query" in data and "search" in data["query"]:
-            logger.info(f"Wikipedia araması tamamlandı, {len(data['query']['search'])} sonuç bulundu.")
             return data["query"]["search"]
-        logger.info("Wikipedia araması sonuç bulamadı.")
         return []
     except requests.exceptions.RequestException as e:
         st.error(f"Wikipedia araması yapılırken ağ hatası oluştu: {e}")
-        logger.error(f"Wikipedia ağ hatası: {e}")
         return []
     except json.JSONDecodeError as e:
         st.error(f"Wikipedia yanıtı çözümlenirken hata oluştu: {e}")
-        logger.error(f"Wikipedia JSON çözümleme hatası: {e}")
         return []
     except Exception as e:
         st.error(f"Wikipedia araması yapılırken genel bir hata oluştu: {e}")
-        logger.error(f"Wikipedia genel arama hatası: {e}")
         return []
 
 def generate_image(prompt):
@@ -238,7 +221,6 @@ def generate_image(prompt):
     placeholder_image_url = "https://via.placeholder.com/400x300.png?text=Görsel+Oluşturuldu"
     st.image(placeholder_image_url, caption=prompt)
     add_to_chat_history(st.session_state.active_chat_id, "model", f"'{prompt}' için bir görsel oluşturuldu (örnek).")
-    logger.info(f"Görsel oluşturma placeholder'ı kullanıldı: {prompt}")
 
 def process_image_input(uploaded_file):
     """Yüklenen görseli işler ve metne dönüştürür."""
@@ -246,82 +228,126 @@ def process_image_input(uploaded_file):
         try:
             image = Image.open(uploaded_file)
             st.image(image, caption="Yüklenen Görsel", use_column_width=True)
-            logger.info(f"Görsel yüklendi: {uploaded_file.name}")
-
-            # Görseli sohbet geçmişine ekle
-            add_to_chat_history(st.session_state.active_chat_id, "user", image) # Image nesnesini doğrudan ekle
+            add_to_chat_history(st.session_state.active_chat_id, "user", image)
             
-            # Gemini modelinin çok modlu yeteneklerini kullanarak görseli anlama
             if st.session_state.gemini_model:
-                # Yeni bir chat session başlat, sadece görsel açıklama için
-                # Bu kısım stream=True kullanmaz, tek bir yanıt beklenir
                 vision_chat_session = st.session_state.gemini_model.start_chat(history=[])
-                
-                # Modeli hem görseli hem de metni kullanarak sorgula
                 response = vision_chat_session.send_message([image, "Bu görselde ne görüyorsun?"])
-                
                 response_text = response.text
                 st.markdown(response_text)
-                
                 add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-                logger.info("Görsel açıklaması Gemini modeli tarafından işlendi.")
             else:
                 st.error("Gemini modeli başlatılmamış.")
-                logger.error("Görsel işleme sırasında Gemini modeli başlatılmamış.")
         except Exception as e:
             st.error(f"Görsel işlenirken bir hata oluştu: {e}")
-            logger.error(f"Görsel işleme hatası: {e}")
 
-# --- UI Components (Kullanıcı Arayüzü Bileşenleri) ---
+# --- UI Bileşenleri ---
+
+def display_welcome_and_profile_setup():
+    """Hoş geldiniz mesajı ve profil oluşturma/düzenleme."""
+    st.title("Hanogt AI")
+    st.markdown("<h4 style='text-align: center; color: gray;'>Yeni Kişisel Yapay Zeka Asistanınız!</h4>", unsafe_allow_html=True)
+    st.write("---")
+
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        st.subheader("Profiliniz")
+        if st.session_state.user_avatar:
+            try:
+                profile_image = Image.open(io.BytesIO(st.session_state.user_avatar))
+                st.image(profile_image, caption=st.session_state.user_name if st.session_state.user_name else "Kullanıcı", width=150)
+            except Exception as e:
+                st.warning(f"Profil resmi yüklenemedi: {e}")
+                st.image("https://via.placeholder.com/150?text=Profil", width=150) # Hata olursa varsayılan
+        else:
+            st.image("https://via.placeholder.com/150?text=Profil", width=150)
+
+    with col2:
+        if st.session_state.user_name == "":
+            st.subheader("Size Nasıl Hitap Etmeliyim?")
+            new_name = st.text_input("Adınız:", key="initial_name_input")
+            uploaded_avatar = st.file_uploader("Profil Resmi Yükle (isteğe bağlı)", type=["png", "jpg", "jpeg"], key="initial_avatar_upload")
+
+            if st.button("Kaydet", key="initial_save_button"):
+                if new_name:
+                    st.session_state.user_name = new_name
+                if uploaded_avatar:
+                    st.session_state.user_avatar = uploaded_avatar.read()
+                st.rerun()
+        else:
+            st.subheader(f"Merhaba, {st.session_state.user_name}!")
+            st.write("Ayarlar & Kişiselleştirme bölümünden profilinizi düzenleyebilirsiniz.")
+
+    st.write("---")
+
+def display_settings_and_personalization():
+    """Ayarlar ve Kişiselleştirme bölümünü gösterir."""
+    st.markdown("## Ayarlar & Kişiselleştirme")
+
+    new_name = st.text_input("Adınızı Değiştir:", value=st.session_state.user_name, key="settings_name_input")
+    uploaded_avatar = st.file_uploader("Profil Resmini Değiştir (isteğe bağlı)", type=["png", "jpg", "jpeg"], key="settings_avatar_upload")
+
+    if st.button("Profil Bilgilerini Güncelle", key="update_profile_button"):
+        st.session_state.user_name = new_name
+        if uploaded_avatar:
+            st.session_state.user_avatar = uploaded_avatar.read()
+        st.toast("Profil güncellendi!", icon="✅")
+        st.rerun()
+
+    st.markdown("---")
+    st.markdown("### Sohbet Yönetimi")
+    if st.button("🧹 Aktif Sohbet Geçmişini Temizle", key="clear_active_chat_button"):
+        clear_active_chat()
+
+    st.write("---")
 
 def display_about_section():
-    """'Hakkında' bölümünü gösterir."""
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("## Hakkında")
-    st.sidebar.markdown("""
-        **Hanogt AI v5.1.5 Pro+ Enhanced (Refactored)**
-        Streamlit ve Google Gemini Pro ile geliştirilmiştir.
-
-        **Desteklenen Özellikler:**
-        * **Genel sohbet**
-        * **Web araması** (DuckDuckGo, Wikipedia)
-        * **Bilgi tabanı** yanıtları
-        * **Yaratıcı metin** üretimi
-        * **Basit görsel** oluşturma (örnek)
-        * **Metin okuma** (TTS)
-        * **Geri bildirim** mekanizması
-        (Supabase) © 2025
+    """'Hakkımızda' bölümünü gösterir."""
+    st.markdown("## ℹ️ Hakkımızda")
+    st.markdown("""
+        **Hanogt AI** HanStudios'un Sahibi Oğuz Han Guluzade Tarafından 2025 Yılında Yapılmıştır,
+        Açık Kaynak Kodludur, Gemini Tarafından Eğitilmiştir Ve Bütün Telif Hakları Saklıdır.
     """)
-
-def display_settings_section():
-    """Ayarlar bölümünü gösterir."""
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("## Ayarlar")
-
-    if st.button("🧹 Sohbet Geçmişini Temizle", key="clear_chat_button"):
-        clear_active_chat()
+    st.write("---")
 
 def display_main_chat_interface():
     """Ana sohbet arayüzünü gösterir."""
+    
+    # Ana mod seçim butonları
+    # Modların üzerine ayarlar butonu geldiği için burada tekrar title eklemiyorum
+    
+    # Ayrı kolonlarda Ayarlar ve Hakkımızda butonları
+    settings_col, about_col = st.columns(2)
+    with settings_col:
+        if st.button("⚙️ Ayarlar & Kişiselleştirme", key="btn_settings_personalization"):
+            st.session_state.current_page = "settings_personalization"
+            st.rerun()
+    with about_col:
+        if st.button("ℹ️ Hakkımızda", key="btn_about"):
+            st.session_state.current_page = "about_page"
+            st.rerun()
+    
+    st.markdown("---") # Ayarlar/Hakkımızda butonları ile mod seçim arasına çizgi
     st.markdown("## Uygulama Modu")
+
 
     st.session_state.chat_mode = st.radio(
         "Mod Seçimi",
-        ["Yazılı Sohbet", "Görsel Oluşturucu", "Sesli Sohbet (Dosya Yükle)", "Yaratıcı Stüdyo"],
+        ["💬 Yazılı Sohbet", "🖼️ Görsel Oluşturucu", "🎤 Sesli Sohbet (Dosya Yükle)", "✨ Yaratıcı Stüdyo"],
         horizontal=True,
         index=st.session_state.get("current_mode_index", 0),
         key="main_mode_radio"
     )
-    st.session_state.current_mode_index = ["Yazılı Sohbet", "Görsel Oluşturucu", "Sesli Sohbet (Dosya Yükle)", "Yaratıcı Stüdyo"].index(st.session_state.chat_mode)
+    st.session_state.current_mode_index = ["💬 Yazılı Sohbet", "🖼️ Görsel Oluşturucu", "🎤 Sesli Sohbet (Dosya Yükle)", "✨ Yaratıcı Stüdyo"].index(st.session_state.chat_mode)
 
-
-    if st.session_state.chat_mode == "Yazılı Sohbet":
+    if st.session_state.chat_mode == "💬 Yazılı Sohbet":
         handle_text_chat()
-    elif st.session_state.chat_mode == "Görsel Oluşturucu":
+    elif st.session_state.chat_mode == "🖼️ Görsel Oluşturucu":
         handle_image_generation()
-    elif st.session_state.chat_mode == "Sesli Sohbet (Dosya Yükle)":
+    elif st.session_state.chat_mode == "🎤 Sesli Sohbet (Dosya Yükle)":
         handle_voice_chat()
-    elif st.session_state.chat_mode == "Yaratıcı Stüdyo":
+    elif st.session_state.chat_mode == "✨ Yaratıcı Stüdyo":
         handle_creative_studio()
 
 def handle_text_chat():
@@ -329,17 +355,20 @@ def handle_text_chat():
     chat_messages = st.session_state.all_chats.get(st.session_state.active_chat_id, [])
 
     for message_index, message in enumerate(chat_messages):
-        with st.chat_message(message["role"]):
+        avatar_src = None
+        if message["role"] == "user" and st.session_state.user_avatar:
+            avatar_src = Image.open(io.BytesIO(st.session_state.user_avatar))
+
+        with st.chat_message(message["role"], avatar=avatar_src):
             content_part = message["parts"][0]
             if isinstance(content_part, str):
                 st.markdown(content_part)
-            elif isinstance(content_part, bytes): # Görsel ise
+            elif isinstance(content_part, bytes):
                 try:
                     image = Image.open(io.BytesIO(content_part))
                     st.image(image, caption="Yüklenen Görsel", use_column_width=True)
                 except Exception as e:
                     st.warning(f"Görsel yüklenemedi: {e}")
-                    logger.warning(f"Görsel yükleme hatası ({message_index}): {e}")
 
             col_btn1, col_btn2 = st.columns([0.05, 1])
             with col_btn1:
@@ -351,15 +380,12 @@ def handle_text_chat():
             with col_btn2:
                 if st.button("👍", key=f"fb_btn_{st.session_state.active_chat_id}_{message_index}"):
                     st.toast("Geri bildirim için teşekkürler!", icon="🙏")
-                    logger.info(f"Geri bildirim alındı. Mesaj Index: {message_index}")
-
 
     prompt = st.chat_input("Mesajınızı yazın veya bir komut girin: Örn: 'Merhaba', 'web ara: Streamlit', 'yaratıcı metin: uzaylılar'...")
 
     if prompt:
         add_to_chat_history(st.session_state.active_chat_id, "user", prompt)
-        logger.info(f"Kullanıcı promptu: {prompt}")
-
+        
         if prompt.lower().startswith("web ara:"):
             query = prompt[len("web ara:"):].strip()
             results = duckduckgo_search(query)
@@ -370,7 +396,6 @@ def handle_text_chat():
             else:
                 response_text = "Aradığınız terimle ilgili sonuç bulunamadı."
             add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-            logger.info(f"Web araması tamamlandı. Sonuç: {response_text[:100]}...")
         elif prompt.lower().startswith("wiki ara:"):
             query = prompt[len("wiki ara:"):].strip()
             results = wikipedia_search(query)
@@ -381,7 +406,6 @@ def handle_text_chat():
             else:
                 response_text = "Aradığınız terimle ilgili sonuç bulunamadı."
             add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-            logger.info(f"Wikipedia araması tamamlandı. Sonuç: {response_text[:100]}...")
         elif prompt.lower().startswith("görsel oluştur:"):
             image_prompt = prompt[len("görsel oluştur:"):].strip()
             generate_image(image_prompt)
@@ -389,32 +413,17 @@ def handle_text_chat():
             if st.session_state.gemini_model:
                 with st.spinner("Yanıt oluşturuluyor..."):
                     try:
-                        # Chat session'ı sadece ihtiyaç duyulduğunda başlat veya güncelleyin
-                        if "chat_session" not in st.session_state or \
-                           (st.session_state.chat_session.history != st.session_state.all_chats[st.session_state.active_chat_id] and \
-                            st.session_state.all_chats[st.session_state.active_chat_id]): # Geçmiş boşsa yeniden başlatma
-                            
-                            # Geçmişte görsel olup olmadığını kontrol et (Gemini modeli sadece metin ve görseli birlikte alır, sadece bytes'ı almaz)
-                            # `add_to_chat_history` Image nesnesini bytes'a çeviriyor, bu yüzden kontrol etmemiz gerekiyor.
-                            processed_history = []
-                            for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
-                                if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
-                                    try:
-                                        # Bytes'ı tekrar PIL Image'a dönüştürerek modele gönder
-                                        processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
-                                    except Exception as e:
-                                        logger.warning(f"Geçmişteki görsel yüklenemedi, atlanıyor: {e}")
-                                        # Görsel yüklenemezse veya geçersizse, bu mesajı atlayabiliriz
-                                        continue 
-                                else:
-                                    processed_history.append(msg)
+                        processed_history = []
+                        for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
+                            if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
+                                try:
+                                    processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
+                                except Exception:
+                                    continue # Geçersiz görseli atla
+                            else:
+                                processed_history.append(msg)
 
-                            st.session_state.chat_session = st.session_state.gemini_model.start_chat(
-                                history=processed_history
-                            )
-                            logger.info("Yeni Gemini sohbet oturumu başlatıldı veya güncellendi.")
-
-                        # Kullanıcının son mesajını gönder (yukarıda zaten geçmişe eklendi)
+                        st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
                         response = st.session_state.chat_session.send_message(prompt, stream=True)
                         
                         response_text = ""
@@ -425,15 +434,10 @@ def handle_text_chat():
                                 st.markdown(response_text)
                         
                         add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-                        logger.info("Gemini yanıtı başarıyla alındı ve eklendi.")
-
                     except Exception as e:
                         st.error(f"Yanıt alınırken beklenmeyen bir hata oluştu: {e}")
-                        st.error(f"Kaynak: Hata ({e})")
-                        logger.error(f"Gemini yanıtı hatası: {e}")
             else:
-                st.warning("Gemini modeli başlatılmamış. Lütfen API anahtarınızı kontrol edin.")
-                logger.warning("Gemini modeli başlatılmamış uyarısı.")
+                st.warning("Gemini modeli başlatılmamış.")
         
         st.rerun()
 
@@ -446,7 +450,6 @@ def handle_image_generation():
             generate_image(image_prompt)
         else:
             st.warning("Lütfen bir görsel açıklaması girin.")
-            logger.warning("Görsel oluşturma için prompt girilmedi.")
 
 def handle_voice_chat():
     """Sesli sohbet modunu yönetir."""
@@ -459,7 +462,6 @@ def handle_voice_chat():
         if uploaded_audio_file:
             st.audio(uploaded_audio_file, format=uploaded_audio_file.type)
             st.warning("Ses dosyasından metin transkripsiyonu özelliği şu anda bir placeholder'dır.")
-            logger.info(f"Ses dosyası yüklendi: {uploaded_audio_file.name}")
 
         st.markdown("---")
         st.subheader("Canlı Ses Girişi")
@@ -467,27 +469,21 @@ def handle_voice_chat():
             recognized_text = record_audio()
             if recognized_text:
                 add_to_chat_history(st.session_state.active_chat_id, "user", recognized_text)
-                logger.info(f"Canlı ses girişi tanındı: {recognized_text}")
 
                 if st.session_state.gemini_model:
                     with st.spinner("Yanıt oluşturuluyor..."):
                         try:
-                            # Sohbet oturumunu güncelle veya başlat
                             processed_history = []
                             for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
                                 if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
                                     try:
                                         processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
-                                    except Exception as e:
-                                        logger.warning(f"Geçmişteki görsel yüklenemedi (sesli sohbet), atlanıyor: {e}")
-                                        continue 
+                                    except Exception:
+                                        continue
                                 else:
                                     processed_history.append(msg)
 
-                            st.session_state.chat_session = st.session_state.gemini_model.start_chat(
-                                history=processed_history
-                            )
-                            
+                            st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
                             response = st.session_state.chat_session.send_message(recognized_text, stream=True)
                             response_text = ""
                             response_placeholder = st.empty()
@@ -498,16 +494,12 @@ def handle_voice_chat():
                             
                             add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
                             text_to_speech(response_text)
-                            logger.info("Canlı ses girişi için Gemini yanıtı oluşturuldu ve okundu.")
                             st.rerun()
 
                         except Exception as e:
                             st.error(f"Yanıt alınırken beklenmeyen bir hata oluştu: {e}")
-                            st.error(f"Kaynak: Hata ({e})")
-                            logger.error(f"Canlı ses yanıtı hatası: {e}")
                 else:
                     st.warning("Gemini modeli başlatılmamış.")
-                    logger.warning("Canlı ses girişi sırasında Gemini modeli başlatılmamış.")
 
 def handle_creative_studio():
     """Yaratıcı stüdyo modunu yönetir."""
@@ -520,7 +512,6 @@ def handle_creative_studio():
             if st.session_state.gemini_model:
                 with st.spinner("Yaratıcı metin oluşturuluyor..."):
                     try:
-                        # Yaratıcı metin için yeni bir sohbet oturumu başlat, geçmişi sıfırla
                         creative_chat_session = st.session_state.gemini_model.start_chat(history=[])
                         response = creative_chat_session.send_message(f"Yaratıcı metin oluştur: {creative_prompt}", stream=True)
                         
@@ -532,21 +523,14 @@ def handle_creative_studio():
                                 st.markdown(response_text)
                         
                         add_to_chat_history(st.session_state.active_chat_id, "model", f"Yaratıcı Metin Oluşturuldu: {response_text}")
-                        logger.info("Yaratıcı metin başarıyla oluşturuldu ve eklendi.")
-
                     except Exception as e:
                         st.error(f"Yaratıcı metin oluşturulurken bir hata oluştu: {e}")
-                        st.error(f"Kaynak: Hata ({e})")
-                        logger.error(f"Yaratıcı metin oluşturma hatası: {e}")
             else:
                 st.warning("Gemini modeli başlatılmamış.")
-                logger.warning("Yaratıcı stüdyo sırasında Gemini modeli başlatılmamış.")
         else:
             st.warning("Lütfen bir yaratıcı metin isteği girin.")
-            logger.warning("Yaratıcı metin oluşturma için prompt girilmedi.")
 
-
-# --- Main Application Logic (Ana Uygulama Mantığı) ---
+# --- Ana Uygulama Mantığı ---
 
 def main():
     """Ana Streamlit uygulamasını çalıştırır."""
@@ -554,26 +538,44 @@ def main():
         page_title="Hanogt AI Asistan",
         page_icon="✨",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="collapsed" # Sidebar'ı tamamen kaldır
     )
 
-    # Oturum durumu değişkenlerini başlat
-    if "models_initialized" not in st.session_state:
-        st.session_state.models_initialized = False
-        logger.info("models_initialized oturum durumu başlatıldı.")
-    
-    load_chat_history()
-    initialize_gemini_model() # Modeli burada başlat
+    initialize_session_state()
 
-    display_about_section()
-    display_settings_section()
-    display_main_chat_interface()
+    # Sayfa yönlendirme (Basit bir router)
+    if "current_page" not in st.session_state:
+        st.session_state.current_page = "main_chat" # Varsayılan olarak ana sohbet
 
-    # Footer
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f"""
+    if st.session_state.user_name == "" and st.session_state.current_page == "main_chat":
+        display_welcome_and_profile_setup()
+    else:
+        # Menü butonları ve ana başlık her zaman görünür olacak
+        st.title("Hanogt AI")
+        st.markdown("<h4 style='text-align: center; color: gray;'>Yeni Kişisel Yapay Zeka Asistanınız!</h4>", unsafe_allow_html=True)
+        st.write("---") # Başlık ile diğer içerik arasına çizgi
+
+
+        if st.session_state.current_page == "main_chat":
+            display_main_chat_interface()
+        elif st.session_state.current_page == "settings_personalization":
+            display_settings_and_personalization()
+            # Ana menüye dön butonu
+            if st.button("⬅️ Ana Menüye Dön", key="back_to_main_from_settings"):
+                st.session_state.current_page = "main_chat"
+                st.rerun()
+        elif st.session_state.current_page == "about_page":
+            display_about_section()
+            # Ana menüye dön butonu
+            if st.button("⬅️ Ana Menüye Dön", key="back_to_main_from_about"):
+                st.session_state.current_page = "main_chat"
+                st.rerun()
+
+    # Footer (Ana menü dışında da görünür olabilir, Streamlit'in footer'ı yok)
+    st.markdown("---")
+    st.markdown(f"""
         <div style="text-align: center; font-size: 12px; color: gray;">
-            Kullanıcı: Oğuz Han Gülüzade <br>
+            Kullanıcı: {st.session_state.user_name if st.session_state.user_name else "Misafir"} <br>
             Hanogt AI v5.1.5 Pro+ Enhanced (Refactored) © {datetime.datetime.now().year} <br>
             AI: Aktif ({GLOBAL_MODEL_NAME}) | Log: Aktif
         </div>
@@ -581,4 +583,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
