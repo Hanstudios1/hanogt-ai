@@ -1006,12 +1006,11 @@ def initialize_session_state():
         st.session_state.current_language = "TR" # Varsayılan dil Türkçe
     
     # EKLENEN KISIM: gemini_model'i burada kontrol et ve başlat
-    if "gemini_model" not in st.session_state:
-        st.session_state.gemini_model = None # Başlangıçta None olarak ayarla
+    # Bu kontrol, uygulamanın her yeniden yüklenmesinde modeli tekrar başlatmaktan kaçınır
+    if "gemini_model" not in st.session_state or not st.session_state.models_initialized:
         initialize_gemini_model() # Modeli başlatma fonksiyonunu çağır
 
     load_chat_history()
-    # initialize_gemini_model() # Bu satırı yukarı taşıdık ve artık koşullu olarak çağrılıyor
 
 def initialize_gemini_model():
     """Gemini modelini başlatır ve oturum durumuna kaydeder."""
@@ -1537,10 +1536,9 @@ def main():
         lang_options = [f"{v['emoji']} {k}" for k, v in LANGUAGES.items()]
         
         # Seçili dilin index'ini bul, yoksa ilk seçeneği varsay
-        try:
+        selected_lang_index = 0 # Varsayılan olarak ilk öğeyi seç
+        if current_lang_display in lang_options:
             selected_lang_index = lang_options.index(current_lang_display)
-        except ValueError:
-            selected_lang_index = 0 # Eğer mevcut dil listelenmiyorsa varsayılanı seç
 
         selected_lang_display = st.selectbox(
             label="",
