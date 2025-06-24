@@ -11,6 +11,7 @@ import datetime
 from PIL import Image
 import numpy as np
 import logging
+import json # json modülünü ekledik
 
 # --- İsteğe Bağlı Kütüphaneler (Platforma özel kurulum gerektirebilir) ---
 try:
@@ -54,9 +55,9 @@ LANGUAGES = {
     "EN": {"name": "English", "emoji": "🇬🇧"},
     "FR": {"name": "Français", "emoji": "🇫🇷"},
     "ES": {"name": "Español", "emoji": "🇪🇸"},
-    "DE": {"name": "Deutsch", "emoji": "🇩🇪"}, # Örnek Avrupa ülkesi
+    "DE": {"name": "Deutsch", "emoji": "🇩🇪"},
     "RU": {"name": "Русский", "emoji": "🇷🇺"},
-    "SA": {"name": "العربية", "emoji": "🇸🇦"}, # Suudi Arabistan
+    "SA": {"name": "العربية", "emoji": "🇸🇦"},
     "AZ": {"name": "Azərbaycan dili", "emoji": "🇦🇿"},
     "JP": {"name": "日本語", "emoji": "🇯🇵"},
     "KR": {"name": "한국어", "emoji": "🇰🇷"},
@@ -1003,13 +1004,19 @@ def initialize_session_state():
         st.session_state.show_about = False
     if "current_language" not in st.session_state:
         st.session_state.current_language = "TR" # Varsayılan dil Türkçe
+    
+    # EKLENEN KISIM: gemini_model'i burada kontrol et ve başlat
+    if "gemini_model" not in st.session_state:
+        st.session_state.gemini_model = None # Başlangıçta None olarak ayarla
+        initialize_gemini_model() # Modeli başlatma fonksiyonunu çağır
 
     load_chat_history()
-    initialize_gemini_model()
+    # initialize_gemini_model() # Bu satırı yukarı taşıdık ve artık koşullu olarak çağrılıyor
 
 def initialize_gemini_model():
     """Gemini modelini başlatır ve oturum durumuna kaydeder."""
-    if st.session_state.get("gemini_model") is None:
+    # Sadece 'gemini_model' None ise veya models_initialized False ise başlat
+    if st.session_state.get("gemini_model") is None or not st.session_state.get("models_initialized", False):
         try:
             st.session_state.gemini_model = genai.GenerativeModel(
                 model_name=GLOBAL_MODEL_NAME,
@@ -1141,7 +1148,7 @@ def wikipedia_search(query):
     except requests.exceptions.RequestException as e:
         st.error(get_text("wikipedia_network_error").format(error=e))
         return []
-    except json.JSONDecodeError as e: # This is a placeholder for `json` import, assuming it's available
+    except json.JSONDecodeError as e:
         st.error(get_text("wikipedia_json_error").format(error=e))
         return []
     except Exception as e:
@@ -1361,7 +1368,8 @@ def handle_text_chat():
             image_prompt = prompt[len("görsel oluştur:"):].strip()
             generate_image(image_prompt)
         else:
-            if st.session_state.gemini_model:
+            # Buradaki kontrolü doğrudan kullanabilirsiniz çünkü initialize_session_state() içinde zaten başlatılıyor.
+            if st.session_state.gemini_model: 
                 with st.spinner(get_text("generating_response")):
                     try:
                         processed_history = []
@@ -1374,7 +1382,10 @@ def handle_text_chat():
                             else:
                                 processed_history.append(msg)
 
-                        st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+                        # chat_session'ı yalnızca ilk kez başlat veya sıfırla
+                        if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
+                             st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+                        
                         response = st.session_state.chat_session.send_message(prompt, stream=True)
                         
                         response_text = ""
@@ -1434,7 +1445,10 @@ def handle_voice_chat():
                                 else:
                                     processed_history.append(msg)
 
-                            st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+                            # chat_session'ı yalnızca ilk kez başlat veya sıfırla
+                            if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
+                                st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+                            
                             response = st.session_state.chat_session.send_message(recognized_text, stream=True)
                             response_text = ""
                             response_placeholder = st.empty()
@@ -1463,6 +1477,8 @@ def handle_creative_studio():
             if st.session_state.gemini_model:
                 with st.spinner(get_text("generating_response")):
                     try:
+                        # Creative studio için her zaman yeni bir session başlatılabilir veya önceki session kullanılabilir.
+                        # Eğer geçmişi tutmak istemiyorsanız 'history=[]' ile başlatmak mantıklıdır.
                         creative_chat_session = st.session_state.gemini_model.start_chat(history=[])
                         response = creative_chat_session.send_message(f"Yaratıcı metin oluştur: {creative_prompt}", stream=True)
                         
