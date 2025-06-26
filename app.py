@@ -13,15 +13,6 @@ import numpy as np
 import logging
 import json
 
-# --- Optional Libraries (May require platform-specific installation) ---
-try:
-    import pyttsx3
-    import speech_recognition as sr
-    TTS_SR_AVAILABLE = True
-except ImportError:
-    TTS_SR_AVAILABLE = False
-    logging.warning("pyttsx3 or speech_recognition modules not found. Voice features disabled.")
-
 # --- Global Variables and Settings ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -79,22 +70,23 @@ def get_text(key):
             "profile_edit_info": "Ayarlar & Kişiselleştirme bölümünden profilinizi düzenleyebilirsiniz.",
             "ai_features_title": "Hanogt AI Özellikleri:",
             "feature_general_chat": "Genel sohbet",
-            "feature_web_search": "Web araması (DuckDuckGo, Wikipedia)",
+            "feature_web_search": "Web araması (DuckDuckGo)", # Updated
+            "feature_wikipedia_search": "Wikipedia araması", # New
+            "feature_research": "Araştırma (Web, Wiki)", # New for the button
             "feature_knowledge_base": "Bilgi tabanı yanıtları",
             "feature_creative_text": "Yaratıcı metin üretimi",
             "feature_image_generation": "Basit görsel oluşturma (örnek)",
-            "feature_text_to_speech": "Metin okuma (TTS)",
             "feature_feedback": "Geri bildirim mekanizması",
             "settings_button": "⚙️ Ayarlar & Kişiselleştirme",
             "about_button": "ℹ️ Hakkımızda",
             "app_mode_title": "Uygulama Modu",
             "chat_mode_text": "💬 Yazılı Sohbet",
             "chat_mode_image": "🖼️ Görsel Oluşturucu",
-            "chat_mode_voice": "🎤 Sesli Sohbet", # Removed "(Dosya Yükle)" to simplify
             "chat_mode_creative": "✨ Yaratıcı Stüdyo",
-            "chat_input_placeholder": "Mesajınızı yazın veya bir komut girin: Örn: 'Merhaba', 'web ara: Streamlit', 'yaratıcı metin: uzaylılar'...",
+            "chat_mode_research": "🔍 Araştırma", # New research mode
+            "chat_input_placeholder": "Mesajınızı yazın veya bir komut girin: Örn: 'Merhaba', 'web ara: Streamlit'...",
             "generating_response": "Yanıt oluşturuluyor...",
-            "tts_button": "▶️",
+            "tts_button": "▶️", # Kept for potential future use or other text output
             "feedback_button": "👍",
             "feedback_toast": "Geri bildirim için teşekkürler!",
             "image_gen_title": "Görsel Oluşturucu",
@@ -102,23 +94,17 @@ def get_text(key):
             "image_gen_button": "Görsel Oluştur",
             "image_gen_warning_placeholder": "Görsel oluşturma özelliği şu anda bir placeholder'dır ve gerçek bir API'ye bağlı değildir.",
             "image_gen_warning_prompt_missing": "Lütfen bir görsel açıklaması girin.",
-            "voice_chat_title": "Sesli Sohbet",
-            "voice_upload_label": "Ses dosyası yükle (MP3, WAV) - Bu özellik şimdilik bir yer tutucudur.", # Clarified placeholder
-            "voice_upload_warning": "Ses dosyasından metin transkripsiyonu özelliği şu anda bir yer tutucudur.",
-            "voice_live_input_title": "Canlı Ses Girişi",
-            "voice_mic_button": "Mikrofonu Başlat",
-            "voice_not_available": "Sesli sohbet özellikleri kullanılamıyor. Gerekli kütüphanelerin (pyttsx3, SpeechRecognition) kurulu olduğundan emin olun.",
-            "voice_listening": "Dinleniyor...",
-            "voice_processing": "Ses işleniyor...",
-            "voice_heard": "Sen dedin: {text}",
-            "voice_no_audio": "Ses algılanamadı, lütfen tekrar deneyin.",
-            "voice_unknown": "Ne dediğinizi anlayamadım. Lütfen daha net konuşun.", # More helpful
-            "voice_api_error": "Ses tanıma servisine ulaşılamıyor; {error}",
             "creative_studio_title": "Yaratıcı Stüdyo",
             "creative_studio_info": "Bu bölüm, yaratıcı metin üretimi gibi gelişmiş özellikler için tasarlanmıştır.",
             "creative_studio_input_label": "Yaratıcı metin isteğinizi girin:",
             "creative_studio_button": "Metin Oluştur",
             "creative_studio_warning_prompt_missing": "Lütfen bir yaratıcı metin isteği girin.",
+            "research_title": "🔍 Araştırma Modu", # New
+            "research_info": "Burada web aramaları (DuckDuckGo) ve Wikipedia aramaları yapabilirsiniz.", # New
+            "research_input_label": "Aramak istediğiniz konuyu girin (örneğin: 'Streamlit', 'yapay zeka'):", # New
+            "research_web_button": "Web Ara (DuckDuckGo)", # New
+            "research_wiki_button": "Wikipedia Ara", # New
+            "research_warning_prompt_missing": "Lütfen aramak istediğiniz bir konu girin.", # New
             "settings_personalization_title": "Ayarlar & Kişiselleştirme",
             "settings_name_change_label": "Adınızı Değiştir:",
             "settings_avatar_change_label": "Profil Resmini Değiştir (isteğe bağlı)",
@@ -152,14 +138,9 @@ def get_text(key):
             "image_upload_caption": "Yüklenen Görsel",
             "image_processing_error": "Görsel işlenirken bir hata oluştu: {error}",
             "image_vision_query": "Bu görselde ne görüyorsun?",
-            "loading_audio_file": "Ses dosyası yükleniyor...",
-            "tts_sr_not_available": "Sesli sohbet ve metin okuma özellikleri şu anda kullanılamıyor. Gerekli kütüphaneler yüklenmemiş veya uyumlu değil.",
-            "mic_listen_timeout": "Ses algılama zaman aşımına uğradı.",
-            "unexpected_audio_record_error": "Ses kaydı sırasında beklenmeyen bir hata oluştu: {error}",
+            "loading_audio_file": "Ses dosyası yükleniyor...", # Kept for consistency if other audio features are added
             "gemini_response_error": "Yanıt alınırken beklenmeyen bir hata oluştu: {error}",
             "creative_text_generated": "Yaratıcı Metin Oluşturuldu: {text}",
-            "voice_selection_error": "Ses seçimi hatası: {error}", # New error message
-            "voice_not_found": "{language} için uygun ses bulunamadı, varsayılan ses kullanılacak. İşletim sisteminizin ses ayarlarını kontrol ediniz." # Generic voice not found
         },
         "EN": {
             "welcome_title": "Hanogt AI",
@@ -172,20 +153,21 @@ def get_text(key):
             "profile_edit_info": "You can edit your profile in the Settings & Personalization section.",
             "ai_features_title": "Hanogt AI Features:",
             "feature_general_chat": "General chat",
-            "feature_web_search": "Web search (DuckDuckGo, Wikipedia)",
+            "feature_web_search": "Web search (DuckDuckGo)", # Updated
+            "feature_wikipedia_search": "Wikipedia search", # New
+            "feature_research": "Research (Web, Wiki)", # New for the button
             "feature_knowledge_base": "Knowledge base responses",
             "feature_creative_text": "Creative text generation",
             "feature_image_generation": "Simple image generation (placeholder)",
-            "feature_text_to_speech": "Text-to-speech (TTS)",
             "feature_feedback": "Feedback mechanism",
             "settings_button": "⚙️ Settings & Personalization",
             "about_button": "ℹ️ About Us",
             "app_mode_title": "Application Mode",
             "chat_mode_text": "💬 Text Chat",
             "chat_mode_image": "🖼️ Image Generator",
-            "chat_mode_voice": "🎤 Voice Chat",
             "chat_mode_creative": "✨ Creative Studio",
-            "chat_input_placeholder": "Type your message or enter a command: E.g., 'Hello', 'web search: Streamlit', 'creative text: aliens'...",
+            "chat_mode_research": "🔍 Research", # New research mode
+            "chat_input_placeholder": "Type your message or enter a command: E.g., 'Hello', 'web search: Streamlit'...",
             "generating_response": "Generating response...",
             "tts_button": "▶️",
             "feedback_button": "👍",
@@ -195,23 +177,17 @@ def get_text(key):
             "image_gen_button": "Generate Image",
             "image_gen_warning_placeholder": "Image generation feature is currently a placeholder and not connected to a real API.",
             "image_gen_warning_prompt_missing": "Please enter an image description.",
-            "voice_chat_title": "Voice Chat",
-            "voice_upload_label": "Upload audio file (MP3, WAV) - This feature is currently a placeholder.",
-            "voice_upload_warning": "Audio file transcription feature is currently a placeholder.",
-            "voice_live_input_title": "Live Voice Input",
-            "voice_mic_button": "Start Microphone",
-            "voice_not_available": "Voice chat features are currently unavailable. Make sure required libraries (pyttsx3, SpeechRecognition) are installed and compatible.",
-            "voice_listening": "Listening...",
-            "voice_processing": "Processing audio...",
-            "voice_heard": "You said: {text}",
-            "voice_no_audio": "No audio detected, please try again.",
-            "voice_unknown": "Could not understand what you said. Please speak more clearly.",
-            "voice_api_error": "Could not reach speech recognition service; {error}",
             "creative_studio_title": "Creative Studio",
             "creative_studio_info": "This section is designed for advanced features like creative text generation.",
             "creative_studio_input_label": "Enter your creative text request:",
             "creative_studio_button": "Generate Text",
             "creative_studio_warning_prompt_missing": "Please enter a creative text request.",
+            "research_title": "🔍 Research Mode", # New
+            "research_info": "Here you can perform web searches (DuckDuckGo) and Wikipedia searches.", # New
+            "research_input_label": "Enter the topic you want to search for (e.g., 'Streamlit', 'artificial intelligence'):", # New
+            "research_web_button": "Search Web (DuckDuckGo)", # New
+            "research_wiki_button": "Search Wikipedia", # New
+            "research_warning_prompt_missing": "Please enter a topic to search.", # New
             "settings_personalization_title": "Settings & Personalization",
             "settings_name_change_label": "Change Your Name:",
             "settings_avatar_change_label": "Change Profile Picture (optional)",
@@ -246,13 +222,8 @@ def get_text(key):
             "image_processing_error": "An error occurred while processing the image: {error}",
             "image_vision_query": "What do you see in this image?",
             "loading_audio_file": "Loading audio file...",
-            "tts_sr_not_available": "Voice chat and text-to-speech features are currently unavailable. Make sure required libraries are installed and compatible.",
-            "mic_listen_timeout": "Audio detection timed out.",
-            "unexpected_audio_record_error": "An unexpected error occurred during audio recording: {error}",
             "gemini_response_error": "An unexpected error occurred while getting a response: {error}",
             "creative_text_generated": "Creative Text Generated: {text}",
-            "voice_selection_error": "Voice selection error: {error}",
-            "voice_not_found": "Suitable voice for {language} not found, default voice will be used. Please check your operating system's sound settings."
         },
         "FR": {
             "welcome_title": "Hanogt AI",
@@ -265,20 +236,21 @@ def get_text(key):
             "profile_edit_info": "Vous pouvez modifier votre profil dans la section Paramètres et Personnalisation.",
             "ai_features_title": "Fonctionnalités de Hanogt AI :",
             "feature_general_chat": "Chat général",
-            "feature_web_search": "Recherche Web (DuckDuckGo, Wikipédia)",
+            "feature_web_search": "Recherche Web (DuckDuckGo)",
+            "feature_wikipedia_search": "Recherche Wikipédia",
+            "feature_research": "Recherche (Web, Wiki)",
             "feature_knowledge_base": "Réponses basées sur la connaissance",
             "feature_creative_text": "Génération de texte créatif",
             "feature_image_generation": "Génération d'images simple (aperçu)",
-            "feature_text_to_speech": "Synthèse vocale (TTS)",
             "feature_feedback": "Mécanisme de feedback",
             "settings_button": "⚙️ Paramètres & Personnalisation",
             "about_button": "ℹ️ À Propos",
             "app_mode_title": "Mode de l'application",
             "chat_mode_text": "💬 Chat Textuel",
             "chat_mode_image": "🖼️ Générateur d'Images",
-            "chat_mode_voice": "🎤 Chat Vocal",
             "chat_mode_creative": "✨ Studio Créatif",
-            "chat_input_placeholder": "Tapez votre message ou une commande : Ex: 'Bonjour', 'recherche web: Streamlit', 'texte créatif: aliens'...",
+            "chat_mode_research": "🔍 Recherche",
+            "chat_input_placeholder": "Tapez votre message ou une commande : Ex: 'Bonjour', 'recherche web: Streamlit'...",
             "generating_response": "Génération de la réponse...",
             "tts_button": "▶️",
             "feedback_button": "👍",
@@ -288,23 +260,17 @@ def get_text(key):
             "image_gen_button": "Générer l'Image",
             "image_gen_warning_placeholder": "La fonction de génération d'images est actuellement un aperçu et n'est pas connectée à une véritable API.",
             "image_gen_warning_prompt_missing": "Veuillez entrer une description d'image.",
-            "voice_chat_title": "Chat Vocal",
-            "voice_upload_label": "Télécharger un fichier audio (MP3, WAV) - Cette fonction est actuellement un aperçu.",
-            "voice_upload_warning": "La fonction de transcription de fichier audio est actuellement un aperçu.",
-            "voice_live_input_title": "Entrée Vocale en Direct",
-            "voice_mic_button": "Démarrer le Microphone",
-            "voice_not_available": "Les fonctions de chat vocal sont actuellement indisponibles. Assurez-vous que les bibliothèques requises (pyttsx3, SpeechRecognition) sont installées et compatibles.",
-            "voice_listening": "Écoute...",
-            "voice_processing": "Traitement audio...",
-            "voice_heard": "Vous avez dit : {text}",
-            "voice_no_audio": "Aucun audio détecté, veuillez réessayer.",
-            "voice_unknown": "Je n'ai pas compris ce que vous avez dit. Veuillez parler plus clairement.",
-            "voice_api_error": "Impossible d'atteindre le service de reconnaissance vocale ; {error}",
             "creative_studio_title": "Studio Créatif",
             "creative_studio_info": "Cette section est conçue pour des fonctionnalités avancées comme la génération de texte créatif.",
             "creative_studio_input_label": "Entrez votre demande de texte créatif :",
             "creative_studio_button": "Générer du Texte",
             "creative_studio_warning_prompt_missing": "Veuillez entrer une demande de texte créatif.",
+            "research_title": "🔍 Mode Recherche",
+            "research_info": "Ici, vous pouvez effectuer des recherches web (DuckDuckGo) et des recherches Wikipédia.",
+            "research_input_label": "Entrez le sujet que vous voulez rechercher (par exemple : 'Streamlit', 'intelligence artificielle') :",
+            "research_web_button": "Recherche Web (DuckDuckGo)",
+            "research_wiki_button": "Recherche Wikipédia",
+            "research_warning_prompt_missing": "Veuillez entrer un sujet à rechercher.",
             "settings_personalization_title": "Paramètres & Personnalisation",
             "settings_name_change_label": "Changer votre nom :",
             "settings_avatar_change_label": "Changer la photo de profil (facultatif)",
@@ -339,13 +305,8 @@ def get_text(key):
             "image_processing_error": "Une erreur s'est produite lors du traitement de l'image : {error}",
             "image_vision_query": "Que voyez-vous dans cette image ?",
             "loading_audio_file": "Chargement du fichier audio...",
-            "tts_sr_not_available": "Les fonctions de chat vocal et de synthèse vocale sont actuellement indisponibles. Assurez-vous que les bibliothèques requises sont installées et compatibles.",
-            "mic_listen_timeout": "Détection audio expirée.",
-            "unexpected_audio_record_error": "Une erreur inattendue s'est produite lors de l'enregistrement audio : {error}",
             "gemini_response_error": "Une erreur inattendue s'est produite lors de l'obtention d'une réponse : {error}",
             "creative_text_generated": "Texte Créatif Généré : {text}",
-            "voice_selection_error": "Erreur de sélection de la voix : {error}",
-            "voice_not_found": "Voix appropriée pour {language} non trouvée, la voix par défaut sera utilisée. Veuillez vérifier les paramètres sonores de votre système d'exploitation."
         },
         "ES": {
             "welcome_title": "Hanogt AI",
@@ -358,20 +319,21 @@ def get_text(key):
             "profile_edit_info": "Puedes editar tu perfil en la sección de Configuración y Personalización.",
             "ai_features_title": "Características de Hanogt AI:",
             "feature_general_chat": "Chat general",
-            "feature_web_search": "Búsqueda web (DuckDuckGo, Wikipedia)",
+            "feature_web_search": "Búsqueda web (DuckDuckGo)",
+            "feature_wikipedia_search": "Búsqueda en Wikipedia",
+            "feature_research": "Investigación (Web, Wiki)",
             "feature_knowledge_base": "Respuestas de la base de conocimientos",
             "feature_creative_text": "Generación de texto creativo",
             "feature_image_generation": "Generación simple de imágenes (ejemplo)",
-            "feature_text_to_speech": "Texto a voz (TTS)",
             "feature_feedback": "Mecanismo de retroalimentación",
             "settings_button": "⚙️ Configuración & Personalización",
             "about_button": "ℹ️ Acerca de Nosotros",
             "app_mode_title": "Modo de Aplicación",
             "chat_mode_text": "💬 Chat de Texto",
             "chat_mode_image": "🖼️ Generador de Imágenes",
-            "chat_mode_voice": "🎤 Chat de Voz",
             "chat_mode_creative": "✨ Estudio Creativo",
-            "chat_input_placeholder": "Escribe tu mensaje o un comando: Ej.: 'Hola', 'búsqueda web: Streamlit', 'texto creativo: alienígenas'...",
+            "chat_mode_research": "🔍 Investigación",
+            "chat_input_placeholder": "Escribe tu mensaje o un comando: Ej.: 'Hola', 'búsqueda web: Streamlit'...",
             "generating_response": "Generando respuesta...",
             "tts_button": "▶️",
             "feedback_button": "👍",
@@ -381,23 +343,17 @@ def get_text(key):
             "image_gen_button": "Generar Imagen",
             "image_gen_warning_placeholder": "La función de generación de imágenes es actualmente un marcador de posición y no está conectada a una API real.",
             "image_gen_warning_prompt_missing": "Por favor, introduce una descripción de la imagen.",
-            "voice_chat_title": "Chat de Voz",
-            "voice_upload_label": "Subir archivo de audio (MP3, WAV) - Esta función es actualmente un marcador de posición.",
-            "voice_upload_warning": "La función de transcripción de archivos de audio es actualmente un marcador de posición.",
-            "voice_live_input_title": "Entrada de Voz en Vivo",
-            "voice_mic_button": "Iniciar Micrófono",
-            "voice_not_available": "Las funciones de chat de voz no están disponibles actualmente. Asegúrate de que las bibliotecas requeridas (pyttsx3, SpeechRecognition) estén instaladas y sean compatibles.",
-            "voice_listening": "Escuchando...",
-            "voice_processing": "Procesando audio...",
-            "voice_heard": "Dijiste: {text}",
-            "voice_no_audio": "No se detectó audio, por favor, inténtalo de nuevo.",
-            "voice_unknown": "No pude entender lo que dijiste. Por favor, habla más claro.",
-            "voice_api_error": "No se puede acceder al servicio de reconocimiento de voz; {error}",
             "creative_studio_title": "Estudio Creativo",
             "creative_studio_info": "Esta sección está diseñada para funciones avanzadas como la generación de texto creativo.",
             "creative_studio_input_label": "Introduce tu solicitud de texto creativo:",
             "creative_studio_button": "Generar Texto",
             "creative_studio_warning_prompt_missing": "Por favor, introduce una solicitud de texto creativo.",
+            "research_title": "🔍 Modo de Investigación",
+            "research_info": "Aquí puedes realizar búsquedas web (DuckDuckGo) y búsquedas en Wikipedia.",
+            "research_input_label": "Introduce el tema que quieres buscar (ejemplo: 'Streamlit', 'inteligencia artificial'):",
+            "research_web_button": "Buscar en la Web (DuckDuckGo)",
+            "research_wiki_button": "Buscar en Wikipedia",
+            "research_warning_prompt_missing": "Por favor, introduce un tema a buscar.",
             "settings_personalization_title": "Configuración & Personalización",
             "settings_name_change_label": "Cambiar tu nombre:",
             "settings_avatar_change_label": "Cambiar foto de perfil (opcional)",
@@ -432,13 +388,8 @@ def get_text(key):
             "image_processing_error": "Se produjo un error al procesar la imagen: {error}",
             "image_vision_query": "¿Qué ves en esta imagen?",
             "loading_audio_file": "Cargando archivo de audio...",
-            "tts_sr_not_available": "Las funciones de chat de voz y texto a voz no están disponibles actualmente. Asegúrate de que las bibliotecas requeridas estén instaladas y sean compatibles.",
-            "mic_listen_timeout": "Tiempo de espera de detección de audio agotado.",
-            "unexpected_audio_record_error": "Se produjo un error inesperado durante la grabación de audio: {error}",
             "gemini_response_error": "Se produjo un error inesperado al obtener una respuesta: {error}",
             "creative_text_generated": "Texto Creativo Generado: {text}",
-            "voice_selection_error": "Error de selección de voz: {error}",
-            "voice_not_found": "No se encontró una voz adecuada para {language}, se utilizará la voz predeterminada. Por favor, verifica la configuración de sonido de tu sistema operativo."
         },
         "DE": {
             "welcome_title": "Hanogt AI",
@@ -451,20 +402,21 @@ def get_text(key):
             "profile_edit_info": "Sie können Ihr Profil im Bereich Einstellungen & Personalisierung bearbeiten.",
             "ai_features_title": "Hanogt AI Funktionen:",
             "feature_general_chat": "Allgemeiner Chat",
-            "feature_web_search": "Websuche (DuckDuckGo, Wikipedia)",
+            "feature_web_search": "Websuche (DuckDuckGo)",
+            "feature_wikipedia_search": "Wikipedia-Suche",
+            "feature_research": "Recherche (Web, Wiki)",
             "feature_knowledge_base": "Wissensdatenbank-Antworten",
             "feature_creative_text": "Kreative Texterstellung",
             "feature_image_generation": "Einfache Bilderzeugung (Beispiel)",
-            "feature_text_to_speech": "Text-to-Speech (TTS)",
             "feature_feedback": "Feedback-Mechanismus",
             "settings_button": "⚙️ Einstellungen & Personalisierung",
             "about_button": "ℹ️ Über Uns",
             "app_mode_title": "Anwendungsmodus",
             "chat_mode_text": "💬 Text-Chat",
             "chat_mode_image": "🖼️ Bilderzeuger",
-            "chat_mode_voice": "🎤 Sprach-Chat",
             "chat_mode_creative": "✨ Kreativ-Studio",
-            "chat_input_placeholder": "Geben Sie Ihre Nachricht oder einen Befehl ein: Z.B. 'Hallo', 'websuche: Streamlit', 'kreativer Text: Aliens'...",
+            "chat_mode_research": "🔍 Recherche",
+            "chat_input_placeholder": "Geben Sie Ihre Nachricht oder einen Befehl ein: Z.B. 'Hallo', 'websuche: Streamlit'...",
             "generating_response": "Antwort wird generiert...",
             "tts_button": "▶️",
             "feedback_button": "👍",
@@ -474,23 +426,17 @@ def get_text(key):
             "image_gen_button": "Bild erzeugen",
             "image_gen_warning_placeholder": "Die Bilderzeugungsfunktion ist derzeit ein Platzhalter und nicht mit einer echten API verbunden.",
             "image_gen_warning_prompt_missing": "Bitte geben Sie eine Bildbeschreibung ein.",
-            "voice_chat_title": "Sprach-Chat",
-            "voice_upload_label": "Audiodatei hochladen (MP3, WAV) - Diese Funktion ist derzeit ein Platzhalter.",
-            "voice_upload_warning": "Die Audiodatei-Transkriptionsfunktion ist derzeit ein Platzhalter.",
-            "voice_live_input_title": "Live-Spracheingabe",
-            "voice_mic_button": "Mikrofon starten",
-            "voice_not_available": "Sprach-Chat-Funktionen sind derzeit nicht verfügbar. Stellen Sie sicher, dass die erforderlichen Bibliotheken (pyttsx3, SpeechRecognition) installiert und kompatibel sind.",
-            "voice_listening": "Hören...",
-            "voice_processing": "Audio wird verarbeitet...",
-            "voice_heard": "Sie sagten: {text}",
-            "voice_no_audio": "Kein Audio erkannt, bitte versuchen Sie es erneut.",
-            "voice_unknown": "Ich konnte nicht verstehen, was Sie gesagt haben. Bitte sprechen Sie klarer.",
-            "voice_api_error": "Spracherkennungsdienst nicht erreichbar; {error}",
             "creative_studio_title": "Kreativ-Studio",
             "creative_studio_info": "Dieser Bereich ist für erweiterte Funktionen wie die Erstellung kreativer Texte konzipiert.",
             "creative_studio_input_label": "Geben Sie Ihre kreative Textanfrage ein:",
             "creative_studio_button": "Text erzeugen",
             "creative_studio_warning_prompt_missing": "Bitte geben Sie eine kreative Textanfrage ein.",
+            "research_title": "🔍 Recherchemodus",
+            "research_info": "Hier können Sie Websuchen (DuckDuckGo) und Wikipedia-Suchen durchführen.",
+            "research_input_label": "Geben Sie das Thema ein, nach dem Sie suchen möchten (z.B. 'Streamlit', 'künstliche Intelligenz'):",
+            "research_web_button": "Web suchen (DuckDuckGo)",
+            "research_wiki_button": "Wikipedia suchen",
+            "research_warning_prompt_missing": "Bitte geben Sie ein Thema zum Suchen ein.",
             "settings_personalization_title": "Einstellungen & Personalisierung",
             "settings_name_change_label": "Namen ändern:",
             "settings_avatar_change_label": "Profilbild ändern (optional)",
@@ -525,13 +471,8 @@ def get_text(key):
             "image_processing_error": "Beim Verarbeiten des Bildes ist ein Fehler aufgetreten: {error}",
             "image_vision_query": "Was sehen Sie auf diesem Bild?",
             "loading_audio_file": "Audiodatei wird geladen...",
-            "tts_sr_not_available": "Sprach-Chat- und Text-to-Speech-Funktionen sind derzeit nicht verfügbar. Stellen Sie sicher, dass die erforderlichen Bibliotheken installiert und kompatibel sind.",
-            "mic_listen_timeout": "Audioerkennung Zeitüberschreitung.",
-            "unexpected_audio_record_error": "Ein unerwarteter Fehler bei der Audioaufnahme: {error}",
             "gemini_response_error": "Ein unerwarteter Fehler beim Abrufen einer Antwort: {error}",
             "creative_text_generated": "Kreativer Text generiert: {text}",
-            "voice_selection_error": "Sprachauswahlfehler: {error}",
-            "voice_not_found": "Geeignete Stimme für {language} nicht gefunden, Standardstimme wird verwendet. Bitte überprüfen Sie die Soundeinstellungen Ihres Betriebssystems."
         },
         "RU": {
             "welcome_title": "Hanogt AI",
@@ -544,20 +485,21 @@ def get_text(key):
             "profile_edit_info": "Вы можете редактировать свой профиль в разделе «Настройки и персонализация».",
             "ai_features_title": "Функции Hanogt AI:",
             "feature_general_chat": "Общий чат",
-            "feature_web_search": "Веб-поиск (DuckDuckGo, Википедия)",
+            "feature_web_search": "Веб-поиск (DuckDuckGo)",
+            "feature_wikipedia_search": "Поиск в Википедии",
+            "feature_research": "Исследование (Веб, Вики)",
             "feature_knowledge_base": "Ответы из базы знаний",
             "feature_creative_text": "Генерация креативного текста",
             "feature_image_generation": "Простая генерация изображений (пример)",
-            "feature_text_to_speech": "Преобразование текста в речь (TTS)",
             "feature_feedback": "Механизм обратной связи",
             "settings_button": "⚙️ Настройки и персонализация",
             "about_button": "ℹ️ О нас",
             "app_mode_title": "Режим приложения",
             "chat_mode_text": "💬 Текстовый чат",
             "chat_mode_image": "🖼️ Генератор изображений",
-            "chat_mode_voice": "🎤 Голосовой чат",
             "chat_mode_creative": "✨ Креативная студия",
-            "chat_input_placeholder": "Введите сообщение или команду: Например, 'Привет', 'веб-поиск: Streamlit', 'креативный текст: инопланетяне'...",
+            "chat_mode_research": "🔍 Исследование",
+            "chat_input_placeholder": "Введите сообщение или команду: Например, 'Привет', 'веб-поиск: Streamlit'...",
             "generating_response": "Генерация ответа...",
             "tts_button": "▶️",
             "feedback_button": "👍",
@@ -567,23 +509,17 @@ def get_text(key):
             "image_gen_button": "Сгенерировать изображение",
             "image_gen_warning_placeholder": "Функция генерации изображений в настоящее время является заглушкой и не подключена к реальному API.",
             "image_gen_warning_prompt_missing": "Пожалуйста, введите описание изображения.",
-            "voice_chat_title": "Голосовой чат",
-            "voice_upload_label": "Загрузить аудиофайл (MP3, WAV) - Эта функция в настоящее время является заглушкой.",
-            "voice_upload_warning": "Функция транскрипции аудиофайлов в настоящее время является заглушкой.",
-            "voice_live_input_title": "Ввод голоса в реальном времени",
-            "voice_mic_button": "Запустить микрофон",
-            "voice_not_available": "Функции голосового чата в настоящее время недоступны. Убедитесь, что необходимые библиотеки (pyttsx3, SpeechRecognition) установлены и совместимы.",
-            "voice_listening": "Слушаю...",
-            "voice_processing": "Обработка аудио...",
-            "voice_heard": "Вы сказали: {text}",
-            "voice_no_audio": "Аудио не обнаружено, пожалуйста, попробуйте еще раз.",
-            "voice_unknown": "Не удалось понять, что вы сказали. Пожалуйста, говорите четче.",
-            "voice_api_error": "Служба распознавания речи недоступна; {error}",
             "creative_studio_title": "Креативная студия",
             "creative_studio_info": "Этот раздел предназначен для расширенных функций, таких как генерация креативного текста.",
             "creative_studio_input_label": "Введите свой запрос на креативный текст:",
             "creative_studio_button": "Сгенерировать текст",
             "creative_studio_warning_prompt_missing": "Пожалуйста, введите запрос на креативный текст.",
+            "research_title": "🔍 Режим исследования",
+            "research_info": "Здесь вы можете выполнять веб-поиск (DuckDuckGo) и поиск в Википедии.",
+            "research_input_label": "Введите тему, которую вы хотите найти (например, 'Streamlit', 'искусственный интеллект'):",
+            "research_web_button": "Искать в Интернете (DuckDuckGo)",
+            "research_wiki_button": "Искать в Википедии",
+            "research_warning_prompt_missing": "Пожалуйста, введите тему для поиска.",
             "settings_personalization_title": "Настройки и персонализация",
             "settings_name_change_label": "Изменить ваше имя:",
             "settings_avatar_change_label": "Изменить фото профиля (необязательно)",
@@ -618,13 +554,8 @@ def get_text(key):
             "image_processing_error": "Произошла ошибка при обработке изображения: {error}",
             "image_vision_query": "Что вы видите на этом изображении?",
             "loading_audio_file": "Загрузка аудиофайла...",
-            "tts_sr_not_available": "Функции голосового чата и преобразования текста в речь в настоящее время недоступны. Убедитесь, что необходимые библиотеки установлены и совместимы.",
-            "mic_listen_timeout": "Время ожидания обнаружения аудио истекло.",
-            "unexpected_audio_record_error": "Произошла непредвиденная ошибка во время записи аудио: {error}",
             "gemini_response_error": "Произошла непредвиденная ошибка при получении ответа: {error}",
             "creative_text_generated": "Креативный текст сгенерирован: {text}",
-            "voice_selection_error": "Ошибка выбора голоса: {error}",
-            "voice_not_found": "Подходящий голос для {language} не найден, будет использоваться голос по умолчанию. Пожалуйста, проверьте настройки звука вашей операционной системы."
         },
         "SA": {
             "welcome_title": "Hanogt AI",
@@ -637,20 +568,21 @@ def get_text(key):
             "profile_edit_info": "يمكنك تعديل ملفك الشخصي في قسم الإعدادات والتخصيص.",
             "ai_features_title": "ميزات Hanogt AI:",
             "feature_general_chat": "دردشة عامة",
-            "feature_web_search": "بحث الويب (DuckDuckGo, ويكيبيديا)",
+            "feature_web_search": "بحث الويب (DuckDuckGo)",
+            "feature_wikipedia_search": "بحث ويكيبيديا",
+            "feature_research": "بحث (ويب، ويكي)",
             "feature_knowledge_base": "استجابات قاعدة المعرفة",
             "feature_creative_text": "إنشاء نص إبداعي",
             "feature_image_generation": "إنشاء صور بسيطة (مثال)",
-            "feature_text_to_speech": "تحويل النص إلى كلام (TTS)",
             "feature_feedback": "آلية التغذية الراجعة",
             "settings_button": "⚙️ الإعدادات والتخصيص",
             "about_button": "ℹ️ حولنا",
             "app_mode_title": "وضع التطبيق",
             "chat_mode_text": "💬 الدردشة النصية",
             "chat_mode_image": "🖼️ منشئ الصور",
-            "chat_mode_voice": "🎤 الدردشة الصوتية",
             "chat_mode_creative": "✨ استوديو إبداعي",
-            "chat_input_placeholder": "اكتب رسالتك أو أدخل أمرًا: مثال: 'مرحبًا', 'بحث ويب: Streamlit', 'نص إبداعي: كائنات فضائية'...",
+            "chat_mode_research": "🔍 بحث",
+            "chat_input_placeholder": "اكتب رسالتك أو أدخل أمرًا: مثال: 'مرحبًا', 'بحث ويب: Streamlit'...",
             "generating_response": "جاري إنشاء الرد...",
             "tts_button": "▶️",
             "feedback_button": "👍",
@@ -660,23 +592,17 @@ def get_text(key):
             "image_gen_button": "إنشاء صورة",
             "image_gen_warning_placeholder": "ميزة إنشاء الصور هي حاليًا مكان مؤقت وغير متصلة بواجهة برمجة تطبيقات حقيقية.",
             "image_gen_warning_prompt_missing": "الرجاء إدخال وصف للصورة.",
-            "voice_chat_title": "الدردشة الصوتية",
-            "voice_upload_label": "تحميل ملف صوتي (MP3, WAV) - هذه الميزة حاليا مكان مؤقت.",
-            "voice_upload_warning": "ميزة تحويل الملف الصوتي إلى نص هي حاليًا مكان مؤقت.",
-            "voice_live_input_title": "إدخال صوت مباشر",
-            "voice_mic_button": "تشغيل الميكروفون",
-            "voice_not_available": "ميزات الدردشة الصوتية غير متاحة حاليًا. تأكد من تثبيت المكتبات المطلوبة (pyttsx3, SpeechRecognition) وتوافقها.",
-            "voice_listening": "جاري الاستماع...",
-            "voice_processing": "معالجة الصوت...",
-            "voice_heard": "قلت: {text}",
-            "voice_no_audio": "لم يتم اكتشاف صوت، يرجى المحاولة مرة أخرى.",
-            "voice_unknown": "لم أتمكن من فهم ما قلته. يرجى التحدث بوضوح أكبر.",
-            "voice_api_error": "لا يمكن الوصول إلى خدمة التعرف على الكلام؛ {error}",
             "creative_studio_title": "استوديو إبداعي",
             "creative_studio_info": "تم تصميم هذا القسم للميزات المتقدمة مثل إنشاء النص الإبداعي.",
             "creative_studio_input_label": "أدخل طلب النص الإبداعي الخاص بك:",
             "creative_studio_button": "إنشاء نص",
             "creative_studio_warning_prompt_missing": "الرجاء إدخال طلب نص إبداعي.",
+            "research_title": "🔍 وضع البحث",
+            "research_info": "هنا يمكنك إجراء عمليات بحث عبر الويب (DuckDuckGo) وعمليات بحث في ويكيبيديا.",
+            "research_input_label": "أدخل الموضوع الذي تريد البحث عنه (على سبيل المثال: 'Streamlit', 'الذكاء الاصطناعي'):",
+            "research_web_button": "بحث الويب (DuckDuckGo)",
+            "research_wiki_button": "بحث ويكيبيديا",
+            "research_warning_prompt_missing": "الرجاء إدخال موضوع للبحث.",
             "settings_personalization_title": "الإعدادات والتخصيص",
             "settings_name_change_label": "تغيير اسمك:",
             "settings_avatar_change_label": "تغيير صورة الملف الشخصي (اختياري)",
@@ -711,13 +637,8 @@ def get_text(key):
             "image_processing_error": "حدث خطأ أثناء معالجة الصورة: {error}",
             "image_vision_query": "ماذا ترى في هذه الصورة؟",
             "loading_audio_file": "جاري تحميل الملف الصوتي...",
-            "tts_sr_not_available": "ميزات الدردشة الصوتية وتحويل النص إلى كلام غير متاحة حاليًا. تأكد من تثبيت المكتبات المطلوبة وتوافقها.",
-            "mic_listen_timeout": "انتهت مهلة اكتشاف الصوت.",
-            "unexpected_audio_record_error": "حدث خطأ غير متوقع أثناء تسجيل الصوت: {error}",
             "gemini_response_error": "حدث خطأ غير متوقع أثناء تلقي رد: {error}",
             "creative_text_generated": "تم إنشاء النص الإبداعي: {text}",
-            "voice_selection_error": "خطأ في اختيار الصوت: {error}",
-            "voice_not_found": "لم يتم العثور على صوت مناسب لـ {language}، سيتم استخدام الصوت الافتراضي. يرجى التحقق من إعدادات الصوت في نظام التشغيل الخاص بك."
         },
         "AZ": {
             "welcome_title": "Hanogt AI",
@@ -730,20 +651,21 @@ def get_text(key):
             "profile_edit_info": "Profilinizi Ayarlar və Fərdiləşdirmə bölməsində redaktə edə bilərsiniz.",
             "ai_features_title": "Hanogt AI Xüsusiyyətləri:",
             "feature_general_chat": "Ümumi söhbət",
-            "feature_web_search": "Veb axtarış (DuckDuckGo, Vikipediya)",
+            "feature_web_search": "Veb axtarış (DuckDuckGo)",
+            "feature_wikipedia_search": "Vikipediya axtarışı",
+            "feature_research": "Araşdırma (Veb, Wiki)",
             "feature_knowledge_base": "Bilik bazası cavabları",
             "feature_creative_text": "Yaradıcı mətn yaratma",
             "feature_image_generation": "Sadə şəkil yaratma (nümunə)",
-            "feature_text_to_speech": "Mətnin səsə çevrilməsi (TTS)",
             "feature_feedback": "Rəy mexanizmi",
             "settings_button": "⚙️ Ayarlar & Fərdiləşdirmə",
             "about_button": "ℹ️ Haqqımızda",
             "app_mode_title": "Tətbiq Rejimi",
             "chat_mode_text": "💬 Yazılı Söhbət",
             "chat_mode_image": "🖼️ Şəkil Yaradıcı",
-            "chat_mode_voice": "🎤 Səsli Söhbət",
             "chat_mode_creative": "✨ Yaradıcı Studiya",
-            "chat_input_placeholder": "Mesajınızı yazın və ya əmr daxil edin: Məsələn: 'Salam', 'veb axtar: Streamlit', 'yaradıcı mətn: yadplanetlilər'...",
+            "chat_mode_research": "🔍 Araşdırma",
+            "chat_input_placeholder": "Mesajınızı yazın və ya əmr daxil edin: Məsələn: 'Salam', 'veb axtar: Streamlit'...",
             "generating_response": "Cavab yaradılır...",
             "tts_button": "▶️",
             "feedback_button": "👍",
@@ -753,23 +675,17 @@ def get_text(key):
             "image_gen_button": "Şəkil Yarat",
             "image_gen_warning_placeholder": "Şəkil yaratma xüsusiyyəti hazırda bir yer tutucudur və real API-yə qoşulmayıb.",
             "image_gen_warning_prompt_missing": "Zəhmət olmasa, bir şəkil təsviri daxil edin.",
-            "voice_chat_title": "Səsli Söhbət",
-            "voice_upload_label": "Səs faylı yükləyin (MP3, WAV) - Bu xüsusiyyət hazırda bir yer tutucudur.",
-            "voice_upload_warning": "Səs faylından mətn transkripsiyası xüsusiyyəti hazırda bir yer tutucudur.",
-            "voice_live_input_title": "Canlı Səs Girişi",
-            "voice_mic_button": "Mikrofonu Başlat",
-            "voice_not_available": "Səsli söhbət xüsusiyyətləri hazırda mövcud deyil. Lazımi kitabxanaların (pyttsx3, SpeechRecognition) quraşdırıldığından və uyğun olduğundan əmin olun.",
-            "voice_listening": "Dinlənilir...",
-            "voice_processing": "Səs emal olunur...",
-            "voice_heard": "Sən dedin: {text}",
-            "voice_no_audio": "Səs aşkarlanmadı, zəhmət olmasa yenidən cəhd edin.",
-            "voice_unknown": "Nə dediyinizi başa düşmədim. Zəhmət olmasa, daha aydın danışın.",
-            "voice_api_error": "Səs tanıma xidmətinə çatmaq mümkün deyil; {error}",
             "creative_studio_title": "Yaradıcı Studiya",
             "creative_studio_info": "Bu bölmə yaradıcı mətn yaratma kimi qabaqcıl xüsusiyyətlər üçün nəzərdə tutulub.",
             "creative_studio_input_label": "Yaradıcı mətn istəyinizi daxil edin:",
             "creative_studio_button": "Mətn Yarat",
             "creative_studio_warning_prompt_missing": "Zəhmət olmasa, bir yaradıcı mətn istəyi daxil edin.",
+            "research_title": "🔍 Araşdırma Rejimi",
+            "research_info": "Burada veb axtarışlar (DuckDuckGo) və Vikipediya axtarışları edə bilərsiniz.",
+            "research_input_label": "Axtarmaq istədiyiniz mövzunu daxil edin (məsələn: 'Streamlit', 'süni intellekt'):",
+            "research_web_button": "Veb Axtar (DuckDuckGo)",
+            "research_wiki_button": "Vikipediya Axtar",
+            "research_warning_prompt_missing": "Zəhmət olmasa, axtarmaq istədiyiniz bir mövzu daxil edin.",
             "settings_personalization_title": "Ayarlar & Fərdiləşdirmə",
             "settings_name_change_label": "Adınızı Dəyişdirin:",
             "settings_avatar_change_label": "Profil Şəklini Dəyişdirin (isteğe bağlı)",
@@ -804,13 +720,8 @@ def get_text(key):
             "image_processing_error": "Şəkil işlənərkən bir səhv baş verdi: {error}",
             "image_vision_query": "Bu şəkildə nə görürsən?",
             "loading_audio_file": "Səs faylı yüklənir...",
-            "tts_sr_not_available": "Səsli söhbət və mətnin səsə çevrilməsi xüsusiyyətləri hazırda mövcud deyil. Lazımi kitabxanaların quraşdırıldığından və uyğun olduğundan əmin olun.",
-            "mic_listen_timeout": "Səs aşkarlama vaxt aşımına uğradı.",
-            "unexpected_audio_record_error": "Səs yazma zamanı gözlənilməz bir səhv baş verdi: {error}",
             "gemini_response_error": "Cavab alınarkən gözlənilməz bir səhv baş verdi: {error}",
             "creative_text_generated": "Yaradıcı Mətn Yaradıldı: {text}",
-            "voice_selection_error": "Səs seçimi xətası: {error}",
-            "voice_not_found": "{language} üçün uyğun səs tapılmadı, standart səs istifadə olunacaq. Əməliyyat sisteminizin səs parametrlərini yoxlayın."
         },
         "JP": {
             "welcome_title": "Hanogt AI",
@@ -823,20 +734,21 @@ def get_text(key):
             "profile_edit_info": "プロフィールは「設定とパーソナライズ」セクションで編集できます。",
             "ai_features_title": "Hanogt AI の機能：",
             "feature_general_chat": "一般チャット",
-            "feature_web_search": "ウェブ検索 (DuckDuckGo, Wikipedia)",
+            "feature_web_search": "ウェブ検索 (DuckDuckGo)",
+            "feature_wikipedia_search": "Wikipedia検索",
+            "feature_research": "リサーチ (ウェブ, Wiki)",
             "feature_knowledge_base": "ナレッジベースの回答",
             "feature_creative_text": "クリエイティブテキスト生成",
             "feature_image_generation": "簡易画像生成 (例)",
-            "feature_text_to_speech": "テキスト読み上げ (TTS)",
             "feature_feedback": "フィードバックメカニズム",
             "settings_button": "⚙️ 設定とパーソナライズ",
             "about_button": "ℹ️ 会社概要",
             "app_mode_title": "アプリケーションモード",
             "chat_mode_text": "💬 テキストチャット",
             "chat_mode_image": "🖼️ 画像生成",
-            "chat_mode_voice": "🎤 音声チャット",
             "chat_mode_creative": "✨ クリエイティブスタジオ",
-            "chat_input_placeholder": "メッセージまたはコマンドを入力してください: 例: 'こんにちは', 'ウェブ検索: Streamlit', 'クリエイティブテキスト: エイリアン'...",
+            "chat_mode_research": "🔍 リサーチ",
+            "chat_input_placeholder": "メッセージまたはコマンドを入力してください: 例: 'こんにちは', 'ウェブ検索: Streamlit'...",
             "generating_response": "応答を生成中...",
             "tts_button": "▶️",
             "feedback_button": "👍",
@@ -846,23 +758,17 @@ def get_text(key):
             "image_gen_button": "画像を生成",
             "image_gen_warning_placeholder": "画像生成機能は現在プレースホルダーであり、実際のAPIには接続されていません。",
             "image_gen_warning_prompt_missing": "画像の説明を入力してください。",
-            "voice_chat_title": "音声チャット",
-            "voice_upload_label": "音声ファイルをアップロード (MP3, WAV) - この機能は現在プレースホルダーです。",
-            "voice_upload_warning": "音声ファイルからのテキスト書き起こし機能は現在プレースホルダーです。",
-            "voice_live_input_title": "ライブ音声入力",
-            "voice_mic_button": "マイクを起動",
-            "voice_not_available": "音声チャット機能は現在利用できません。必要なライブラリ (pyttsx3, SpeechRecognition) がインストールされ、互換性があることを確認してください。",
-            "voice_listening": "聴いています...",
-            "voice_processing": "音声を処理中...",
-            "voice_heard": "あなたは言いました：{text}",
-            "voice_no_audio": "音声が検出されませんでした。もう一度お試しください。",
-            "voice_unknown": "何を言ったか理解できませんでした。もっとはっきりと話してください。",
-            "voice_api_error": "音声認識サービスに到達できません; {error}",
             "creative_studio_title": "クリエイティブスタジオ",
             "creative_studio_info": "このセクションは、クリエイティブなテキスト生成などの高度な機能向けに設計されています。",
             "creative_studio_input_label": "クリエイティブなテキストリクエストを入力してください：",
             "creative_studio_button": "テキストを生成",
             "creative_studio_warning_prompt_missing": "クリエイティブなテキストリクエストを入力してください。",
+            "research_title": "🔍 リサーチモード",
+            "research_info": "ここでは、ウェブ検索 (DuckDuckGo) と Wikipedia 検索を実行できます。",
+            "research_input_label": "検索したいトピックを入力してください (例: 'Streamlit', '人工知能'):",
+            "research_web_button": "ウェブ検索 (DuckDuckGo)",
+            "research_wiki_button": "Wikipedia検索",
+            "research_warning_prompt_missing": "検索するトピックを入力してください。",
             "settings_personalization_title": "設定とパーソナライズ",
             "settings_name_change_label": "名前を変更：",
             "settings_avatar_change_label": "プロフィール画像を変更 (オプション)",
@@ -897,13 +803,8 @@ def get_text(key):
             "image_processing_error": "画像の処理中にエラーが発生しました：{error}",
             "image_vision_query": "この画像に何が見えますか？",
             "loading_audio_file": "音声ファイルを読み込み中...",
-            "tts_sr_not_available": "音声チャットおよびテキスト読み上げ機能は現在利用できません。必要なライブラリがインストールされ、互換性があることを確認してください。",
-            "mic_listen_timeout": "音声検出がタイムアウトしました。",
-            "unexpected_audio_record_error": "音声録音中に予期しないエラーが発生しました：{error}",
             "gemini_response_error": "応答の取得中に予期しないエラーが発生しました：{error}",
             "creative_text_generated": "クリエイティブテキスト生成済み：{text}",
-            "voice_selection_error": "音声選択エラー: {error}",
-            "voice_not_found": "{language} の適切な音声が見つかりませんでした。デフォルトの音声が使用されます。オペレーティングシステムのサウンド設定を確認してください。"
         },
         "KR": {
             "welcome_title": "Hanogt AI",
@@ -916,20 +817,21 @@ def get_text(key):
             "profile_edit_info": "설정 및 개인화 섹션에서 프로필을 편집할 수 있습니다.",
             "ai_features_title": "Hanogt AI 기능:",
             "feature_general_chat": "일반 채팅",
-            "feature_web_search": "웹 검색 (DuckDuckGo, Wikipedia)",
+            "feature_web_search": "웹 검색 (DuckDuckGo)",
+            "feature_wikipedia_search": "위키백과 검색",
+            "feature_research": "연구 (웹, 위키)",
             "feature_knowledge_base": "지식 기반 응답",
             "feature_creative_text": "창의적인 텍스트 생성",
             "feature_image_generation": "간단한 이미지 생성 (예시)",
-            "feature_text_to_speech": "텍스트 음성 변환 (TTS)",
             "feature_feedback": "피드백 메커니즘",
             "settings_button": "⚙️ 설정 및 개인화",
             "about_button": "ℹ️ 회사 소개",
             "app_mode_title": "애플리케이션 모드",
             "chat_mode_text": "💬 텍스트 채팅",
             "chat_mode_image": "🖼️ 이미지 생성기",
-            "chat_mode_voice": "🎤 음성 채팅",
             "chat_mode_creative": "✨ 크리에이티브 스튜디오",
-            "chat_input_placeholder": "메시지를 입력하거나 명령을 입력하세요: 예: '안녕하세요', '웹 검색: Streamlit', '창의적인 텍스트: 외계인'...",
+            "chat_mode_research": "🔍 연구",
+            "chat_input_placeholder": "메시지를 입력하거나 명령을 입력하세요: 예: '안녕하세요', '웹 검색: Streamlit'...",
             "generating_response": "응답 생성 중...",
             "tts_button": "▶️",
             "feedback_button": "👍",
@@ -939,23 +841,17 @@ def get_text(key):
             "image_gen_button": "이미지 생성",
             "image_gen_warning_placeholder": "이미지 생성 기능은 현재 플레이스홀더이며 실제 API에 연결되어 있지 않습니다.",
             "image_gen_warning_prompt_missing": "이미지 설명을 입력하세요.",
-            "voice_chat_title": "음성 채팅",
-            "voice_upload_label": "오디오 파일 업로드 (MP3, WAV) - 이 기능은 현재 플레이스홀더입니다.",
-            "voice_upload_warning": "오디오 파일 전사 기능은 현재 플레이스홀더입니다.",
-            "voice_live_input_title": "실시간 음성 입력",
-            "voice_mic_button": "마이크 시작",
-            "voice_not_available": "음성 채팅 기능은 현재 사용할 수 없습니다. 필요한 라이브러리(pyttsx3, SpeechRecognition)가 설치되어 있고 호환되는지 확인하세요.",
-            "voice_listening": "듣는 중...",
-            "voice_processing": "오디오 처리 중...",
-            "voice_heard": "당신이 말했습니다: {text}",
-            "voice_no_audio": "오디오가 감지되지 않았습니다. 다시 시도하세요.",
-            "voice_unknown": "무슨 말을 했는지 이해할 수 없었습니다. 더 명확하게 말해주세요.",
-            "voice_api_error": "음성 인식 서비스에 연결할 수 없습니다. {error}",
             "creative_studio_title": "크리에이티브 스튜디오",
             "creative_studio_info": "이 섹션은 창의적인 텍스트 생성과 같은 고급 기능을 위해 설계되었습니다.",
             "creative_studio_input_label": "창의적인 텍스트 요청을 입력하세요:",
             "creative_studio_button": "텍스트 생성",
             "creative_studio_warning_prompt_missing": "창의적인 텍스트 요청을 입력하세요.",
+            "research_title": "🔍 연구 모드",
+            "research_info": "여기서 웹 검색 (DuckDuckGo) 및 위키백과 검색을 수행할 수 있습니다.",
+            "research_input_label": "검색하려는 주제를 입력하세요 (예: 'Streamlit', '인공지능'):",
+            "research_web_button": "웹 검색 (DuckDuckGo)",
+            "research_wiki_button": "위키백과 검색",
+            "research_warning_prompt_missing": "검색할 주제를 입력하세요.",
             "settings_personalization_title": "설정 및 개인화",
             "settings_name_change_label": "이름 변경:",
             "settings_avatar_change_label": "프로필 사진 변경 (선택 사항)",
@@ -990,13 +886,8 @@ def get_text(key):
             "image_processing_error": "이미지 처리 중 오류가 발생했습니다: {error}",
             "image_vision_query": "이 이미지에서 무엇을 보시나요?",
             "loading_audio_file": "오디오 파일 로드 중...",
-            "tts_sr_not_available": "음성 채팅 및 텍스트 음성 변환 기능은 현재 사용할 수 없습니다. 필요한 라이브러리가 설치되어 있고 호환되는지 확인하세요.",
-            "mic_listen_timeout": "오디오 감지 시간 초과.",
-            "unexpected_audio_record_error": "오디오 녹음 중 예기치 않은 오류가 발생했습니다: {error}",
             "gemini_response_error": "응답을 가져오는 중 예기치 않은 오류가 발생했습니다: {error}",
             "creative_text_generated": "창의적인 텍스트 생성됨: {text}",
-            "voice_selection_error": "음성 선택 오류: {error}",
-            "voice_not_found": "{language}에 적합한 음성을 찾을 수 없습니다. 기본 음성이 사용됩니다. 운영 체제의 사운드 설정을 확인하십시오."
         },
     }
     return texts.get(st.session_state.current_language, texts["TR"]).get(key, "TEXT_MISSING")
@@ -1084,91 +975,6 @@ def clear_active_chat():
         logger.info(f"Active chat ({st.session_state.active_chat_id}) cleared.")
     st.rerun()
 
-def text_to_speech(text):
-    """Converts text to speech and plays the audio."""
-    if not TTS_SR_AVAILABLE:
-        st.warning(get_text("tts_sr_not_available"))
-        return False
-    try:
-        engine = pyttsx3.init()
-        voices = engine.getProperty('voices')
-        
-        # Get the speech code for the current language
-        current_speech_code = LANGUAGES[st.session_state.current_language]["speech_code"].lower()
-        
-        found_voice = False
-        for voice in voices:
-            # Look for voices that contain the current language's speech code or a common identifier
-            if current_speech_code in voice.id.lower() or current_speech_code.split('-')[0] in voice.id.lower():
-                engine.setProperty('voice', voice.id)
-                found_voice = True
-                logger.info(f"Selected voice: {voice.name} ({voice.id}) for language {st.session_state.current_language}")
-                break
-        
-        if not found_voice:
-            # Fallback for some languages if direct match isn't found
-            if st.session_state.current_language == "TR":
-                # Specific check for Turkish
-                turkish_voices = [v for v in voices if "turkish" in v.name.lower() or "tr-tr" in v.id.lower()]
-                if turkish_voices:
-                    engine.setProperty('voice', turkish_voices[0].id)
-                    found_voice = True
-                    logger.info(f"Fallback to Turkish voice: {turkish_voices[0].name} ({turkish_voices[0].id})")
-                else:
-                    st.warning(get_text("voice_not_found").format(language=LANGUAGES[st.session_state.current_language]['name']))
-            else:
-                 st.warning(get_text("voice_not_found").format(language=LANGUAGES[st.session_state.current_language]['name']))
-
-        engine.say(text)
-        engine.runAndWait()
-        logger.info("Text-to-speech conversion successful.")
-        return True
-    except Exception as e:
-        st.error(get_text("voice_selection_error").format(error=e))
-        logger.error(f"Text-to-speech error: {e}")
-        return False
-
-def record_audio():
-    """Records audio input from the user."""
-    if not TTS_SR_AVAILABLE:
-        st.warning(get_text("tts_sr_not_available"))
-        return ""
-    
-    r = sr.Recognizer()
-    audio_placeholder = st.empty()
-    audio_placeholder.info(get_text("voice_listening"))
-    
-    try:
-        with sr.Microphone() as source:
-            r.adjust_for_ambient_noise(source) # Adjust for ambient noise
-            audio = r.listen(source, timeout=5, phrase_time_limit=10)
-        
-        audio_placeholder.info(get_text("voice_processing"))
-        
-        # Use the speech code for the current language
-        language_code = LANGUAGES[st.session_state.current_language]["speech_code"]
-        text = r.recognize_google(audio, language=language_code)
-        
-        audio_placeholder.success(get_text("voice_heard").format(text=text))
-        logger.info(f"Recognized speech: {text}")
-        return text
-    except sr.WaitTimeoutError:
-        audio_placeholder.warning(get_text("mic_listen_timeout"))
-        logger.warning("Audio recording timed out.")
-        return ""
-    except sr.UnknownValueError:
-        audio_placeholder.warning(get_text("voice_unknown"))
-        logger.warning("Speech recognition could not understand audio.")
-        return ""
-    except sr.RequestError as e:
-        audio_placeholder.error(get_text("voice_api_error").format(error=e))
-        logger.error(f"Speech recognition service error: {e}")
-        return ""
-    except Exception as e:
-        audio_placeholder.error(get_text("unexpected_audio_record_error").format(error=e))
-        logger.error(f"Unexpected error during audio recording: {e}")
-        return ""
-
 @st.cache_data(ttl=3600)
 def duckduckgo_search(query):
     """Performs a web search using DuckDuckGo."""
@@ -1216,8 +1022,6 @@ def process_image_input(uploaded_file):
             add_to_chat_history(st.session_state.active_chat_id, "user", image)
             
             if st.session_state.gemini_model:
-                # For vision, a new chat session with just the image and query is often sufficient
-                # unless you want to maintain a conversation about the image.
                 vision_chat_session = st.session_state.gemini_model.start_chat(history=[])
                 response = vision_chat_session.send_message([image, get_text("image_vision_query")])
                 response_text = response.text
@@ -1243,10 +1047,10 @@ def display_welcome_and_profile_setup():
         st.markdown(f"""
             * {get_text('feature_general_chat')}
             * {get_text('feature_web_search')}
+            * {get_text('feature_wikipedia_search')}
             * {get_text('feature_knowledge_base')}
             * {get_text('feature_creative_text')}
             * {get_text('feature_image_generation')}
-            * {get_text('feature_text_to_speech')}
             * {get_text('feature_feedback')}
         """)
 
@@ -1327,8 +1131,8 @@ def display_main_chat_interface():
     mode_options = [
         get_text("chat_mode_text"),
         get_text("chat_mode_image"),
-        get_text("chat_mode_voice"),
-        get_text("chat_mode_creative")
+        get_text("chat_mode_creative"),
+        get_text("chat_mode_research") # Added Research mode
     ]
     st.session_state.chat_mode = st.radio(
         "Mode Selection",
@@ -1345,10 +1149,10 @@ def display_main_chat_interface():
         handle_text_chat()
     elif current_mode_string == get_text("chat_mode_image"):
         handle_image_generation()
-    elif current_mode_string == get_text("chat_mode_voice"):
-        handle_voice_chat()
     elif current_mode_string == get_text("chat_mode_creative"):
         handle_creative_studio()
+    elif current_mode_string == get_text("chat_mode_research"): # Handle Research mode
+        handle_research_mode()
 
 def handle_text_chat():
     """Manages the text chat mode."""
@@ -1358,7 +1162,9 @@ def handle_text_chat():
         avatar_src = None
         if message["role"] == "user" and st.session_state.user_avatar:
             try:
-                avatar_src = Image.open(io.BytesIO(st.session_state.user_avatar))
+                profile_image_bytes = message["parts"][0] if isinstance(message["parts"][0], bytes) else None
+                if profile_image_bytes:
+                    avatar_src = Image.open(io.BytesIO(profile_image_bytes))
             except Exception as e:
                 logger.warning(f"Failed to load user avatar for chat message: {e}")
                 avatar_src = None
@@ -1374,23 +1180,30 @@ def handle_text_chat():
                 except Exception as e:
                     st.warning(get_text("image_load_error").format(error=e))
 
+            # Removed TTS button from here since voice chat is removed
             col_btn1, col_btn2 = st.columns([0.05, 1])
             with col_btn1:
-                if st.button(get_text("tts_button"), key=f"tts_btn_{st.session_state.active_chat_id}_{message_index}"):
-                    if isinstance(content_part, str):
-                        text_to_speech(content_part)
-                    else:
-                        st.warning(get_text("image_not_convertible"))
+                # Kept for potential future text output functionality, though not TTS anymore
+                # if st.button(get_text("tts_button"), key=f"tts_btn_{st.session_state.active_chat_id}_{message_index}"):
+                #     st.warning(get_text("image_not_convertible")) # Placeholder
+                pass # No action for now
             with col_btn2:
                 if st.button(get_text("feedback_button"), key=f"fb_btn_{st.session_state.active_chat_id}_{message_index}"):
                     st.toast(get_text("feedback_toast"), icon="🙏")
 
     prompt = st.chat_input(get_text("chat_input_placeholder"))
 
+    # Placeholder for Research button within chat input area (conceptually below it)
+    col1, col2 = st.columns([1, 8]) # Adjust column ratio as needed
+    with col1:
+        if st.button(get_text("chat_mode_research"), key="research_button_in_chat"):
+            st.session_state.chat_mode = get_text("chat_mode_research")
+            st.rerun()
+
     if prompt:
         add_to_chat_history(st.session_state.active_chat_id, "user", prompt)
         
-        # Command handling (web search, wiki search, image generation)
+        # Command handling (web search, wiki search, image generation) - these can still be used as commands
         if prompt.lower().startswith("web ara:") or prompt.lower().startswith("web search:"):
             query = prompt.split(":", 1)[1].strip()
             results = duckduckgo_search(query)
@@ -1419,21 +1232,17 @@ def handle_text_chat():
             if st.session_state.gemini_model:
                 with st.spinner(get_text("generating_response")):
                     try:
-                        # Prepare history for Gemini, handling potential image parts
                         processed_history = []
                         for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
                             if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
                                 try:
-                                    # Convert stored image bytes back to PIL Image for Gemini
                                     processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
                                 except Exception as e:
                                     logger.error(f"Error converting stored image bytes to PIL Image: {e}")
-                                    continue # Skip problematic image entries
+                                    continue
                             else:
                                 processed_history.append(msg)
 
-                        # Check if a chat session exists and if its history matches the current chat_messages
-                        # If not, initialize a new chat session to ensure correct context
                         if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
                             st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
                         
@@ -1464,68 +1273,6 @@ def handle_image_generation():
         else:
             st.warning(get_text("image_gen_warning_prompt_missing"))
 
-def handle_voice_chat():
-    """Manages the voice chat mode."""
-    st.subheader(get_text("voice_chat_title"))
-    
-    if not TTS_SR_AVAILABLE:
-        st.info(get_text("tts_sr_not_available"))
-    else:
-        # Placeholder for audio file upload (as per original code)
-        uploaded_audio_file = st.file_uploader(get_text("voice_upload_label"), type=["mp3", "wav"], key="audio_uploader")
-        if uploaded_audio_file:
-            st.audio(uploaded_audio_file, format=uploaded_audio_file.type)
-            st.warning(get_text("voice_upload_warning"))
-
-        st.markdown("---")
-        st.subheader(get_text("voice_live_input_title"))
-        
-        if st.button(get_text("voice_mic_button"), key="start_mic_button"):
-            recognized_text = record_audio()
-            
-            if recognized_text:
-                add_to_chat_history(st.session_state.active_chat_id, "user", recognized_text)
-
-                if st.session_state.gemini_model:
-                    with st.spinner(get_text("generating_response")):
-                        try:
-                            # Prepare history for Gemini, handling potential image parts
-                            processed_history = []
-                            for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
-                                if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
-                                    try:
-                                        processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
-                                    except Exception as e:
-                                        logger.error(f"Error converting stored image bytes to PIL Image during voice chat history processing: {e}")
-                                        continue
-                                else:
-                                    processed_history.append(msg)
-
-                            # Ensure chat_session is correctly initialized/updated with full history
-                            if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
-                                st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
-                            
-                            response = st.session_state.chat_session.send_message(recognized_text, stream=True)
-                            response_text = ""
-                            # Display AI response as it streams
-                            response_placeholder = st.empty()
-                            for chunk in response:
-                                response_text += chunk.text
-                                with response_placeholder.container():
-                                    st.markdown(response_text)
-                            
-                            add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-                            
-                            # Speak the AI's response
-                            text_to_speech(response_text)
-
-                        except Exception as e:
-                            st.error(get_text("gemini_response_error").format(error=e))
-                            logger.error(f"Gemini response error in voice chat: {e}")
-                else:
-                    st.warning(get_text("gemini_model_not_initialized"))
-            st.rerun() # Rerun to display updated chat history
-
 def handle_creative_studio():
     """Manages the creative studio mode."""
     st.subheader(get_text("creative_studio_title"))
@@ -1537,9 +1284,8 @@ def handle_creative_studio():
             if st.session_state.gemini_model:
                 with st.spinner(get_text("generating_response")):
                     try:
-                        # For creative studio, a fresh session without prior history might be preferred
                         creative_chat_session = st.session_state.gemini_model.start_chat(history=[])
-                        response = creative_chat_session.send_message(f"Generate creative text: {creative_prompt}", stream=True) # Clarified prompt
+                        response = creative_chat_session.send_message(f"Generate creative text: {creative_prompt}", stream=True)
                         
                         response_text = ""
                         response_placeholder = st.empty()
@@ -1555,6 +1301,51 @@ def handle_creative_studio():
                 st.warning(get_text("gemini_model_not_initialized"))
         else:
             st.warning(get_text("creative_studio_warning_prompt_missing"))
+
+def handle_research_mode():
+    """Manages the research mode with web and Wikipedia search."""
+    st.subheader(get_text("research_title"))
+    st.write(get_text("research_info"))
+
+    search_query = st.text_input(get_text("research_input_label"), key="research_query_input")
+
+    col_web_search, col_wiki_search = st.columns(2)
+
+    with col_web_search:
+        if st.button(get_text("research_web_button"), key="perform_web_search_button"):
+            if search_query:
+                with st.spinner(get_text("generating_response")):
+                    results = duckduckgo_search(search_query)
+                    if results:
+                        response_text = get_text("web_search_results") + "\n"
+                        for i, r in enumerate(results):
+                            response_text += f"{i+1}. **{r['title']}**\n{r['body']}\n{r['href']}\n\n"
+                    else:
+                        response_text = get_text("web_search_no_results")
+                    st.markdown(response_text)
+                    add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
+            else:
+                st.warning(get_text("research_warning_prompt_missing"))
+            st.rerun() # Rerun to display results and clear input if needed
+
+    with col_wiki_search:
+        if st.button(get_text("research_wiki_button"), key="perform_wiki_search_button"):
+            if search_query:
+                with st.spinner(get_text("generating_response")):
+                    results = wikipedia_search(search_query)
+                    if results:
+                        response_text = get_text("wikipedia_search_results") + "\n"
+                        for i, r in enumerate(results):
+                            response_text += f"{i+1}. **{r['title']}**\n"
+                            # You might want to fetch full content for the top result here,
+                            # but for brevity, only title is shown as per previous implementation.
+                    else:
+                        response_text = get_text("wikipedia_search_no_results")
+                    st.markdown(response_text)
+                    add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
+            else:
+                st.warning(get_text("research_warning_prompt_missing"))
+            st.rerun() # Rerun to display results and clear input if needed
 
 
 # --- Main Application Logic ---
@@ -1584,6 +1375,15 @@ def main():
             /* Center app title */
             h1 {
                 text-align: center;
+            }
+            /* Adjust chat input and button alignment - might need fine-tuning */
+            .st-chat-input-container {
+                display: flex;
+                flex-direction: column; /* Stack input and buttons */
+            }
+            .st-chat-input-container .stButton {
+                margin-top: 5px; /* Space between input and button */
+                width: 100%; /* Make button full width if needed */
             }
         </style>
     """, unsafe_allow_html=True)
