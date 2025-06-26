@@ -824,8 +824,10 @@ def initialize_session_state():
         st.session_state.all_chats = {}
     if "active_chat_id" not in st.session_state:
         st.session_state.active_chat_id = "chat_0"
-        if "chat_0" not in st.session_state.all_chats:
-            st.session_state.all_chats["chat_0"] = []
+    
+    # Initialize chat_history for the active chat ID if it doesn't exist
+    if st.session_state.active_chat_id not in st.session_state.all_chats:
+        st.session_state.all_chats[st.session_state.active_chat_id] = []
     
     # Unified mode management
     if "current_view" not in st.session_state:
@@ -851,10 +853,13 @@ def initialize_session_state():
     if "current_language" not in st.session_state:
         st.session_state.current_language = "TR"
 
-    if "gemini_model" not in st.session_state or not st.session_state.models_initialized:
+    # Initialize chat_session if not present or models not initialized
+    if "chat_session" not in st.session_state or not st.session_state.models_initialized:
         initialize_gemini_model()
+        # If model initialized, then also initialize chat_session
+        if st.session_state.models_initialized and "gemini_model" in st.session_state:
+            st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=[])
 
-    load_chat_history()
 
 def initialize_gemini_model():
     """Initializes the Gemini model and saves it to session state."""
@@ -894,17 +899,23 @@ def add_to_chat_history(chat_id, role, content):
 
     logger.info(f"Added to chat history: Chat ID: {chat_id}, Role: {role}, Content Type: {type(content)}")
 
-def load_chat_history():
-    """Loads chat history."""
-    if st.session_state.active_chat_id not in st.session_state.all_chats:
-        st.session_state.all_chats[st.session_state.active_chat_id] = []
+# The `load_chat_history` function is now redundant because initialization handles it.
+# def load_chat_history():
+#     """Loads chat history."""
+#     if st.session_state.active_chat_id not in st.session_state.all_chats:
+#         st.session_state.all_chats[st.session_state.active_chat_id] = []
 
 def clear_active_chat():
     """Clears the content of the active chat."""
     if st.session_state.active_chat_id in st.session_state.all_chats:
         st.session_state.all_chats[st.session_state.active_chat_id] = []
-        if "chat_session" in st.session_state:
-            del st.session_state.chat_session # Reset chat session history
+        # Reset chat session history as well when chat is cleared
+        if "gemini_model" in st.session_state and st.session_state.gemini_model:
+            st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=[])
+        else:
+            # If model isn't initialized, just remove the session
+            if "chat_session" in st.session_state:
+                del st.session_state.chat_session
         st.toast(get_text("chat_cleared_toast"), icon="🧹")
         logger.info(f"Active chat ({st.session_state.active_chat_id}) cleared.")
     st.rerun()
@@ -961,9 +972,14 @@ def process_image_input(uploaded_file):
             add_to_chat_history(st.session_state.active_chat_id, "user", image)
             
             if st.session_state.gemini_model:
-                vision_chat_session = st.session_state.gemini_model.start_chat(history=[]) # New session for vision
+                # Use the existing chat_session for vision, or create a new one if it doesn't exist
+                # This ensures vision context is part of the ongoing chat if desired
+                if "chat_session" not in st.session_state or st.session_state.chat_session is None:
+                    st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=[])
+
                 with st.spinner(get_text("generating_response")):
-                    response = vision_chat_session.send_message([image, get_text("image_vision_query")])
+                    # Send image and prompt to the existing chat session
+                    response = st.session_state.chat_session.send_message([image, get_text("image_vision_query")])
                     response_text = response.text
                     add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
                     st.session_state.current_view = "chat" # Return to chat view after vision
@@ -1099,10 +1115,12 @@ def display_unified_interface():
 
     else: # Default chat view
         st.subheader("💬 Hanogt AI Sohbet") # Generic chat title
+        # Access the chat history for the active chat ID
         chat_messages = st.session_state.all_chats.get(st.session_state.active_chat_id, [])
 
         # Display chat history
-        for message_data in reversed(chat_messages): # Displaying newest at bottom
+        # Changed to iterate directly through chat_messages to use the actual history
+        for message_data in chat_messages: # Displaying in order of addition
             role = message_data["role"]
             content_parts = message_data["parts"]
 
@@ -1113,6 +1131,11 @@ def display_unified_interface():
                 except Exception as e:
                     logger.warning(f"Failed to load user avatar for chat message: {e}")
                     avatar_src = None
+            elif role == "model":
+                # Assuming you have an AI avatar, otherwise default to Streamlit's AI avatar
+                # For this example, we'll let Streamlit handle the default AI avatar if none specified.
+                pass
+
 
             with st.chat_message(role, avatar=avatar_src):
                 for part in content_parts:
@@ -1124,10 +1147,11 @@ def display_unified_interface():
                             st.image(image_content, caption=get_text("image_upload_caption"), use_column_width=True)
                         except Exception as e:
                             st.warning(get_text("image_load_error").format(error=e))
-                # Feedback button
+                # Feedback button - ensure unique key for each button
                 st.button(get_text("feedback_button"), key=f"fb_btn_{uuid.uuid4()}", on_click=lambda: st.toast(get_text("feedback_toast"), icon="🙏"))
 
-        if not st.session_state.chat_history: # Initial message for empty chat
+        # Check the *actual* chat history for the active chat ID to display the initial message
+        if not chat_messages: # Initial message for empty chat
             st.info("Merhaba! Size nasıl yardımcı olabilirim? 'Resim oluştur: bir kedi' gibi komutlar veya doğrudan mesajlar kullanabilirsiniz.")
 
 
@@ -1154,10 +1178,11 @@ def display_unified_interface():
                 st.session_state.last_research_query = ""
             else:
                 # If research mode is off, activate it if there's a query
-                if user_input or st.session_state.last_research_query:
-                    # Use current input if available, otherwise use the last query
-                    query_to_research = user_input if user_input else st.session_state.last_research_query
-                    
+                # Use current input if available, otherwise use the last query
+                # If both are empty, prompt user for input for research.
+                query_to_research = user_input if user_input else st.session_state.last_research_query
+                
+                if query_to_research:
                     st.session_state.show_research_results = True
                     st.session_state.current_view = "research_results"
                     st.session_state.last_research_query = query_to_research
@@ -1180,21 +1205,6 @@ def display_unified_interface():
             prompt_for_image = user_input.split(":", 1)[1].strip()
             generate_image_placeholder(prompt_for_image)
             st.session_state.current_view = "image_display" # Show image after generation
-        # Removed explicit "web ara" and "wiki ara" commands to encourage using the Research button
-        # elif user_input.lower().startswith("web ara:") or user_input.lower().startswith("web search:"):
-        #     st.session_state.current_view = "research_results"
-        #     query = user_input.split(":", 1)[1].strip()
-        #     st.session_state.last_research_query = query
-        #     with st.spinner(get_text("generating_response")):
-        #         st.session_state.last_research_results = perform_combined_research(query)
-        #     st.session_state.show_research_results = True # Ensure research results are shown
-        # elif user_input.lower().startswith("wiki ara:") or user_input.lower().startswith("wiki search:"):
-        #     st.session_state.current_view = "research_results"
-        #     query = user_input.split(":", 1)[1].strip()
-        #     st.session_state.last_research_query = query
-        #     with st.spinner(get_text("generating_response")):
-        #         st.session_state.last_research_results = perform_combined_research(query) # Use combined research
-        #     st.session_state.show_research_results = True # Ensure research results are shown
         
         # Creative Text Generation Command (can be integrated similarly if needed)
         elif user_input.lower().startswith("yaratıcı metin oluştur:") or user_input.lower().startswith("generate creative text:"):
@@ -1203,8 +1213,11 @@ def display_unified_interface():
                 with st.spinner(get_text("generating_response")):
                     try:
                         # Start a fresh chat session for creative generation to avoid history influencing
-                        creative_chat_session = st.session_state.gemini_model.start_chat(history=[])
-                        response = creative_chat_session.send_message(f"Generate creative text based on this: {creative_prompt}", stream=True)
+                        # Use the existing chat_session for general context or create if missing
+                        if "chat_session" not in st.session_state or st.session_state.chat_session is None:
+                             st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=[])
+                        
+                        response = st.session_state.chat_session.send_message(f"Generate creative text based on this: {creative_prompt}", stream=True)
                         
                         response_text = ""
                         response_placeholder = st.empty()
@@ -1213,7 +1226,7 @@ def display_unified_interface():
                             with response_placeholder.container():
                                 st.markdown(response_text)
                         
-                        add_to_chat_history(st.session_state.active_chat_id, "model", get_text("creative_text_generated").format(text=response_text))
+                        add_to_chat_history(st.session_state.active_chat_id, "model", response_text) # Log the full generated text
                         st.session_state.current_view = "chat" # Return to chat view
                     except Exception as e:
                         st.error(get_text("unexpected_response_error").format(error=e))
@@ -1222,7 +1235,7 @@ def display_unified_interface():
 
         else:
             # Regular chat interaction with Gemini (only if not in research mode)
-            if not st.session_state.show_research_results:
+            if not st.session_state.show_research_results: # Only process regular chat if not explicitly in research mode
                 if st.session_state.gemini_model:
                     with st.spinner(get_text("generating_response")):
                         try:
@@ -1234,15 +1247,23 @@ def display_unified_interface():
                                         processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
                                     except Exception as e:
                                         logger.error(f"Error converting stored image bytes to PIL Image for chat history: {e}")
-                                        # Optionally, skip this message or replace with a placeholder text
-                                        processed_history.append({"role": msg["role"], "parts": ["(Uploaded Image)"]})
+                                        # Fallback: if image cannot be loaded, represent it as text
+                                        processed_history.append({"role": msg["role"], "parts": ["(Uploaded Image - could not display)"]})
                                 else:
                                     processed_history.append(msg)
                             
-                            # Ensure chat_session is initialized or reset with current history
-                            if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
+                            # Ensure chat_session is initialized and updated with current history
+                            if "chat_session" not in st.session_state or st.session_state.chat_session is None:
                                 st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
-                            
+                            else:
+                                # Update existing session's history for continuity
+                                # NOTE: Gemini API's chat sessions are append-only. Resetting history is the common approach
+                                # if you need to entirely change context or correct an earlier turn.
+                                # For simple continuity, you just append the new user message.
+                                # If `st.session_state.chat_session.history` can get out of sync,
+                                # explicitly re-initializing it with `processed_history` each time is safer for consistency.
+                                st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+
                             response = st.session_state.chat_session.send_message(user_input, stream=True)
                             
                             response_text = ""
@@ -1259,10 +1280,6 @@ def display_unified_interface():
                             logger.error(f"Gemini chat response error: {e}")
                 else:
                     st.warning(get_text("gemini_model_not_initialized"))
-            else:
-                # If in research mode and user types, assume it's a new research query
-                # This path is implicitly handled by the research button now, but keep in mind for future.
-                pass
         st.rerun() # Rerun to display new chat messages or command results
 
     # Handle image upload separately outside the main chat_input logic
@@ -1338,8 +1355,11 @@ def main():
         lang_options = [f"{v['emoji']} {k}" for k, v in LANGUAGES.items()]
         
         selected_lang_index = 0
-        if current_lang_display in lang_options:
-            selected_lang_index = lang_options.index(current_lang_display)
+        # Find the index of the currently selected language
+        for i, option in enumerate(lang_options):
+            if option.endswith(st.session_state.current_language):
+                selected_lang_index = i
+                break
 
         selected_lang_display = st.selectbox(
             label="Select application language",
