@@ -97,6 +97,9 @@ def get_text(key):
             "research_info": "Aşağıda son aramanızla ilgili hem web'den hem de Wikipedia'dan toplanan bilgiler bulunmaktadır.",
             "research_button_text_on": "Araştırmayı Kapat",
             "research_button_text_off": "Araştır",
+            "creative_text_button_text_on": "Yaratıcı Metni Kapat",
+            "creative_text_button_text_off": "Yaratıcı Metin Oluştur",
+            "creative_text_input_required": "Yaratıcı metin oluşturmak için önce bir mesaj girin.",
             "settings_personalization_title": "Ayarlar & Kişiselleştirme",
             "settings_name_change_label": "Adınızı Değiştir:",
             "settings_avatar_change_label": "Profil Resmini Değiştir (isteğe bağlı)",
@@ -172,6 +175,9 @@ def get_text(key):
             "research_info": "Below is information gathered from both the web and Wikipedia related to your last query.",
             "research_button_text_on": "Close Research",
             "research_button_text_off": "Research",
+            "creative_text_button_text_on": "Close Creative Text",
+            "creative_text_button_text_off": "Generate Creative Text",
+            "creative_text_input_required": "Please enter a message first to generate creative text.",
             "settings_personalization_title": "Settings & Personalization",
             "settings_name_change_label": "Change Your Name:",
             "settings_avatar_change_label": "Change Profile Picture (optional)",
@@ -247,6 +253,9 @@ def get_text(key):
             "research_info": "Voici les informations recueillies sur le web et Wikipédia concernant votre dernière requête.",
             "research_button_text_on": "Fermer la Recherche",
             "research_button_text_off": "Rechercher",
+            "creative_text_button_text_on": "Fermer Texte Créatif",
+            "creative_text_button_text_off": "Générer Texte Créatif",
+            "creative_text_input_required": "Veuillez d'abord entrer un message pour générer du texte créatif.",
             "settings_personalization_title": "Paramètres & Personnalisation",
             "settings_name_change_label": "Changer votre nom :",
             "settings_avatar_change_label": "Changer la photo de profil (facultatif)",
@@ -322,6 +331,9 @@ def get_text(key):
             "research_info": "Aquí tienes la información recopilada de la web y Wikipedia relacionada con tu última consulta.",
             "research_button_text_on": "Cerrar Investigación",
             "research_button_text_off": "Investigar",
+            "creative_text_button_text_on": "Cerrar Texto Creativo",
+            "creative_text_button_text_off": "Generar Texto Creativo",
+            "creative_text_input_required": "Por favor, introduce un mensaje primero para generar texto creativo.",
             "settings_personalization_title": "Configuración & Personalización",
             "settings_name_change_label": "Cambiar tu nombre:",
             "settings_avatar_change_label": "Cambiar foto de perfil (opcional)",
@@ -397,6 +409,9 @@ def get_text(key):
             "research_info": "Nachfolgend finden Sie Informationen, die sowohl aus dem Web als auch von Wikipedia zu Ihrer letzten Anfrage gesammelt wurden.",
             "research_button_text_on": "Recherche schließen",
             "research_button_text_off": "Recherchieren",
+            "creative_text_button_text_on": "Kreativen Text schließen",
+            "creative_text_button_text_off": "Kreativen Text erstellen",
+            "creative_text_input_required": "Bitte geben Sie zuerst eine Nachricht ein, um kreativen Text zu generieren.",
             "settings_personalization_title": "Einstellungen & Personalisierung",
             "settings_name_change_label": "Namen ändern:",
             "settings_avatar_change_label": "Profilbild ändern (optional)",
@@ -472,6 +487,9 @@ def get_text(key):
             "research_info": "Ниже представлена информация, собранная как из интернета, так и из Википедии по вашему последнему запросу.",
             "research_button_text_on": "Закрыть исследование",
             "research_button_text_off": "Исследовать",
+            "creative_text_button_text_on": "Закрыть креативный текст",
+            "creative_text_button_text_off": "Сгенерировать креативный текст",
+            "creative_text_input_required": "Пожалуйста, сначала введите сообщение для генерации креативного текста.",
             "settings_personalization_title": "Настройки и персонализация",
             "settings_name_change_label": "Изменить ваше имя:",
             "settings_avatar_change_label": "Изменить фото профиля (необязательно)",
@@ -547,6 +565,9 @@ def get_text(key):
             "research_info": "أدناه معلومات تم جمعها من الويب وويكيبيديا تتعلق بآخر استعلام لك.",
             "research_button_text_on": "إغلاق البحث",
             "research_button_text_off": "بحث",
+            "creative_text_button_text_on": "إغلاق النص الإبداعي",
+            "creative_text_button_text_off": "إنشاء نص إبداعي",
+            "creative_text_input_required": "الرجاء إدخال رسالة أولاً لإنشاء نص إبداعي.",
             "settings_personalization_title": "الإعدادات والتخصيص",
             "settings_name_change_label": "تغيير اسمك:",
             "settings_avatar_change_label": "تغيير صورة الملف الشخصي (اختياري)",
@@ -622,6 +643,9 @@ def get_text(key):
             "research_info": "Aşağıda son sorğunuzla əlaqədar vebdən və Vikipediyadan toplanmış məlumatlar verilmişdir.",
             "research_button_text_on": "Araşdırmanı Bağla",
             "research_button_text_off": "Araşdır",
+            "creative_text_button_text_on": "Yaradıcı Mətni Bağla",
+            "creative_text_button_text_off": "Yaradıcı Mətn Yarat",
+            "creative_text_input_required": "Yaradıcı mətn yaratmaq üçün əvvəlcə mesaj daxil edin.",
             "settings_personalization_title": "Ayarlar & Fərdiləşdirmə",
             "settings_name_change_label": "Adınızı Dəyişdirin:",
             "settings_avatar_change_label": "Profil Şəklini Dəyişdirin (isteğe bağlı)",
@@ -697,6 +721,9 @@ def get_text(key):
             "research_info": "以下は、最新のクエリに関連するウェブとWikipediaからの情報です。",
             "research_button_text_on": "リサーチを閉じる",
             "research_button_text_off": "リサーチ",
+            "creative_text_button_text_on": "クリエイティブテキストを閉じる",
+            "creative_text_button_text_off": "クリエイティブテキストを生成",
+            "creative_text_input_required": "クリエイティブなテキストを生成するには、まずメッセージを入力してください。",
             "settings_personalization_title": "設定とパーソナライズ",
             "settings_name_change_label": "名前を変更：",
             "settings_avatar_change_label": "プロフィール画像を変更 (オプション)",
@@ -772,6 +799,9 @@ def get_text(key):
             "research_info": "아래는 마지막 쿼리와 관련된 웹 및 위키백과에서 수집된 정보입니다.",
             "research_button_text_on": "연구 닫기",
             "research_button_text_off": "연구",
+            "creative_text_button_text_on": "창의적인 텍스트 닫기",
+            "creative_text_button_text_off": "창의적인 텍스트 생성",
+            "creative_text_input_required": "창의적인 텍스트를 생성하려면 먼저 메시지를 입력하세요.",
             "settings_personalization_title": "설정 및 개인화",
             "settings_name_change_label": "이름 변경:",
             "settings_avatar_change_label": "프로필 사진 변경 (선택 사항)",
@@ -831,7 +861,7 @@ def initialize_session_state():
     
     # Unified mode management
     if "current_view" not in st.session_state:
-        st.session_state.current_view = "chat" # Can be "chat", "image_display", "research_results"
+        st.session_state.current_view = "chat" # Can be "chat", "image_display", "research_results", "creative_text_display"
     
     if "show_settings" not in st.session_state:
         st.session_state.show_settings = False
@@ -845,6 +875,15 @@ def initialize_session_state():
         st.session_state.last_research_query = ""
     if "last_research_results" not in st.session_state:
         st.session_state.last_research_results = None
+
+    # Creative text specific states
+    if "show_creative_text_results" not in st.session_state:
+        st.session_state.show_creative_text_results = False
+    if "last_creative_text_query" not in st.session_state:
+        st.session_state.last_creative_text_query = ""
+    if "last_creative_text_result" not in st.session_state:
+        st.session_state.last_creative_text_result = ""
+
 
     # Image generation specific states
     if "generated_image_url" not in st.session_state:
@@ -964,6 +1003,40 @@ def generate_image_placeholder(prompt):
     add_to_chat_history(st.session_state.active_chat_id, "model", get_text("image_generated_example").format(prompt=prompt))
     logger.info(f"Generated placeholder image for prompt: {prompt}")
 
+def generate_creative_text(prompt):
+    """Generates creative text using Gemini."""
+    if st.session_state.gemini_model:
+        with st.spinner(get_text("generating_response")):
+            try:
+                # Start a fresh chat session for creative generation to avoid history influencing
+                # Use the existing chat_session for general context or create if missing
+                if "chat_session" not in st.session_state or st.session_state.chat_session is None:
+                     st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=[])
+                
+                # Add a system instruction or a specific prompt for creative writing
+                creative_prompt_template = f"Write a creative story, poem, or script about: {prompt}"
+                response = st.session_state.chat_session.send_message(creative_prompt_template, stream=True)
+                
+                response_text = ""
+                # Stream the response to the user interface
+                for chunk in response:
+                    if chunk.text:
+                        response_text += chunk.text
+                        st.session_state.last_creative_text_result = response_text
+                        # This part will be displayed in the creative_text_display area, no need for placeholder here
+                        # if st.session_state.current_view == "creative_text_display":
+                        #     st.markdown(response_text) 
+                
+                add_to_chat_history(st.session_state.active_chat_id, "model", response_text) # Log the full generated text
+                st.session_state.current_view = "creative_text_display" # Switch to creative text display view
+                logger.info(f"Generated creative text for prompt: {prompt}")
+
+            except Exception as e:
+                st.error(get_text("unexpected_response_error").format(error=e))
+                logger.error(f"Gemini creative text generation error: {e}")
+    else:
+        st.warning(get_text("gemini_model_not_initialized"))
+
 def process_image_input(uploaded_file):
     """Processes the uploaded image and converts it to text (vision)."""
     if uploaded_file is not None:
@@ -1073,10 +1146,18 @@ def display_unified_interface():
         if st.button(get_text("settings_button"), key="toggle_settings"):
             st.session_state.show_settings = not st.session_state.show_settings
             st.session_state.show_about = False
+            # Ensure other views are closed when opening settings
+            st.session_state.show_research_results = False
+            st.session_state.show_creative_text_results = False
+            st.session_state.current_view = "chat"
     with col_about:
         if st.button(get_text("about_button"), key="toggle_about"):
             st.session_state.show_about = not st.session_state.show_about
             st.session_state.show_settings = False
+            # Ensure other views are closed when opening about
+            st.session_state.show_research_results = False
+            st.session_state.show_creative_text_results = False
+            st.session_state.current_view = "chat"
 
     if st.session_state.show_settings:
         display_settings_and_personalization()
@@ -1105,21 +1186,46 @@ def display_unified_interface():
                 st.markdown(f"- **{r['title']}**: {r['snippet']}...") # Wikipedia API snippet is usually short
         else:
             st.info(get_text("wikipedia_search_no_results"))
+        
+        # Add a "Close Research" button if research results are displayed
+        if st.button(get_text("research_button_text_on"), key="close_research_from_display"):
+            st.session_state.show_research_results = False
+            st.session_state.current_view = "chat"
+            st.session_state.last_research_results = None
+            st.session_state.last_research_query = ""
+            st.rerun()
+
+    elif st.session_state.show_creative_text_results and st.session_state.last_creative_text_result:
+        st.subheader(get_text("creative_studio_title"))
+        st.info(get_text("creative_studio_info"))
+        st.markdown(st.session_state.last_creative_text_result)
+
+        # Add a "Close Creative Text" button if creative text results are displayed
+        if st.button(get_text("creative_text_button_text_on"), key="close_creative_text_from_display"):
+            st.session_state.show_creative_text_results = False
+            st.session_state.current_view = "chat"
+            st.session_state.last_creative_text_result = ""
+            st.session_state.last_creative_text_query = ""
+            st.rerun()
 
     elif st.session_state.generated_image_url:
         st.subheader(get_text("image_gen_title"))
-        st.image(st.session_state.generated_image_url, caption=st.session_state.last_research_query, use_column_width=True)
+        # Changed use_column_width to use_container_width
+        st.image(st.session_state.generated_image_url, caption=st.session_state.last_research_query, use_container_width=True)
         st.info(get_text("image_gen_warning_placeholder"))
-        # After showing the image, clear the URL to return to chat history by default next rerun
-        # st.session_state.generated_image_url = None # This will cause it to flash and disappear. Better to let it stay until new interaction.
+        
+        # Add a button to return to chat after viewing image
+        if st.button("Sohbete Geri Dön" if st.session_state.current_language == "TR" else "Return to Chat", key="return_to_chat_from_image"):
+            st.session_state.generated_image_url = None
+            st.session_state.current_view = "chat"
+            st.rerun()
 
     else: # Default chat view
-        st.subheader("💬 Hanogt AI Sohbet") # Generic chat title
+        st.subheader("💬 Hanogt AI Sohbet" if st.session_state.current_language == "TR" else "💬 Hanogt AI Chat") # Generic chat title
         # Access the chat history for the active chat ID
         chat_messages = st.session_state.all_chats.get(st.session_state.active_chat_id, [])
 
         # Display chat history
-        # Changed to iterate directly through chat_messages to use the actual history
         for message_data in chat_messages: # Displaying in order of addition
             role = message_data["role"]
             content_parts = message_data["parts"]
@@ -1132,10 +1238,7 @@ def display_unified_interface():
                     logger.warning(f"Failed to load user avatar for chat message: {e}")
                     avatar_src = None
             elif role == "model":
-                # Assuming you have an AI avatar, otherwise default to Streamlit's AI avatar
-                # For this example, we'll let Streamlit handle the default AI avatar if none specified.
-                pass
-
+                pass # Streamlit handles default AI avatar
 
             with st.chat_message(role, avatar=avatar_src):
                 for part in content_parts:
@@ -1144,7 +1247,8 @@ def display_unified_interface():
                     elif isinstance(part, bytes):
                         try:
                             image_content = Image.open(io.BytesIO(part))
-                            st.image(image_content, caption=get_text("image_upload_caption"), use_column_width=True)
+                            # Changed use_column_width to use_container_width
+                            st.image(image_content, caption=get_text("image_upload_caption"), use_container_width=True)
                         except Exception as e:
                             st.warning(get_text("image_load_error").format(error=e))
                 # Feedback button - ensure unique key for each button
@@ -1152,24 +1256,23 @@ def display_unified_interface():
 
         # Check the *actual* chat history for the active chat ID to display the initial message
         if not chat_messages: # Initial message for empty chat
-            st.info("Merhaba! Size nasıl yardımcı olabilirim? 'Resim oluştur: bir kedi' gibi komutlar veya doğrudan mesajlar kullanabilirsiniz.")
+            st.info("Merhaba! Size nasıl yardımcı olabilirim? 'Resim oluştur: bir kedi' gibi komutlar veya doğrudan mesajlar kullanabilirsiniz." if st.session_state.current_language == "TR" else "Hello! How can I help you? You can use commands like 'image generate: a cat' or direct messages.")
 
 
-    # --- Chat Input and Research Button ---
-    col_input, col_button = st.columns([8, 1])
+    # --- Chat Input and Action Buttons (Research, Creative Text) ---
+    col_input, col_research_btn, col_creative_btn = st.columns([6, 1.5, 1.5])
 
     with col_input:
         user_input = st.chat_input(get_text("chat_input_placeholder"), key="main_chat_input")
         
-    with col_button:
+    with col_research_btn:
         # Toggle Research Button
         if st.session_state.show_research_results:
-            button_label = get_text("research_button_text_on")
+            research_button_label = get_text("research_button_text_on")
         else:
-            button_label = get_text("research_button_text_off")
+            research_button_label = get_text("research_button_text_off")
         
-        # Unique key for the button to avoid re-rendering issues
-        if st.button(button_label, key="toggle_research_mode_button", help="Araştırma modunu aç/kapat"):
+        if st.button(research_button_label, key="toggle_research_mode_button", help="Araştırma modunu aç/kapat"):
             if st.session_state.show_research_results:
                 # If currently showing research results, close it
                 st.session_state.show_research_results = False
@@ -1179,10 +1282,13 @@ def display_unified_interface():
             else:
                 # If research mode is off, activate it if there's a query
                 # Use current input if available, otherwise use the last query
-                # If both are empty, prompt user for input for research.
                 query_to_research = user_input if user_input else st.session_state.last_research_query
                 
                 if query_to_research:
+                    # Close other views
+                    st.session_state.show_creative_text_results = False
+                    st.session_state.generated_image_url = None
+
                     st.session_state.show_research_results = True
                     st.session_state.current_view = "research_results"
                     st.session_state.last_research_query = query_to_research
@@ -1192,32 +1298,85 @@ def display_unified_interface():
                     st.warning(get_text("research_input_required"))
             st.rerun() # Crucial for state change to reflect immediately
 
-    # Process user input if available
+    with col_creative_btn:
+        # Toggle Creative Text Button
+        if st.session_state.show_creative_text_results:
+            creative_button_label = get_text("creative_text_button_text_on")
+        else:
+            creative_button_label = get_text("creative_text_button_text_off")
+        
+        if st.button(creative_button_label, key="toggle_creative_text_mode_button", help="Yaratıcı metin modu aç/kapat"):
+            if st.session_state.show_creative_text_results:
+                # If currently showing creative text results, close it
+                st.session_state.show_creative_text_results = False
+                st.session_state.current_view = "chat"
+                st.session_state.last_creative_text_result = ""
+                st.session_state.last_creative_text_query = ""
+            else:
+                # If creative text mode is off, activate it if there's a query
+                query_to_generate = user_input if user_input else st.session_state.last_creative_text_query
+                
+                if query_to_generate:
+                    # Close other views
+                    st.session_state.show_research_results = False
+                    st.session_state.generated_image_url = None
+
+                    st.session_state.show_creative_text_results = True
+                    st.session_state.current_view = "creative_text_display"
+                    st.session_state.last_creative_text_query = query_to_generate
+                    generate_creative_text(query_to_generate) # Call the generation function
+                else:
+                    st.warning(get_text("creative_text_input_required"))
+            st.rerun() # Crucial for state change to reflect immediately
+
+
+    # Process user input if available (after button actions, as button clicks trigger reruns)
     if user_input:
-        st.session_state.last_research_query = user_input # Update last query
+        st.session_state.last_research_query = user_input # Update last research query
+        st.session_state.last_creative_text_query = user_input # Update last creative text query
         add_to_chat_history(st.session_state.active_chat_id, "user", user_input)
         
-        # Reset image display if new text input
+        # Reset image/research/creative display if new text input
         st.session_state.generated_image_url = None
+        st.session_state.show_research_results = False
+        st.session_state.show_creative_text_results = False
+        st.session_state.current_view = "chat" # Default to chat view on new input
 
-        # Command handling
+        # Command handling (kept for direct commands in chat)
         if user_input.lower().startswith("resim oluştur:") or user_input.lower().startswith("image generate:"):
             prompt_for_image = user_input.split(":", 1)[1].strip()
             generate_image_placeholder(prompt_for_image)
             st.session_state.current_view = "image_display" # Show image after generation
         
-        # Creative Text Generation Command (can be integrated similarly if needed)
-        elif user_input.lower().startswith("yaratıcı metin oluştur:") or user_input.lower().startswith("generate creative text:"):
-            creative_prompt = user_input.split(":", 1)[1].strip()
-            if st.session_state.gemini_model:
+        # This block is now handled by the creative text button
+        # elif user_input.lower().startswith("yaratıcı metin oluştur:") or user_input.lower().startswith("generate creative text:"):
+        #     creative_prompt = user_input.split(":", 1)[1].strip()
+        #     generate_creative_text(creative_prompt)
+        #     st.session_state.current_view = "creative_text_display"
+
+        else:
+            # Regular chat interaction with Gemini (only if no specific command or view active)
+            # Ensure we are in "chat" view before processing a regular chat message
+            if st.session_state.current_view == "chat" and st.session_state.gemini_model:
                 with st.spinner(get_text("generating_response")):
                     try:
-                        # Start a fresh chat session for creative generation to avoid history influencing
-                        # Use the existing chat_session for general context or create if missing
-                        if "chat_session" not in st.session_state or st.session_state.chat_session is None:
-                             st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=[])
+                        # Prepare history for Gemini, handling image content
+                        processed_history = []
+                        for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
+                            if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
+                                try:
+                                    processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
+                                except Exception as e:
+                                    logger.error(f"Error converting stored image bytes to PIL Image for chat history: {e}")
+                                    # Fallback: if image cannot be loaded, represent it as text
+                                    processed_history.append({"role": msg["role"], "parts": ["(Uploaded Image - could not display)"]})
+                            else:
+                                processed_history.append(msg)
                         
-                        response = st.session_state.chat_session.send_message(f"Generate creative text based on this: {creative_prompt}", stream=True)
+                        # Re-initialize chat_session with the complete history for consistency
+                        st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+
+                        response = st.session_state.chat_session.send_message(user_input, stream=True)
                         
                         response_text = ""
                         response_placeholder = st.empty()
@@ -1226,65 +1385,22 @@ def display_unified_interface():
                             with response_placeholder.container():
                                 st.markdown(response_text)
                         
-                        add_to_chat_history(st.session_state.active_chat_id, "model", response_text) # Log the full generated text
-                        st.session_state.current_view = "chat" # Return to chat view
+                        add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
+                        st.session_state.current_view = "chat" # Ensure chat view after response
                     except Exception as e:
                         st.error(get_text("unexpected_response_error").format(error=e))
-            else:
+                        logger.error(f"Gemini chat response error: {e}")
+            elif not st.session_state.gemini_model:
                 st.warning(get_text("gemini_model_not_initialized"))
-
-        else:
-            # Regular chat interaction with Gemini (only if not in research mode)
-            if not st.session_state.show_research_results: # Only process regular chat if not explicitly in research mode
-                if st.session_state.gemini_model:
-                    with st.spinner(get_text("generating_response")):
-                        try:
-                            # Prepare history for Gemini, handling image content
-                            processed_history = []
-                            for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
-                                if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
-                                    try:
-                                        processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
-                                    except Exception as e:
-                                        logger.error(f"Error converting stored image bytes to PIL Image for chat history: {e}")
-                                        # Fallback: if image cannot be loaded, represent it as text
-                                        processed_history.append({"role": msg["role"], "parts": ["(Uploaded Image - could not display)"]})
-                                else:
-                                    processed_history.append(msg)
-                            
-                            # Ensure chat_session is initialized and updated with current history
-                            if "chat_session" not in st.session_state or st.session_state.chat_session is None:
-                                st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
-                            else:
-                                # Update existing session's history for continuity
-                                # NOTE: Gemini API's chat sessions are append-only. Resetting history is the common approach
-                                # if you need to entirely change context or correct an earlier turn.
-                                # For simple continuity, you just append the new user message.
-                                # If `st.session_state.chat_session.history` can get out of sync,
-                                # explicitly re-initializing it with `processed_history` each time is safer for consistency.
-                                st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
-
-                            response = st.session_state.chat_session.send_message(user_input, stream=True)
-                            
-                            response_text = ""
-                            response_placeholder = st.empty()
-                            for chunk in response:
-                                response_text += chunk.text
-                                with response_placeholder.container():
-                                    st.markdown(response_text)
-                            
-                            add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-                            st.session_state.current_view = "chat" # Ensure chat view after response
-                        except Exception as e:
-                            st.error(get_text("unexpected_response_error").format(error=e))
-                            logger.error(f"Gemini chat response error: {e}")
-                else:
-                    st.warning(get_text("gemini_model_not_initialized"))
         st.rerun() # Rerun to display new chat messages or command results
 
     # Handle image upload separately outside the main chat_input logic
-    uploaded_file = st.file_uploader("Bir görsel yükle (AI'ya analiz ettir)", type=["png", "jpg", "jpeg"], key="image_upload_for_vision")
+    uploaded_file = st.file_uploader("Bir görsel yükle (AI'ya analiz ettir)" if st.session_state.current_language == "TR" else "Upload an image (for AI analysis)", type=["png", "jpg", "jpeg"], key="image_upload_for_vision")
     if uploaded_file:
+        # Reset other displays when image is uploaded
+        st.session_state.show_research_results = False
+        st.session_state.show_creative_text_results = False
+        st.session_state.generated_image_url = None
         process_image_input(uploaded_file)
 
 
@@ -1327,8 +1443,10 @@ def main():
                 min-width: 100px; /* Ensure button has some width */
                 height: 56px; /* Match height of chat input for better alignment */
             }
-            .st-emotion-cache-vj1n86 { /* Targets the div around chat_input, may change in Streamlit versions */
-                flex-grow: 1; /* Allow chat input to take remaining space */
+            /* Target the div around chat_input, might change in Streamlit versions */
+            /* This ensures the chat input takes available space */
+            div.st-emotion-cache-vj1n86 { 
+                flex-grow: 1; 
             }
             /* Styling for chat messages - optional */
             .st-chat-message-container {
