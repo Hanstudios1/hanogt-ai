@@ -4,14 +4,11 @@ requests
 beautifulsoup4
 sentence-transformers
 tinydb
-speechrecognition
-pyttsx3
 langchain
 langchain-community
 langchain-openai
 google-generativeai
 duckduckgo-search
-pyaudio
 transformers
 torch
 huggingface_hub
