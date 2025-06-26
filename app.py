@@ -13,14 +13,6 @@ import numpy as np
 import logging
 import json
 
-# --- Stable Diffusion Imports ---
-from diffusers import StableDiffusionPipeline
-import torch
-# xformers ve accelerate opsiyoneldir, performans için eklenir ancak kurulumu zor olabilir.
-# Eğer kullanacaksanız, requirements.txt dosyanıza ekleyin ve aşağıdaki yorum satırlarını kaldırın:
-# import accelerate
-# import xformers
-
 # --- Global Variables and Settings ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -83,7 +75,7 @@ def get_text(key):
             "feature_research": "Araştırma (Web, Wiki)", # New for the button
             "feature_knowledge_base": "Bilgi tabanı yanıtları",
             "feature_creative_text": "Yaratıcı metin üretimi",
-            "feature_image_generation": "Görsel oluşturma (Stable Diffusion)", # Updated description
+            "feature_image_generation": "Basit görsel oluşturma (örnek)",
             "feature_feedback": "Geri bildirim mekanizması",
             "settings_button": "⚙️ Ayarlar & Kişiselleştirme",
             "about_button": "ℹ️ Hakkımızda",
@@ -100,7 +92,7 @@ def get_text(key):
             "image_gen_title": "Görsel Oluşturucu",
             "image_gen_input_label": "Oluşturmak istediğiniz görseli tanımlayın:",
             "image_gen_button": "Görsel Oluştur",
-            "image_gen_warning_placeholder": "Görsel oluşturma özelliği şu anda bir placeholder'dır ve gerçek bir API'ye bağlı değildir.", # This will be removed
+            "image_gen_warning_placeholder": "Görsel oluşturma özelliği şu anda bir placeholder'dır ve gerçek bir API'ye bağlı değildir.",
             "image_gen_warning_prompt_missing": "Lütfen bir görsel açıklaması girin.",
             "creative_studio_title": "Yaratıcı Stüdyo",
             "creative_studio_info": "Bu bölüm, yaratıcı metin üretimi gibi gelişmiş özellikler için tasarlanmıştır.",
@@ -142,17 +134,13 @@ def get_text(key):
             "web_search_no_results": "Aradığınız terimle ilgili sonuç bulunamadı.",
             "wikipedia_search_results": "Wikipedia Arama Sonuçları:",
             "wikipedia_search_no_results": "Aradığınız terimle ilgili sonuç bulunamadı.",
-            "image_generated_example": "'{prompt}' için bir görsel oluşturuldu.", # Updated text
+            "image_generated_example": "'{prompt}' için bir görsel oluşturuldu (örnek).",
             "image_upload_caption": "Yüklenen Görsel",
             "image_processing_error": "Görsel işlenirken bir hata oluştu: {error}",
             "image_vision_query": "Bu görselde ne görüyorsun?",
             "loading_audio_file": "Ses dosyası yükleniyor...", # Kept for consistency if other audio features are added
             "gemini_response_error": "Yanıt alınırken beklenmeyen bir hata oluştu: {error}",
             "creative_text_generated": "Yaratıcı Metin Oluşturuldu: {text}",
-            "sd_model_loading": "Stable Diffusion modeli yükleniyor... Bu biraz zaman alabilir ({device})...",
-            "sd_model_load_success": "Stable Diffusion modeli başarıyla yüklendi.",
-            "sd_model_load_error": "Stable Diffusion modelini yüklerken hata oluştu: {error}",
-            "sd_generating_image": "Görsel oluşturuluyor... Lütfen bekleyiniz.",
         },
         "EN": {
             "welcome_title": "Hanogt AI",
@@ -170,7 +158,7 @@ def get_text(key):
             "feature_research": "Research (Web, Wiki)", # New for the button
             "feature_knowledge_base": "Knowledge base responses",
             "feature_creative_text": "Creative text generation",
-            "feature_image_generation": "Image generation (Stable Diffusion)", # Updated description
+            "feature_image_generation": "Simple image generation (placeholder)",
             "feature_feedback": "Feedback mechanism",
             "settings_button": "⚙️ Settings & Personalization",
             "about_button": "ℹ️ About Us",
@@ -187,7 +175,7 @@ def get_text(key):
             "image_gen_title": "Image Generator",
             "image_gen_input_label": "Describe the image you want to create:",
             "image_gen_button": "Generate Image",
-            "image_gen_warning_placeholder": "Image generation feature is currently a placeholder and not connected to a real API.", # This will be removed
+            "image_gen_warning_placeholder": "Image generation feature is currently a placeholder and not connected to a real API.",
             "image_gen_warning_prompt_missing": "Please enter an image description.",
             "creative_studio_title": "Creative Studio",
             "creative_studio_info": "This section is designed for advanced features like creative text generation.",
@@ -229,17 +217,13 @@ def get_text(key):
             "web_search_no_results": "No results found for your search term.",
             "wikipedia_search_results": "Wikipedia Search Results:",
             "wikipedia_search_no_results": "No results found for your search term.",
-            "image_generated_example": "An image for '{prompt}' was generated.", # Updated text
+            "image_generated_example": "An image for '{prompt}' was generated (example).",
             "image_upload_caption": "Uploaded Image",
             "image_processing_error": "An error occurred while processing the image: {error}",
             "image_vision_query": "What do you see in this image?",
             "loading_audio_file": "Loading audio file...",
             "gemini_response_error": "An unexpected error occurred while getting a response: {error}",
             "creative_text_generated": "Creative Text Generated: {text}",
-            "sd_model_loading": "Loading Stable Diffusion model... This may take a while ({device})...",
-            "sd_model_load_success": "Stable Diffusion model loaded successfully.",
-            "sd_model_load_error": "An error occurred while loading Stable Diffusion model: {error}",
-            "sd_generating_image": "Generating image... Please wait.",
         },
         "FR": {
             "welcome_title": "Hanogt AI",
@@ -257,7 +241,7 @@ def get_text(key):
             "feature_research": "Recherche (Web, Wiki)",
             "feature_knowledge_base": "Réponses basées sur la connaissance",
             "feature_creative_text": "Génération de texte créatif",
-            "feature_image_generation": "Génération d'images (Stable Diffusion)",
+            "feature_image_generation": "Génération d'images simple (aperçu)",
             "feature_feedback": "Mécanisme de feedback",
             "settings_button": "⚙️ Paramètres & Personnalisation",
             "about_button": "ℹ️ À Propos",
@@ -316,17 +300,13 @@ def get_text(key):
             "web_search_no_results": "Aucun résultat trouvé pour votre terme de recherche.",
             "wikipedia_search_results": "Résultats de la recherche Wikipédia :",
             "wikipedia_search_no_results": "Aucun résultat trouvé pour votre terme de recherche.",
-            "image_generated_example": "Une image pour '{prompt}' a été générée.",
+            "image_generated_example": "Une image pour '{prompt}' a été générée (exemple).",
             "image_upload_caption": "Image Téléchargée",
             "image_processing_error": "Une erreur s'est produite lors du traitement de l'image : {error}",
             "image_vision_query": "Que voyez-vous dans cette image ?",
             "loading_audio_file": "Chargement du fichier audio...",
             "gemini_response_error": "Une erreur inattendue s'est produite lors de l'obtention d'une réponse : {error}",
             "creative_text_generated": "Texte Créatif Généré : {text}",
-            "sd_model_loading": "Chargement du modèle Stable Diffusion... Cela peut prendre un certain temps ({device})...",
-            "sd_model_load_success": "Modèle Stable Diffusion chargé avec succès.",
-            "sd_model_load_error": "Une erreur s'est produite lors du chargement du modèle Stable Diffusion : {error}",
-            "sd_generating_image": "Génération de l'image... Veuillez patienter.",
         },
         "ES": {
             "welcome_title": "Hanogt AI",
@@ -344,7 +324,7 @@ def get_text(key):
             "feature_research": "Investigación (Web, Wiki)",
             "feature_knowledge_base": "Respuestas de la base de conocimientos",
             "feature_creative_text": "Generación de texto creativo",
-            "feature_image_generation": "Generación de imágenes (Stable Diffusion)",
+            "feature_image_generation": "Generación simple de imágenes (ejemplo)",
             "feature_feedback": "Mecanismo de retroalimentación",
             "settings_button": "⚙️ Configuración & Personalización",
             "about_button": "ℹ️ Acerca de Nosotros",
@@ -403,17 +383,13 @@ def get_text(key):
             "web_search_no_results": "No se encontraron resultados para su término de búsqueda.",
             "wikipedia_search_results": "Resultados de la Búsqueda de Wikipedia:",
             "wikipedia_search_no_results": "No se encontraron resultados para su término de búsqueda.",
-            "image_generated_example": "Se generó una imagen para '{prompt}'.",
+            "image_generated_example": "Se generó una imagen para '{prompt}' (ejemplo).",
             "image_upload_caption": "Imagen Subida",
             "image_processing_error": "Se produjo un error al procesar la imagen: {error}",
             "image_vision_query": "¿Qué ves en esta imagen?",
             "loading_audio_file": "Cargando archivo de audio...",
             "gemini_response_error": "Se produjo un error inesperado al obtener una respuesta: {error}",
             "creative_text_generated": "Texto Creativo Generado: {text}",
-            "sd_model_loading": "Cargando modelo Stable Diffusion... Esto puede llevar un tiempo ({device})...",
-            "sd_model_load_success": "Modelo Stable Diffusion cargado con éxito.",
-            "sd_model_load_error": "Se produjo un error al cargar el modelo Stable Diffusion: {error}",
-            "sd_generating_image": "Generando imagen... Por favor, espere.",
         },
         "DE": {
             "welcome_title": "Hanogt AI",
@@ -431,7 +407,7 @@ def get_text(key):
             "feature_research": "Recherche (Web, Wiki)",
             "feature_knowledge_base": "Wissensdatenbank-Antworten",
             "feature_creative_text": "Kreative Texterstellung",
-            "feature_image_generation": "Bilderzeugung (Stable Diffusion)",
+            "feature_image_generation": "Einfache Bilderzeugung (Beispiel)",
             "feature_feedback": "Feedback-Mechanismus",
             "settings_button": "⚙️ Einstellungen & Personalisierung",
             "about_button": "ℹ️ Über Uns",
@@ -490,17 +466,13 @@ def get_text(key):
             "web_search_no_results": "Keine Ergebnisse für Ihren Suchbegriff gefunden.",
             "wikipedia_search_results": "Wikipedia-Suchergebnisse:",
             "wikipedia_search_no_results": "Keine Ergebnisse für Ihren Suchbegriff gefunden.",
-            "image_generated_example": "Ein Bild für '{prompt}' wurde generiert.",
+            "image_generated_example": "Ein Bild für '{prompt}' wurde generiert (Beispiel).",
             "image_upload_caption": "Hochgeladenes Bild",
             "image_processing_error": "Beim Verarbeiten des Bildes ist ein Fehler aufgetreten: {error}",
             "image_vision_query": "Was sehen Sie auf diesem Bild?",
             "loading_audio_file": "Audiodatei wird geladen...",
             "gemini_response_error": "Ein unerwarteter Fehler beim Abrufen einer Antwort: {error}",
             "creative_text_generated": "Kreativer Text generiert: {text}",
-            "sd_model_loading": "Stable Diffusion Modell wird geladen... Dies kann etwas dauern ({device})...",
-            "sd_model_load_success": "Stable Diffusion Modell erfolgreich geladen.",
-            "sd_model_load_error": "Fehler beim Laden des Stable Diffusion Modells: {error}",
-            "sd_generating_image": "Bild wird generiert... Bitte warten Sie.",
         },
         "RU": {
             "welcome_title": "Hanogt AI",
@@ -518,7 +490,7 @@ def get_text(key):
             "feature_research": "Исследование (Веб, Вики)",
             "feature_knowledge_base": "Ответы из базы знаний",
             "feature_creative_text": "Генерация креативного текста",
-            "feature_image_generation": "Генерация изображений (Stable Diffusion)",
+            "feature_image_generation": "Простая генерация изображений (пример)",
             "feature_feedback": "Механизм обратной связи",
             "settings_button": "⚙️ Настройки и персонализация",
             "about_button": "ℹ️ О нас",
@@ -577,17 +549,13 @@ def get_text(key):
             "web_search_no_results": "Результаты по вашему запросу не найдены.",
             "wikipedia_search_results": "Результаты поиска Википедии:",
             "wikipedia_search_no_results": "Результаты по вашему запросу не найдены.",
-            "image_generated_example": "Изображение для '{prompt}' сгенерировано.",
+            "image_generated_example": "Изображение для '{prompt}' сгенерировано (пример).",
             "image_upload_caption": "Загруженное изображение",
             "image_processing_error": "Произошла ошибка при обработке изображения: {error}",
             "image_vision_query": "Что вы видите на этом изображении?",
             "loading_audio_file": "Загрузка аудиофайла...",
             "gemini_response_error": "Произошла непредвиденная ошибка при получении ответа: {error}",
             "creative_text_generated": "Креативный текст сгенерирован: {text}",
-            "sd_model_loading": "Stable Diffusion модель загружается... Это может занять некоторое время ({device})...",
-            "sd_model_load_success": "Модель Stable Diffusion успешно загружена.",
-            "sd_model_load_error": "Произошла ошибка при загрузке модели Stable Diffusion: {error}",
-            "sd_generating_image": "Изображение генерируется... Пожалуйста, подождите.",
         },
         "SA": {
             "welcome_title": "Hanogt AI",
@@ -605,7 +573,7 @@ def get_text(key):
             "feature_research": "بحث (ويب، ويكي)",
             "feature_knowledge_base": "استجابات قاعدة المعرفة",
             "feature_creative_text": "إنشاء نص إبداعي",
-            "feature_image_generation": "إنشاء صور (Stable Diffusion)",
+            "feature_image_generation": "إنشاء صور بسيطة (مثال)",
             "feature_feedback": "آلية التغذية الراجعة",
             "settings_button": "⚙️ الإعدادات والتخصيص",
             "about_button": "ℹ️ حولنا",
@@ -664,17 +632,13 @@ def get_text(key):
             "web_search_no_results": "لم يتم العثور على نتائج لمصطلح البحث الخاص بك.",
             "wikipedia_search_results": "نتائج بحث ويكيبيديا:",
             "wikipedia_search_no_results": "لم يتم العثور على نتائج لمصطلح البحث الخاص بك.",
-            "image_generated_example": "تم إنشاء صورة لـ '{prompt}'.",
+            "image_generated_example": "تم إنشاء صورة لـ '{prompt}' (مثال).",
             "image_upload_caption": "الصورة المحملة",
             "image_processing_error": "حدث خطأ أثناء معالجة الصورة: {error}",
             "image_vision_query": "ماذا ترى في هذه الصورة؟",
             "loading_audio_file": "جاري تحميل الملف الصوتي...",
             "gemini_response_error": "حدث خطأ غير متوقع أثناء تلقي رد: {error}",
             "creative_text_generated": "تم إنشاء النص الإبداعي: {text}",
-            "sd_model_loading": "جاري تحميل نموذج Stable Diffusion... قد يستغرق هذا بعض الوقت ({device})...",
-            "sd_model_load_success": "تم تحميل نموذج Stable Diffusion بنجاح.",
-            "sd_model_load_error": "حدث خطأ أثناء تحميل نموذج Stable Diffusion: {error}",
-            "sd_generating_image": "جاري إنشاء الصورة... يرجى الانتظار.",
         },
         "AZ": {
             "welcome_title": "Hanogt AI",
@@ -692,7 +656,7 @@ def get_text(key):
             "feature_research": "Araşdırma (Veb, Wiki)",
             "feature_knowledge_base": "Bilik bazası cavabları",
             "feature_creative_text": "Yaradıcı mətn yaratma",
-            "feature_image_generation": "Şəkil yaratma (Stable Diffusion)",
+            "feature_image_generation": "Sadə şəkil yaratma (nümunə)",
             "feature_feedback": "Rəy mexanizmi",
             "settings_button": "⚙️ Ayarlar & Fərdiləşdirmə",
             "about_button": "ℹ️ Haqqımızda",
@@ -751,17 +715,13 @@ def get_text(key):
             "web_search_no_results": "Axtarış termininizlə əlaqəli nəticə tapılmadı.",
             "wikipedia_search_results": "Vikipediya Axtarış Nəticələri:",
             "wikipedia_search_no_results": "Axtarış termininizlə əlaqəli nəticə tapılmadı.",
-            "image_generated_example": "'{prompt}' üçün bir şəkil yaradıldı.",
+            "image_generated_example": "'{prompt}' üçün bir şəkil yaradıldı (nümunə).",
             "image_upload_caption": "Yüklənən Şəkil",
             "image_processing_error": "Şəkil işlənərkən bir səhv baş verdi: {error}",
             "image_vision_query": "Bu şəkildə nə görürsən?",
             "loading_audio_file": "Səs faylı yüklənir...",
             "gemini_response_error": "Cavab alınarkən gözlənilməz bir səhv baş verdi: {error}",
             "creative_text_generated": "Yaradıcı Mətn Yaradıldı: {text}",
-            "sd_model_loading": "Stable Diffusion modeli yüklənir... Bu biraz zaman alabilir ({device})...",
-            "sd_model_load_success": "Stable Diffusion modeli uğurla yükləndi.",
-            "sd_model_load_error": "Stable Diffusion modelini yükləyərkən səhv baş verdi: {error}",
-            "sd_generating_image": "Şəkil yaradılır... Zəhmət olmasa gözləyin.",
         },
         "JP": {
             "welcome_title": "Hanogt AI",
@@ -779,7 +739,7 @@ def get_text(key):
             "feature_research": "リサーチ (ウェブ, Wiki)",
             "feature_knowledge_base": "ナレッジベースの回答",
             "feature_creative_text": "クリエイティブテキスト生成",
-            "feature_image_generation": "画像生成 (Stable Diffusion)",
+            "feature_image_generation": "簡易画像生成 (例)",
             "feature_feedback": "フィードバックメカニズム",
             "settings_button": "⚙️ 設定とパーソナライズ",
             "about_button": "ℹ️ 会社概要",
@@ -838,17 +798,13 @@ def get_text(key):
             "web_search_no_results": "検索語句に一致する結果は見つかりませんでした。",
             "wikipedia_search_results": "Wikipedia検索結果：",
             "wikipedia_search_no_results": "検索語句に一致する結果は見つかりませんでした。",
-            "image_generated_example": "'{prompt}'の画像が生成されました。",
+            "image_generated_example": "'{prompt}'の画像が生成されました (例)。",
             "image_upload_caption": "アップロードされた画像",
             "image_processing_error": "画像の処理中にエラーが発生しました：{error}",
             "image_vision_query": "この画像に何が見えますか？",
             "loading_audio_file": "音声ファイルを読み込み中...",
             "gemini_response_error": "応答の取得中に予期しないエラーが発生しました：{error}",
             "creative_text_generated": "クリエイティブテキスト生成済み：{text}",
-            "sd_model_loading": "Stable Diffusionモデルをロード中... これには時間がかかる場合があります ({device})...",
-            "sd_model_load_success": "Stable Diffusionモデルのロードに成功しました。",
-            "sd_model_load_error": "Stable Diffusionモデルのロード中にエラーが発生しました：{error}",
-            "sd_generating_image": "画像を生成中... しばらくお待ちください。",
         },
         "KR": {
             "welcome_title": "Hanogt AI",
@@ -866,7 +822,7 @@ def get_text(key):
             "feature_research": "연구 (웹, 위키)",
             "feature_knowledge_base": "지식 기반 응답",
             "feature_creative_text": "창의적인 텍스트 생성",
-            "feature_image_generation": "이미지 생성 (Stable Diffusion)",
+            "feature_image_generation": "간단한 이미지 생성 (예시)",
             "feature_feedback": "피드백 메커니즘",
             "settings_button": "⚙️ 설정 및 개인화",
             "about_button": "ℹ️ 회사 소개",
@@ -925,17 +881,13 @@ def get_text(key):
             "web_search_no_results": "검색어에 대한 결과가 없습니다.",
             "wikipedia_search_results": "위키백과 검색 결과:",
             "wikipedia_search_no_results": "검색어에 대한 결과가 없습니다.",
-            "image_generated_example": "'{prompt}'에 대한 이미지가 생성되었습니다.",
+            "image_generated_example": "'{prompt}'에 대한 이미지가 생성되었습니다(예시).",
             "image_upload_caption": "업로드된 이미지",
             "image_processing_error": "이미지 처리 중 오류가 발생했습니다: {error}",
             "image_vision_query": "이 이미지에서 무엇을 보시나요?",
             "loading_audio_file": "오디오 파일 로드 중...",
             "gemini_response_error": "응답을 가져오는 중 예기치 않은 오류가 발생했습니다: {error}",
             "creative_text_generated": "창의적인 텍스트 생성됨: {text}",
-            "sd_model_loading": "Stable Diffusion 모델 로드 중... 시간이 좀 걸릴 수 있습니다 ({device})...",
-            "sd_model_load_success": "Stable Diffusion 모델이 성공적으로 로드되었습니다.",
-            "sd_model_load_error": "Stable Diffusion 모델 로드 중 오류가 발생했습니다: {error}",
-            "sd_generating_image": "이미지 생성 중... 잠시 기다려 주세요.",
         },
     }
     return texts.get(st.session_state.current_language, texts["TR"]).get(key, "TEXT_MISSING")
@@ -964,16 +916,9 @@ def initialize_session_state():
         st.session_state.show_about = False
     if "current_language" not in st.session_state:
         st.session_state.current_language = "TR"
-    if "stable_diffusion_pipeline" not in st.session_state:
-        st.session_state.stable_diffusion_pipeline = None
 
     if "gemini_model" not in st.session_state or not st.session_state.models_initialized:
         initialize_gemini_model()
-
-    # Stable Diffusion modelini de ilk açılışta yükle
-    if st.session_state.stable_diffusion_pipeline is None:
-        st.session_state.stable_diffusion_pipeline = load_stable_diffusion_model()
-
 
     load_chat_history()
 
@@ -997,40 +942,6 @@ def initialize_gemini_model():
             st.error(get_text("model_init_error").format(error=e))
             st.session_state.models_initialized = False
             logger.error(f"Gemini model initialization error: {e}")
-
-@st.cache_resource
-def load_stable_diffusion_model():
-    """Loads the Stable Diffusion model and caches it."""
-    try:
-        # GPU var mı kontrol et
-        if torch.cuda.is_available():
-            device = "cuda"
-            # fp16 kullan, eğer GPU destekliyorsa daha hızlı ve daha az bellek kullanır
-            dtype = torch.float16
-        elif torch.backends.mps.is_available(): # macOS (Apple Silicon) için
-            device = "mps"
-            dtype = torch.float16
-        else:
-            device = "cpu"
-            dtype = torch.float32 # CPU için genelde float32 daha stabil
-
-        with st.spinner(get_text("sd_model_loading").format(device=device)):
-            # 'runwayml/stable-diffusion-v1-5' yaygın olarak kullanılan bir modeldir.
-            # Alternatif olarak 'stabilityai/stable-diffusion-xl-base-1.0' deneyebilirsiniz,
-            # ancak XL modelleri çok daha fazla kaynak gerektirir.
-            pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", torch_dtype=dtype)
-            pipe.to(device)
-            # Eğer xformers kurulu ve CUDA kullanıyorsanız, performansı artırabilirsiniz.
-            # if device == "cuda" and 'xformers' in sys.modules: # sys.modules'ı import etmeniz gerekir
-            #     pipe.enable_xformers_memory_efficient_attention()
-        st.toast(get_text("sd_model_load_success"), icon="🎨")
-        logger.info(f"Stable Diffusion model loaded successfully on {device}")
-        return pipe
-    except Exception as e:
-        st.error(get_text("sd_model_load_error").format(error=e))
-        logger.error(f"Stable Diffusion model loading error: {e}")
-        return None
-
 
 def add_to_chat_history(chat_id, role, content):
     """Adds a message to the chat history."""
@@ -1096,33 +1007,11 @@ def wikipedia_search(query):
         return []
 
 def generate_image(prompt):
-    """Generates an image using Stable Diffusion."""
-    if st.session_state.stable_diffusion_pipeline is None:
-        st.error(get_text("sd_model_load_error").format(error="Model not loaded."))
-        return
-
-    with st.spinner(get_text("sd_generating_image")):
-        try:
-            image = st.session_state.stable_diffusion_pipeline(prompt).images[0]
-            st.image(image, caption=prompt, use_column_width=True)
-            add_to_chat_history(st.session_state.active_chat_id, "model", image) # Görseli byte olarak kaydet
-            st.markdown(get_text("image_generated_example").format(prompt=prompt))
-            
-            # Görseli indirme butonu
-            buf = io.BytesIO()
-            image.save(buf, format="PNG")
-            byte_im = buf.getvalue()
-            st.download_button(
-                label=get_text("image_gen_button"), # Kullanıcı arayüzünde "Görsel Oluştur" butonu aynı zamanda indirme butonu olarak kullanılabilir
-                data=byte_im,
-                file_name=f"hanogt_ai_image_{uuid.uuid4()}.png",
-                mime="image/png"
-            )
-
-        except Exception as e:
-            st.error(f"Görsel oluşturulurken bir hata oluştu: {e}")
-            logger.error(f"Stable Diffusion image generation error: {e}")
-
+    """Image generation (example - placeholder)."""
+    st.warning(get_text("image_gen_warning_placeholder"))
+    placeholder_image_url = "https://via.placeholder.com/400x300.png?text=Image+Generated"
+    st.image(placeholder_image_url, caption=prompt)
+    add_to_chat_history(st.session_state.active_chat_id, "model", get_text("image_generated_example").format(prompt=prompt))
 
 def process_image_input(uploaded_file):
     """Processes the uploaded image and converts it to text (vision)."""
@@ -1337,7 +1226,6 @@ def handle_text_chat():
             add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
         elif prompt.lower().startswith("görsel oluştur:") or prompt.lower().startswith("image generate:"):
             image_prompt = prompt.split(":", 1)[1].strip()
-            # Directly call the actual image generation function
             generate_image(image_prompt)
         else:
             # Regular chat interaction with Gemini
@@ -1376,33 +1264,9 @@ def handle_text_chat():
         st.rerun()
 
 def handle_image_generation():
-    """Manages the image generation mode using Stable Diffusion."""
+    """Manages the image generation mode."""
     st.subheader(get_text("image_gen_title"))
     image_prompt = st.text_input(get_text("image_gen_input_label"), key="image_prompt_input")
-    
-    # Görsel geçmişini burada gösterelim
-    st.markdown("---")
-    st.markdown("### Oluşturulan Görseller")
-    
-    # Sadece görsel oluşturma moduna ait geçmişi filtreleyebiliriz veya genel geçmişi gösterebiliriz.
-    # Şimdilik, genel sohbet geçmişindeki 'model' tarafından oluşturulmuş görselleri filtreleyelim.
-    image_history = [
-        msg for msg in st.session_state.all_chats.get(st.session_state.active_chat_id, [])
-        if msg["role"] == "model" and isinstance(msg["parts"][0], bytes) # Check if it's a byte stream (assumed to be image)
-    ]
-    
-    if image_history:
-        for i, img_msg in enumerate(reversed(image_history)): # En son oluşturulanı en üste getir
-            try:
-                image = Image.open(io.BytesIO(img_msg["parts"][0]))
-                st.image(image, caption=f"Görsel {len(image_history) - i}", use_column_width=True)
-            except Exception as e:
-                st.warning(f"Geçmiş görsel yüklenemedi: {e}")
-    else:
-        st.info("Henüz oluşturulmuş bir görsel yok.")
-    
-    st.markdown("---") # Tekrar alta alalım input'u
-
     if st.button(get_text("image_gen_button"), key="generate_image_button"):
         if image_prompt:
             generate_image(image_prompt)
@@ -1570,4 +1434,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
