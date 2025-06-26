@@ -11,62 +11,62 @@ import datetime
 from PIL import Image
 import numpy as np
 import logging
-import json # json modülünü ekledik
+import json
 
-# --- İsteğe Bağlı Kütüphaneler (Platforma özel kurulum gerektirebilir) ---
+# --- Optional Libraries (May require platform-specific installation) ---
 try:
     import pyttsx3
     import speech_recognition as sr
     TTS_SR_AVAILABLE = True
 except ImportError:
     TTS_SR_AVAILABLE = False
-    logging.warning("pyttsx3 veya speech_recognition modülleri bulunamadı. Sesli özellikler devre dışı bırakıldı.")
+    logging.warning("pyttsx3 or speech_recognition modules not found. Voice features disabled.")
 
-# --- Global Değişkenler ve Ayarlar ---
+# --- Global Variables and Settings ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# API Anahtarı Kontrolü
+# API Key Check
 GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY") if st.secrets else os.environ.get("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY:
-    st.error("GOOGLE_API_KEY bulunamadı. Lütfen Streamlit Secrets'ı veya ortam değişkenlerini kontrol edin.")
-    logger.error("GOOGLE_API_KEY bulunamadı. Uygulama durduruluyor.")
+    st.error("GOOGLE_API_KEY not found. Please check Streamlit Secrets or environment variables.")
+    logger.error("GOOGLE_API_KEY not found. Application stopped.")
     st.stop()
 
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
-    logger.info("Google API Anahtarı başarıyla yapılandırıldı.")
+    logger.info("Google API Key successfully configured.")
 except Exception as e:
-    logger.error(f"Genel API Yapılandırma Hatası: {e}")
-    st.error(f"API anahtarı yapılandırılamadı: {e}. Lütfen anahtarınızı kontrol edin.")
+    logger.error(f"General API Configuration Error: {e}")
+    st.error(f"API key could not be configured: {e}. Please check your key.")
     st.stop()
 
-# Gemini Model Parametreleri
+# Gemini Model Parameters
 GLOBAL_MODEL_NAME = 'gemini-1.5-flash-latest'
 GLOBAL_TEMPERATURE = 0.7
 GLOBAL_TOP_P = 0.95
 GLOBAL_TOP_K = 40
 GLOBAL_MAX_OUTPUT_TOKENS = 4096
 
-# --- Dil Ayarları ---
+# --- Language Settings ---
 LANGUAGES = {
-    "TR": {"name": "Türkçe", "emoji": "🇹🇷"},
-    "EN": {"name": "English", "emoji": "🇬🇧"},
-    "FR": {"name": "Français", "emoji": "🇫🇷"},
-    "ES": {"name": "Español", "emoji": "🇪🇸"},
-    "DE": {"name": "Deutsch", "emoji": "🇩🇪"},
-    "RU": {"name": "Русский", "emoji": "🇷🇺"},
-    "SA": {"name": "العربية", "emoji": "🇸🇦"},
-    "AZ": {"name": "Azərbaycan dili", "emoji": "🇦🇿"},
-    "JP": {"name": "日本語", "emoji": "🇯🇵"},
-    "KR": {"name": "한국어", "emoji": "🇰🇷"},
+    "TR": {"name": "Türkçe", "emoji": "🇹🇷", "speech_code": "tr-TR"},
+    "EN": {"name": "English", "emoji": "🇬🇧", "speech_code": "en-US"},
+    "FR": {"name": "Français", "emoji": "🇫🇷", "speech_code": "fr-FR"},
+    "ES": {"name": "Español", "emoji": "🇪🇸", "speech_code": "es-ES"},
+    "DE": {"name": "Deutsch", "emoji": "🇩🇪", "speech_code": "de-DE"},
+    "RU": {"name": "Русский", "emoji": "🇷🇺", "speech_code": "ru-RU"},
+    "SA": {"name": "العربية", "emoji": "🇸🇦", "speech_code": "ar-SA"}, # Arabic might need specific voice pack
+    "AZ": {"name": "Azərbaycan dili", "emoji": "🇦🇿", "speech_code": "az-AZ"}, # Azerbaijani might need specific voice pack
+    "JP": {"name": "日本語", "emoji": "🇯🇵", "speech_code": "ja-JP"},
+    "KR": {"name": "한국어", "emoji": "🇰🇷", "speech_code": "ko-KR"},
 }
 
-# --- Yardımcı Fonksiyonlar ---
+# --- Helper Functions ---
 
 def get_text(key):
-    """Seçili dile göre metin döndürür."""
+    """Returns text based on the selected language."""
     texts = {
         "TR": {
             "welcome_title": "Hanogt AI",
@@ -90,7 +90,7 @@ def get_text(key):
             "app_mode_title": "Uygulama Modu",
             "chat_mode_text": "💬 Yazılı Sohbet",
             "chat_mode_image": "🖼️ Görsel Oluşturucu",
-            "chat_mode_voice": "🎤 Sesli Sohbet (Dosya Yükle)",
+            "chat_mode_voice": "🎤 Sesli Sohbet", # Removed "(Dosya Yükle)" to simplify
             "chat_mode_creative": "✨ Yaratıcı Stüdyo",
             "chat_input_placeholder": "Mesajınızı yazın veya bir komut girin: Örn: 'Merhaba', 'web ara: Streamlit', 'yaratıcı metin: uzaylılar'...",
             "generating_response": "Yanıt oluşturuluyor...",
@@ -103,14 +103,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "Görsel oluşturma özelliği şu anda bir placeholder'dır ve gerçek bir API'ye bağlı değildir.",
             "image_gen_warning_prompt_missing": "Lütfen bir görsel açıklaması girin.",
             "voice_chat_title": "Sesli Sohbet",
-            "voice_upload_label": "Ses dosyası yükle (MP3, WAV)",
-            "voice_upload_warning": "Ses dosyasından metin transkripsiyonu özelliği şu anda bir placeholder'dır.",
+            "voice_upload_label": "Ses dosyası yükle (MP3, WAV) - Bu özellik şimdilik bir yer tutucudur.", # Clarified placeholder
+            "voice_upload_warning": "Ses dosyasından metin transkripsiyonu özelliği şu anda bir yer tutucudur.",
             "voice_live_input_title": "Canlı Ses Girişi",
             "voice_mic_button": "Mikrofonu Başlat",
             "voice_not_available": "Sesli sohbet özellikleri kullanılamıyor. Gerekli kütüphanelerin (pyttsx3, SpeechRecognition) kurulu olduğundan emin olun.",
             "voice_listening": "Dinleniyor...",
+            "voice_processing": "Ses işleniyor...",
             "voice_heard": "Sen dedin: {text}",
             "voice_no_audio": "Ses algılanamadı, lütfen tekrar deneyin.",
+            "voice_unknown": "Ne dediğinizi anlayamadım. Lütfen daha net konuşun.", # More helpful
             "voice_api_error": "Ses tanıma servisine ulaşılamıyor; {error}",
             "creative_studio_title": "Yaratıcı Stüdyo",
             "creative_studio_info": "Bu bölüm, yaratıcı metin üretimi gibi gelişmiş özellikler için tasarlanmıştır.",
@@ -156,7 +158,8 @@ def get_text(key):
             "unexpected_audio_record_error": "Ses kaydı sırasında beklenmeyen bir hata oluştu: {error}",
             "gemini_response_error": "Yanıt alınırken beklenmeyen bir hata oluştu: {error}",
             "creative_text_generated": "Yaratıcı Metin Oluşturuldu: {text}",
-            "turkish_voice_not_found": "Türkçe ses bulunamadı, varsayılan ses kullanılacak. İşletim sisteminizin ses ayarlarını kontrol ediniz."
+            "voice_selection_error": "Ses seçimi hatası: {error}", # New error message
+            "voice_not_found": "{language} için uygun ses bulunamadı, varsayılan ses kullanılacak. İşletim sisteminizin ses ayarlarını kontrol ediniz." # Generic voice not found
         },
         "EN": {
             "welcome_title": "Hanogt AI",
@@ -180,7 +183,7 @@ def get_text(key):
             "app_mode_title": "Application Mode",
             "chat_mode_text": "💬 Text Chat",
             "chat_mode_image": "🖼️ Image Generator",
-            "chat_mode_voice": "🎤 Voice Chat (Upload File)",
+            "chat_mode_voice": "🎤 Voice Chat",
             "chat_mode_creative": "✨ Creative Studio",
             "chat_input_placeholder": "Type your message or enter a command: E.g., 'Hello', 'web search: Streamlit', 'creative text: aliens'...",
             "generating_response": "Generating response...",
@@ -193,15 +196,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "Image generation feature is currently a placeholder and not connected to a real API.",
             "image_gen_warning_prompt_missing": "Please enter an image description.",
             "voice_chat_title": "Voice Chat",
-            "voice_upload_label": "Upload audio file (MP3, WAV)",
+            "voice_upload_label": "Upload audio file (MP3, WAV) - This feature is currently a placeholder.",
             "voice_upload_warning": "Audio file transcription feature is currently a placeholder.",
             "voice_live_input_title": "Live Voice Input",
             "voice_mic_button": "Start Microphone",
             "voice_not_available": "Voice chat features are currently unavailable. Make sure required libraries (pyttsx3, SpeechRecognition) are installed and compatible.",
             "voice_listening": "Listening...",
+            "voice_processing": "Processing audio...",
             "voice_heard": "You said: {text}",
             "voice_no_audio": "No audio detected, please try again.",
-            "voice_unknown": "Could not understand what you said.",
+            "voice_unknown": "Could not understand what you said. Please speak more clearly.",
             "voice_api_error": "Could not reach speech recognition service; {error}",
             "creative_studio_title": "Creative Studio",
             "creative_studio_info": "This section is designed for advanced features like creative text generation.",
@@ -247,7 +251,8 @@ def get_text(key):
             "unexpected_audio_record_error": "An unexpected error occurred during audio recording: {error}",
             "gemini_response_error": "An unexpected error occurred while getting a response: {error}",
             "creative_text_generated": "Creative Text Generated: {text}",
-            "turkish_voice_not_found": "Turkish voice not found, default voice will be used. Please check your operating system's sound settings."
+            "voice_selection_error": "Voice selection error: {error}",
+            "voice_not_found": "Suitable voice for {language} not found, default voice will be used. Please check your operating system's sound settings."
         },
         "FR": {
             "welcome_title": "Hanogt AI",
@@ -271,7 +276,7 @@ def get_text(key):
             "app_mode_title": "Mode de l'application",
             "chat_mode_text": "💬 Chat Textuel",
             "chat_mode_image": "🖼️ Générateur d'Images",
-            "chat_mode_voice": "🎤 Chat Vocal (Télécharger fichier)",
+            "chat_mode_voice": "🎤 Chat Vocal",
             "chat_mode_creative": "✨ Studio Créatif",
             "chat_input_placeholder": "Tapez votre message ou une commande : Ex: 'Bonjour', 'recherche web: Streamlit', 'texte créatif: aliens'...",
             "generating_response": "Génération de la réponse...",
@@ -284,15 +289,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "La fonction de génération d'images est actuellement un aperçu et n'est pas connectée à une véritable API.",
             "image_gen_warning_prompt_missing": "Veuillez entrer une description d'image.",
             "voice_chat_title": "Chat Vocal",
-            "voice_upload_label": "Télécharger un fichier audio (MP3, WAV)",
+            "voice_upload_label": "Télécharger un fichier audio (MP3, WAV) - Cette fonction est actuellement un aperçu.",
             "voice_upload_warning": "La fonction de transcription de fichier audio est actuellement un aperçu.",
             "voice_live_input_title": "Entrée Vocale en Direct",
             "voice_mic_button": "Démarrer le Microphone",
             "voice_not_available": "Les fonctions de chat vocal sont actuellement indisponibles. Assurez-vous que les bibliothèques requises (pyttsx3, SpeechRecognition) sont installées et compatibles.",
             "voice_listening": "Écoute...",
+            "voice_processing": "Traitement audio...",
             "voice_heard": "Vous avez dit : {text}",
             "voice_no_audio": "Aucun audio détecté, veuillez réessayer.",
-            "voice_unknown": "Je n'ai pas compris ce que vous avez dit.",
+            "voice_unknown": "Je n'ai pas compris ce que vous avez dit. Veuillez parler plus clairement.",
             "voice_api_error": "Impossible d'atteindre le service de reconnaissance vocale ; {error}",
             "creative_studio_title": "Studio Créatif",
             "creative_studio_info": "Cette section est conçue pour des fonctionnalités avancées comme la génération de texte créatif.",
@@ -338,7 +344,8 @@ def get_text(key):
             "unexpected_audio_record_error": "Une erreur inattendue s'est produite lors de l'enregistrement audio : {error}",
             "gemini_response_error": "Une erreur inattendue s'est produite lors de l'obtention d'une réponse : {error}",
             "creative_text_generated": "Texte Créatif Généré : {text}",
-            "turkish_voice_not_found": "Voix turque non trouvée, la voix par défaut sera utilisée. Veuillez vérifier les paramètres sonores de votre système d'exploitation."
+            "voice_selection_error": "Erreur de sélection de la voix : {error}",
+            "voice_not_found": "Voix appropriée pour {language} non trouvée, la voix par défaut sera utilisée. Veuillez vérifier les paramètres sonores de votre système d'exploitation."
         },
         "ES": {
             "welcome_title": "Hanogt AI",
@@ -362,7 +369,7 @@ def get_text(key):
             "app_mode_title": "Modo de Aplicación",
             "chat_mode_text": "💬 Chat de Texto",
             "chat_mode_image": "🖼️ Generador de Imágenes",
-            "chat_mode_voice": "🎤 Chat de Voz (Subir archivo)",
+            "chat_mode_voice": "🎤 Chat de Voz",
             "chat_mode_creative": "✨ Estudio Creativo",
             "chat_input_placeholder": "Escribe tu mensaje o un comando: Ej.: 'Hola', 'búsqueda web: Streamlit', 'texto creativo: alienígenas'...",
             "generating_response": "Generando respuesta...",
@@ -375,15 +382,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "La función de generación de imágenes es actualmente un marcador de posición y no está conectada a una API real.",
             "image_gen_warning_prompt_missing": "Por favor, introduce una descripción de la imagen.",
             "voice_chat_title": "Chat de Voz",
-            "voice_upload_label": "Subir archivo de audio (MP3, WAV)",
+            "voice_upload_label": "Subir archivo de audio (MP3, WAV) - Esta función es actualmente un marcador de posición.",
             "voice_upload_warning": "La función de transcripción de archivos de audio es actualmente un marcador de posición.",
             "voice_live_input_title": "Entrada de Voz en Vivo",
             "voice_mic_button": "Iniciar Micrófono",
             "voice_not_available": "Las funciones de chat de voz no están disponibles actualmente. Asegúrate de que las bibliotecas requeridas (pyttsx3, SpeechRecognition) estén instaladas y sean compatibles.",
             "voice_listening": "Escuchando...",
+            "voice_processing": "Procesando audio...",
             "voice_heard": "Dijiste: {text}",
             "voice_no_audio": "No se detectó audio, por favor, inténtalo de nuevo.",
-            "voice_unknown": "No pude entender lo que dijiste.",
+            "voice_unknown": "No pude entender lo que dijiste. Por favor, habla más claro.",
             "voice_api_error": "No se puede acceder al servicio de reconocimiento de voz; {error}",
             "creative_studio_title": "Estudio Creativo",
             "creative_studio_info": "Esta sección está diseñada para funciones avanzadas como la generación de texto creativo.",
@@ -429,7 +437,8 @@ def get_text(key):
             "unexpected_audio_record_error": "Se produjo un error inesperado durante la grabación de audio: {error}",
             "gemini_response_error": "Se produjo un error inesperado al obtener una respuesta: {error}",
             "creative_text_generated": "Texto Creativo Generado: {text}",
-            "turkish_voice_not_found": "No se encontró voz turca, se utilizará la voz predeterminada. Por favor, verifica la configuración de sonido de tu sistema operativo."
+            "voice_selection_error": "Error de selección de voz: {error}",
+            "voice_not_found": "No se encontró una voz adecuada para {language}, se utilizará la voz predeterminada. Por favor, verifica la configuración de sonido de tu sistema operativo."
         },
         "DE": {
             "welcome_title": "Hanogt AI",
@@ -453,7 +462,7 @@ def get_text(key):
             "app_mode_title": "Anwendungsmodus",
             "chat_mode_text": "💬 Text-Chat",
             "chat_mode_image": "🖼️ Bilderzeuger",
-            "chat_mode_voice": "🎤 Sprach-Chat (Datei hochladen)",
+            "chat_mode_voice": "🎤 Sprach-Chat",
             "chat_mode_creative": "✨ Kreativ-Studio",
             "chat_input_placeholder": "Geben Sie Ihre Nachricht oder einen Befehl ein: Z.B. 'Hallo', 'websuche: Streamlit', 'kreativer Text: Aliens'...",
             "generating_response": "Antwort wird generiert...",
@@ -466,15 +475,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "Die Bilderzeugungsfunktion ist derzeit ein Platzhalter und nicht mit einer echten API verbunden.",
             "image_gen_warning_prompt_missing": "Bitte geben Sie eine Bildbeschreibung ein.",
             "voice_chat_title": "Sprach-Chat",
-            "voice_upload_label": "Audiodatei hochladen (MP3, WAV)",
+            "voice_upload_label": "Audiodatei hochladen (MP3, WAV) - Diese Funktion ist derzeit ein Platzhalter.",
             "voice_upload_warning": "Die Audiodatei-Transkriptionsfunktion ist derzeit ein Platzhalter.",
             "voice_live_input_title": "Live-Spracheingabe",
             "voice_mic_button": "Mikrofon starten",
             "voice_not_available": "Sprach-Chat-Funktionen sind derzeit nicht verfügbar. Stellen Sie sicher, dass die erforderlichen Bibliotheken (pyttsx3, SpeechRecognition) installiert und kompatibel sind.",
             "voice_listening": "Hören...",
+            "voice_processing": "Audio wird verarbeitet...",
             "voice_heard": "Sie sagten: {text}",
             "voice_no_audio": "Kein Audio erkannt, bitte versuchen Sie es erneut.",
-            "voice_unknown": "Ich konnte nicht verstehen, was Sie gesagt haben.",
+            "voice_unknown": "Ich konnte nicht verstehen, was Sie gesagt haben. Bitte sprechen Sie klarer.",
             "voice_api_error": "Spracherkennungsdienst nicht erreichbar; {error}",
             "creative_studio_title": "Kreativ-Studio",
             "creative_studio_info": "Dieser Bereich ist für erweiterte Funktionen wie die Erstellung kreativer Texte konzipiert.",
@@ -520,7 +530,8 @@ def get_text(key):
             "unexpected_audio_record_error": "Ein unerwarteter Fehler bei der Audioaufnahme: {error}",
             "gemini_response_error": "Ein unerwarteter Fehler beim Abrufen einer Antwort: {error}",
             "creative_text_generated": "Kreativer Text generiert: {text}",
-            "turkish_voice_not_found": "Türkische Stimme nicht gefunden, Standardstimme wird verwendet. Bitte überprüfen Sie die Soundeinstellungen Ihres Betriebssystems."
+            "voice_selection_error": "Sprachauswahlfehler: {error}",
+            "voice_not_found": "Geeignete Stimme für {language} nicht gefunden, Standardstimme wird verwendet. Bitte überprüfen Sie die Soundeinstellungen Ihres Betriebssystems."
         },
         "RU": {
             "welcome_title": "Hanogt AI",
@@ -544,7 +555,7 @@ def get_text(key):
             "app_mode_title": "Режим приложения",
             "chat_mode_text": "💬 Текстовый чат",
             "chat_mode_image": "🖼️ Генератор изображений",
-            "chat_mode_voice": "🎤 Голосовой чат (загрузить файл)",
+            "chat_mode_voice": "🎤 Голосовой чат",
             "chat_mode_creative": "✨ Креативная студия",
             "chat_input_placeholder": "Введите сообщение или команду: Например, 'Привет', 'веб-поиск: Streamlit', 'креативный текст: инопланетяне'...",
             "generating_response": "Генерация ответа...",
@@ -557,15 +568,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "Функция генерации изображений в настоящее время является заглушкой и не подключена к реальному API.",
             "image_gen_warning_prompt_missing": "Пожалуйста, введите описание изображения.",
             "voice_chat_title": "Голосовой чат",
-            "voice_upload_label": "Загрузить аудиофайл (MP3, WAV)",
+            "voice_upload_label": "Загрузить аудиофайл (MP3, WAV) - Эта функция в настоящее время является заглушкой.",
             "voice_upload_warning": "Функция транскрипции аудиофайлов в настоящее время является заглушкой.",
             "voice_live_input_title": "Ввод голоса в реальном времени",
             "voice_mic_button": "Запустить микрофон",
             "voice_not_available": "Функции голосового чата в настоящее время недоступны. Убедитесь, что необходимые библиотеки (pyttsx3, SpeechRecognition) установлены и совместимы.",
             "voice_listening": "Слушаю...",
+            "voice_processing": "Обработка аудио...",
             "voice_heard": "Вы сказали: {text}",
             "voice_no_audio": "Аудио не обнаружено, пожалуйста, попробуйте еще раз.",
-            "voice_unknown": "Не удалось понять, что вы сказали.",
+            "voice_unknown": "Не удалось понять, что вы сказали. Пожалуйста, говорите четче.",
             "voice_api_error": "Служба распознавания речи недоступна; {error}",
             "creative_studio_title": "Креативная студия",
             "creative_studio_info": "Этот раздел предназначен для расширенных функций, таких как генерация креативного текста.",
@@ -611,7 +623,8 @@ def get_text(key):
             "unexpected_audio_record_error": "Произошла непредвиденная ошибка во время записи аудио: {error}",
             "gemini_response_error": "Произошла непредвиденная ошибка при получении ответа: {error}",
             "creative_text_generated": "Креативный текст сгенерирован: {text}",
-            "turkish_voice_not_found": "Турецкий голос не найден, будет использоваться голос по умолчанию. Пожалуйста, проверьте настройки звука вашей операционной системы."
+            "voice_selection_error": "Ошибка выбора голоса: {error}",
+            "voice_not_found": "Подходящий голос для {language} не найден, будет использоваться голос по умолчанию. Пожалуйста, проверьте настройки звука вашей операционной системы."
         },
         "SA": {
             "welcome_title": "Hanogt AI",
@@ -635,7 +648,7 @@ def get_text(key):
             "app_mode_title": "وضع التطبيق",
             "chat_mode_text": "💬 الدردشة النصية",
             "chat_mode_image": "🖼️ منشئ الصور",
-            "chat_mode_voice": "🎤 الدردشة الصوتية (تحميل ملف)",
+            "chat_mode_voice": "🎤 الدردشة الصوتية",
             "chat_mode_creative": "✨ استوديو إبداعي",
             "chat_input_placeholder": "اكتب رسالتك أو أدخل أمرًا: مثال: 'مرحبًا', 'بحث ويب: Streamlit', 'نص إبداعي: كائنات فضائية'...",
             "generating_response": "جاري إنشاء الرد...",
@@ -648,15 +661,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "ميزة إنشاء الصور هي حاليًا مكان مؤقت وغير متصلة بواجهة برمجة تطبيقات حقيقية.",
             "image_gen_warning_prompt_missing": "الرجاء إدخال وصف للصورة.",
             "voice_chat_title": "الدردشة الصوتية",
-            "voice_upload_label": "تحميل ملف صوتي (MP3, WAV)",
+            "voice_upload_label": "تحميل ملف صوتي (MP3, WAV) - هذه الميزة حاليا مكان مؤقت.",
             "voice_upload_warning": "ميزة تحويل الملف الصوتي إلى نص هي حاليًا مكان مؤقت.",
             "voice_live_input_title": "إدخال صوت مباشر",
             "voice_mic_button": "تشغيل الميكروفون",
             "voice_not_available": "ميزات الدردشة الصوتية غير متاحة حاليًا. تأكد من تثبيت المكتبات المطلوبة (pyttsx3, SpeechRecognition) وتوافقها.",
             "voice_listening": "جاري الاستماع...",
+            "voice_processing": "معالجة الصوت...",
             "voice_heard": "قلت: {text}",
             "voice_no_audio": "لم يتم اكتشاف صوت، يرجى المحاولة مرة أخرى.",
-            "voice_unknown": "لم أتمكن من فهم ما قلته.",
+            "voice_unknown": "لم أتمكن من فهم ما قلته. يرجى التحدث بوضوح أكبر.",
             "voice_api_error": "لا يمكن الوصول إلى خدمة التعرف على الكلام؛ {error}",
             "creative_studio_title": "استوديو إبداعي",
             "creative_studio_info": "تم تصميم هذا القسم للميزات المتقدمة مثل إنشاء النص الإبداعي.",
@@ -702,7 +716,8 @@ def get_text(key):
             "unexpected_audio_record_error": "حدث خطأ غير متوقع أثناء تسجيل الصوت: {error}",
             "gemini_response_error": "حدث خطأ غير متوقع أثناء تلقي رد: {error}",
             "creative_text_generated": "تم إنشاء النص الإبداعي: {text}",
-            "turkish_voice_not_found": "لم يتم العثور على صوت تركي، سيتم استخدام الصوت الافتراضي. يرجى التحقق من إعدادات الصوت في نظام التشغيل الخاص بك."
+            "voice_selection_error": "خطأ في اختيار الصوت: {error}",
+            "voice_not_found": "لم يتم العثور على صوت مناسب لـ {language}، سيتم استخدام الصوت الافتراضي. يرجى التحقق من إعدادات الصوت في نظام التشغيل الخاص بك."
         },
         "AZ": {
             "welcome_title": "Hanogt AI",
@@ -726,7 +741,7 @@ def get_text(key):
             "app_mode_title": "Tətbiq Rejimi",
             "chat_mode_text": "💬 Yazılı Söhbət",
             "chat_mode_image": "🖼️ Şəkil Yaradıcı",
-            "chat_mode_voice": "🎤 Səsli Söhbət (Fayl Yüklə)",
+            "chat_mode_voice": "🎤 Səsli Söhbət",
             "chat_mode_creative": "✨ Yaradıcı Studiya",
             "chat_input_placeholder": "Mesajınızı yazın və ya əmr daxil edin: Məsələn: 'Salam', 'veb axtar: Streamlit', 'yaradıcı mətn: yadplanetlilər'...",
             "generating_response": "Cavab yaradılır...",
@@ -739,15 +754,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "Şəkil yaratma xüsusiyyəti hazırda bir yer tutucudur və real API-yə qoşulmayıb.",
             "image_gen_warning_prompt_missing": "Zəhmət olmasa, bir şəkil təsviri daxil edin.",
             "voice_chat_title": "Səsli Söhbət",
-            "voice_upload_label": "Səs faylı yükləyin (MP3, WAV)",
+            "voice_upload_label": "Səs faylı yükləyin (MP3, WAV) - Bu xüsusiyyət hazırda bir yer tutucudur.",
             "voice_upload_warning": "Səs faylından mətn transkripsiyası xüsusiyyəti hazırda bir yer tutucudur.",
             "voice_live_input_title": "Canlı Səs Girişi",
             "voice_mic_button": "Mikrofonu Başlat",
             "voice_not_available": "Səsli söhbət xüsusiyyətləri hazırda mövcud deyil. Lazımi kitabxanaların (pyttsx3, SpeechRecognition) quraşdırıldığından və uyğun olduğundan əmin olun.",
             "voice_listening": "Dinlənilir...",
+            "voice_processing": "Səs emal olunur...",
             "voice_heard": "Sən dedin: {text}",
             "voice_no_audio": "Səs aşkarlanmadı, zəhmət olmasa yenidən cəhd edin.",
-            "voice_unknown": "Nə dediyinizi başa düşmədim.",
+            "voice_unknown": "Nə dediyinizi başa düşmədim. Zəhmət olmasa, daha aydın danışın.",
             "voice_api_error": "Səs tanıma xidmətinə çatmaq mümkün deyil; {error}",
             "creative_studio_title": "Yaradıcı Studiya",
             "creative_studio_info": "Bu bölmə yaradıcı mətn yaratma kimi qabaqcıl xüsusiyyətlər üçün nəzərdə tutulub.",
@@ -793,7 +809,8 @@ def get_text(key):
             "unexpected_audio_record_error": "Səs yazma zamanı gözlənilməz bir səhv baş verdi: {error}",
             "gemini_response_error": "Cavab alınarkən gözlənilməz bir səhv baş verdi: {error}",
             "creative_text_generated": "Yaradıcı Mətn Yaradıldı: {text}",
-            "turkish_voice_not_found": "Türk səsi tapılmadı, standart səs istifadə olunacaq. Əməliyyat sisteminizin səs parametrlərini yoxlayın."
+            "voice_selection_error": "Səs seçimi xətası: {error}",
+            "voice_not_found": "{language} üçün uyğun səs tapılmadı, standart səs istifadə olunacaq. Əməliyyat sisteminizin səs parametrlərini yoxlayın."
         },
         "JP": {
             "welcome_title": "Hanogt AI",
@@ -817,7 +834,7 @@ def get_text(key):
             "app_mode_title": "アプリケーションモード",
             "chat_mode_text": "💬 テキストチャット",
             "chat_mode_image": "🖼️ 画像生成",
-            "chat_mode_voice": "🎤 音声チャット (ファイルアップロード)",
+            "chat_mode_voice": "🎤 音声チャット",
             "chat_mode_creative": "✨ クリエイティブスタジオ",
             "chat_input_placeholder": "メッセージまたはコマンドを入力してください: 例: 'こんにちは', 'ウェブ検索: Streamlit', 'クリエイティブテキスト: エイリアン'...",
             "generating_response": "応答を生成中...",
@@ -830,15 +847,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "画像生成機能は現在プレースホルダーであり、実際のAPIには接続されていません。",
             "image_gen_warning_prompt_missing": "画像の説明を入力してください。",
             "voice_chat_title": "音声チャット",
-            "voice_upload_label": "音声ファイルをアップロード (MP3, WAV)",
+            "voice_upload_label": "音声ファイルをアップロード (MP3, WAV) - この機能は現在プレースホルダーです。",
             "voice_upload_warning": "音声ファイルからのテキスト書き起こし機能は現在プレースホルダーです。",
             "voice_live_input_title": "ライブ音声入力",
             "voice_mic_button": "マイクを起動",
             "voice_not_available": "音声チャット機能は現在利用できません。必要なライブラリ (pyttsx3, SpeechRecognition) がインストールされ、互換性があることを確認してください。",
             "voice_listening": "聴いています...",
+            "voice_processing": "音声を処理中...",
             "voice_heard": "あなたは言いました：{text}",
             "voice_no_audio": "音声が検出されませんでした。もう一度お試しください。",
-            "voice_unknown": "何を言ったか理解できませんでした。",
+            "voice_unknown": "何を言ったか理解できませんでした。もっとはっきりと話してください。",
             "voice_api_error": "音声認識サービスに到達できません; {error}",
             "creative_studio_title": "クリエイティブスタジオ",
             "creative_studio_info": "このセクションは、クリエイティブなテキスト生成などの高度な機能向けに設計されています。",
@@ -884,7 +902,8 @@ def get_text(key):
             "unexpected_audio_record_error": "音声録音中に予期しないエラーが発生しました：{error}",
             "gemini_response_error": "応答の取得中に予期しないエラーが発生しました：{error}",
             "creative_text_generated": "クリエイティブテキスト生成済み：{text}",
-            "turkish_voice_not_found": "トルコ語の音声が見つかりませんでした。デフォルトの音声が使用されます。オペレーティングシステムのサウンド設定を確認してください。"
+            "voice_selection_error": "音声選択エラー: {error}",
+            "voice_not_found": "{language} の適切な音声が見つかりませんでした。デフォルトの音声が使用されます。オペレーティングシステムのサウンド設定を確認してください。"
         },
         "KR": {
             "welcome_title": "Hanogt AI",
@@ -908,7 +927,7 @@ def get_text(key):
             "app_mode_title": "애플리케이션 모드",
             "chat_mode_text": "💬 텍스트 채팅",
             "chat_mode_image": "🖼️ 이미지 생성기",
-            "chat_mode_voice": "🎤 음성 채팅 (파일 업로드)",
+            "chat_mode_voice": "🎤 음성 채팅",
             "chat_mode_creative": "✨ 크리에이티브 스튜디오",
             "chat_input_placeholder": "메시지를 입력하거나 명령을 입력하세요: 예: '안녕하세요', '웹 검색: Streamlit', '창의적인 텍스트: 외계인'...",
             "generating_response": "응답 생성 중...",
@@ -921,15 +940,16 @@ def get_text(key):
             "image_gen_warning_placeholder": "이미지 생성 기능은 현재 플레이스홀더이며 실제 API에 연결되어 있지 않습니다.",
             "image_gen_warning_prompt_missing": "이미지 설명을 입력하세요.",
             "voice_chat_title": "음성 채팅",
-            "voice_upload_label": "오디오 파일 업로드 (MP3, WAV)",
+            "voice_upload_label": "오디오 파일 업로드 (MP3, WAV) - 이 기능은 현재 플레이스홀더입니다.",
             "voice_upload_warning": "오디오 파일 전사 기능은 현재 플레이스홀더입니다.",
             "voice_live_input_title": "실시간 음성 입력",
             "voice_mic_button": "마이크 시작",
             "voice_not_available": "음성 채팅 기능은 현재 사용할 수 없습니다. 필요한 라이브러리(pyttsx3, SpeechRecognition)가 설치되어 있고 호환되는지 확인하세요.",
             "voice_listening": "듣는 중...",
+            "voice_processing": "오디오 처리 중...",
             "voice_heard": "당신이 말했습니다: {text}",
             "voice_no_audio": "오디오가 감지되지 않았습니다. 다시 시도하세요.",
-            "voice_unknown": "무슨 말을 했는지 이해할 수 없었습니다.",
+            "voice_unknown": "무슨 말을 했는지 이해할 수 없었습니다. 더 명확하게 말해주세요.",
             "voice_api_error": "음성 인식 서비스에 연결할 수 없습니다. {error}",
             "creative_studio_title": "크리에이티브 스튜디오",
             "creative_studio_info": "이 섹션은 창의적인 텍스트 생성과 같은 고급 기능을 위해 설계되었습니다.",
@@ -975,13 +995,14 @@ def get_text(key):
             "unexpected_audio_record_error": "오디오 녹음 중 예기치 않은 오류가 발생했습니다: {error}",
             "gemini_response_error": "응답을 가져오는 중 예기치 않은 오류가 발생했습니다: {error}",
             "creative_text_generated": "창의적인 텍스트 생성됨: {text}",
-            "turkish_voice_not_found": "터키어 음성을 찾을 수 없습니다. 기본 음성이 사용됩니다. 운영 체제의 사운드 설정을 확인하십시오."
+            "voice_selection_error": "음성 선택 오류: {error}",
+            "voice_not_found": "{language}에 적합한 음성을 찾을 수 없습니다. 기본 음성이 사용됩니다. 운영 체제의 사운드 설정을 확인하십시오."
         },
     }
     return texts.get(st.session_state.current_language, texts["TR"]).get(key, "TEXT_MISSING")
 
 def initialize_session_state():
-    """Uygulama oturum durumunu başlatır."""
+    """Initializes application session state."""
     if "user_name" not in st.session_state:
         st.session_state.user_name = ""
     if "user_avatar" not in st.session_state:
@@ -995,32 +1016,28 @@ def initialize_session_state():
         if "chat_0" not in st.session_state.all_chats:
             st.session_state.all_chats["chat_0"] = []
     if "chat_mode" not in st.session_state:
-        st.session_state.chat_mode = "💬 Yazılı Sohbet" # Updated to include emoji
+        st.session_state.chat_mode = "💬 Yazılı Sohbet"
     if "current_mode_index" not in st.session_state:
         st.session_state.current_mode_index = 0
-    if "show_settings" not in st.session_state: # Ayarlar bölümünü gösterme kontrolü
+    if "show_settings" not in st.session_state:
         st.session_state.show_settings = False
-    if "show_about" not in st.session_state: # Hakkında bölümünü gösterme kontrolü
+    if "show_about" not in st.session_state:
         st.session_state.show_about = False
     if "current_language" not in st.session_state:
-        st.session_state.current_language = "TR" # Varsayılan dil Türkçe
-    
-    # EKLENEN KISIM: gemini_model'i burada kontrol et ve başlat
-    # Bu kontrol, uygulamanın her yeniden yüklenmesinde modeli tekrar başlatmaktan kaçınır
+        st.session_state.current_language = "TR"
+
     if "gemini_model" not in st.session_state or not st.session_state.models_initialized:
-        initialize_gemini_model() # Modeli başlatma fonksiyonunu çağır
+        initialize_gemini_model()
 
     load_chat_history()
 
 def initialize_gemini_model():
-    """Gemini modelini başlatır ve oturum durumuna kaydeder."""
-    # Sadece 'gemini_model' None ise veya models_initialized False ise başlat
+    """Initializes the Gemini model and saves it to session state."""
     if st.session_state.get("gemini_model") is None or not st.session_state.get("models_initialized", False):
         try:
             st.session_state.gemini_model = genai.GenerativeModel(
                 model_name=GLOBAL_MODEL_NAME,
-                # Düzeltme: 'Generation_config' yerine 'GenerationConfig' kullanıldı.
-                generation_config=genai.GenerationConfig( 
+                generation_config=genai.GenerationConfig(
                     temperature=GLOBAL_TEMPERATURE,
                     top_p=GLOBAL_TOP_P,
                     top_k=GLOBAL_TOP_K,
@@ -1029,17 +1046,18 @@ def initialize_gemini_model():
             )
             st.session_state.models_initialized = True
             st.toast(get_text("model_init_success"), icon="✅")
-            logger.info(f"Gemini Modeli başlatıldı: {GLOBAL_MODEL_NAME}")
+            logger.info(f"Gemini Model initialized: {GLOBAL_MODEL_NAME}")
         except Exception as e:
             st.error(get_text("model_init_error").format(error=e))
             st.session_state.models_initialized = False
-            logger.error(f"Gemini modeli başlatma hatası: {e}")
+            logger.error(f"Gemini model initialization error: {e}")
 
 def add_to_chat_history(chat_id, role, content):
-    """Sohbet geçmişine mesaj ekler."""
+    """Adds a message to the chat history."""
     if chat_id not in st.session_state.all_chats:
         st.session_state.all_chats[chat_id] = []
-    
+
+    # Handle image content for storage
     if isinstance(content, Image.Image):
         img_byte_arr = io.BytesIO()
         content.save(img_byte_arr, format='PNG')
@@ -1048,85 +1066,112 @@ def add_to_chat_history(chat_id, role, content):
         st.session_state.all_chats[chat_id].append({"role": role, "parts": [content]})
     else:
         st.session_state.all_chats[chat_id].append({"role": role, "parts": [content]})
-    
-    logger.info(f"Sohbet geçmişine eklendi: Chat ID: {chat_id}, Rol: {role}, İçerik Türü: {type(content)}")
+
+    logger.info(f"Added to chat history: Chat ID: {chat_id}, Role: {role}, Content Type: {type(content)}")
 
 def load_chat_history():
-    """Sohbet geçmişini yükler."""
+    """Loads chat history."""
     if st.session_state.active_chat_id not in st.session_state.all_chats:
         st.session_state.all_chats[st.session_state.active_chat_id] = []
 
 def clear_active_chat():
-    """Aktif sohbetin içeriğini temizler."""
+    """Clears the content of the active chat."""
     if st.session_state.active_chat_id in st.session_state.all_chats:
         st.session_state.all_chats[st.session_state.active_chat_id] = []
         if "chat_session" in st.session_state:
-            del st.session_state.chat_session
+            del st.session_state.chat_session # Reset chat session history
         st.toast(get_text("chat_cleared_toast"), icon="🧹")
-        logger.info(f"Aktif sohbet ({st.session_state.active_chat_id}) temizlendi.")
+        logger.info(f"Active chat ({st.session_state.active_chat_id}) cleared.")
     st.rerun()
 
 def text_to_speech(text):
-    """Metni konuşmaya çevirir ve sesi oynatır."""
+    """Converts text to speech and plays the audio."""
     if not TTS_SR_AVAILABLE:
         st.warning(get_text("tts_sr_not_available"))
         return False
     try:
         engine = pyttsx3.init()
         voices = engine.getProperty('voices')
-        found_turkish_voice = False
+        
+        # Get the speech code for the current language
+        current_speech_code = LANGUAGES[st.session_state.current_language]["speech_code"].lower()
+        
+        found_voice = False
         for voice in voices:
-            if "turkish" in voice.name.lower() or "tr-tr" in voice.id.lower():
+            # Look for voices that contain the current language's speech code or a common identifier
+            if current_speech_code in voice.id.lower() or current_speech_code.split('-')[0] in voice.id.lower():
                 engine.setProperty('voice', voice.id)
-                found_turkish_voice = True
+                found_voice = True
+                logger.info(f"Selected voice: {voice.name} ({voice.id}) for language {st.session_state.current_language}")
                 break
-        if not found_turkish_voice:
-            st.warning(get_text("turkish_voice_not_found"))
+        
+        if not found_voice:
+            # Fallback for some languages if direct match isn't found
+            if st.session_state.current_language == "TR":
+                # Specific check for Turkish
+                turkish_voices = [v for v in voices if "turkish" in v.name.lower() or "tr-tr" in v.id.lower()]
+                if turkish_voices:
+                    engine.setProperty('voice', turkish_voices[0].id)
+                    found_voice = True
+                    logger.info(f"Fallback to Turkish voice: {turkish_voices[0].name} ({turkish_voices[0].id})")
+                else:
+                    st.warning(get_text("voice_not_found").format(language=LANGUAGES[st.session_state.current_language]['name']))
+            else:
+                 st.warning(get_text("voice_not_found").format(language=LANGUAGES[st.session_state.current_language]['name']))
 
         engine.say(text)
         engine.runAndWait()
-        logger.info("Metinden sese çevirme başarılı.")
+        logger.info("Text-to-speech conversion successful.")
         return True
     except Exception as e:
-        st.error(get_text("unexpected_response_error").format(error=e))
-        logger.error(f"Metinden sese çevirme hatası: {e}")
+        st.error(get_text("voice_selection_error").format(error=e))
+        logger.error(f"Text-to-speech error: {e}")
         return False
 
 def record_audio():
-    """Kullanıcıdan ses girişi alır."""
+    """Records audio input from the user."""
     if not TTS_SR_AVAILABLE:
         st.warning(get_text("tts_sr_not_available"))
         return ""
+    
     r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write(get_text("voice_listening"))
-        try:
-            audio = r.listen(source, timeout=5, phrase_time_limit=10)
-        except sr.WaitTimeoutError:
-            st.warning(get_text("voice_no_audio"))
-            return ""
-        except Exception as e:
-            st.error(get_text("unexpected_audio_record_error").format(error=e))
-            return ""
-            
+    audio_placeholder = st.empty()
+    audio_placeholder.info(get_text("voice_listening"))
+    
     try:
-        text = r.recognize_google(audio, language="tr-TR") # Always use TR for recognition
-        st.write(get_text("voice_heard").format(text=text))
-        logger.info(f"Tanınan ses: {text}")
+        with sr.Microphone() as source:
+            r.adjust_for_ambient_noise(source) # Adjust for ambient noise
+            audio = r.listen(source, timeout=5, phrase_time_limit=10)
+        
+        audio_placeholder.info(get_text("voice_processing"))
+        
+        # Use the speech code for the current language
+        language_code = LANGUAGES[st.session_state.current_language]["speech_code"]
+        text = r.recognize_google(audio, language=language_code)
+        
+        audio_placeholder.success(get_text("voice_heard").format(text=text))
+        logger.info(f"Recognized speech: {text}")
         return text
+    except sr.WaitTimeoutError:
+        audio_placeholder.warning(get_text("mic_listen_timeout"))
+        logger.warning("Audio recording timed out.")
+        return ""
     except sr.UnknownValueError:
-        st.warning(get_text("voice_unknown"))
+        audio_placeholder.warning(get_text("voice_unknown"))
+        logger.warning("Speech recognition could not understand audio.")
         return ""
     except sr.RequestError as e:
-        st.error(get_text("voice_api_error").format(error=e))
+        audio_placeholder.error(get_text("voice_api_error").format(error=e))
+        logger.error(f"Speech recognition service error: {e}")
         return ""
     except Exception as e:
-        st.error(get_text("unexpected_audio_record_error").format(error=e))
+        audio_placeholder.error(get_text("unexpected_audio_record_error").format(error=e))
+        logger.error(f"Unexpected error during audio recording: {e}")
         return ""
 
 @st.cache_data(ttl=3600)
 def duckduckgo_search(query):
-    """DuckDuckGo kullanarak web araması yapar."""
+    """Performs a web search using DuckDuckGo."""
     try:
         with DDGS() as ddgs:
             results = [r for r in ddgs.text(query, max_results=5)]
@@ -1137,7 +1182,7 @@ def duckduckgo_search(query):
 
 @st.cache_data(ttl=3600)
 def wikipedia_search(query):
-    """Wikipedia'da arama yapar."""
+    """Searches Wikipedia."""
     try:
         response = requests.get(f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json")
         response.raise_for_status()
@@ -1156,14 +1201,14 @@ def wikipedia_search(query):
         return []
 
 def generate_image(prompt):
-    """Görsel oluşturma (örnek - placeholder)."""
+    """Image generation (example - placeholder)."""
     st.warning(get_text("image_gen_warning_placeholder"))
-    placeholder_image_url = "https://via.placeholder.com/400x300.png?text=Görsel+Oluşturuldu"
+    placeholder_image_url = "https://via.placeholder.com/400x300.png?text=Image+Generated"
     st.image(placeholder_image_url, caption=prompt)
     add_to_chat_history(st.session_state.active_chat_id, "model", get_text("image_generated_example").format(prompt=prompt))
 
 def process_image_input(uploaded_file):
-    """Yüklenen görseli işler ve metne dönüştürür."""
+    """Processes the uploaded image and converts it to text (vision)."""
     if uploaded_file is not None:
         try:
             image = Image.open(uploaded_file)
@@ -1171,6 +1216,8 @@ def process_image_input(uploaded_file):
             add_to_chat_history(st.session_state.active_chat_id, "user", image)
             
             if st.session_state.gemini_model:
+                # For vision, a new chat session with just the image and query is often sufficient
+                # unless you want to maintain a conversation about the image.
                 vision_chat_session = st.session_state.gemini_model.start_chat(history=[])
                 response = vision_chat_session.send_message([image, get_text("image_vision_query")])
                 response_text = response.text
@@ -1181,10 +1228,10 @@ def process_image_input(uploaded_file):
         except Exception as e:
             st.error(get_text("image_processing_error").format(error=e))
 
-# --- UI Bileşenleri ---
+# --- UI Components ---
 
 def display_welcome_and_profile_setup():
-    """Hoş geldiniz mesajı ve profil oluşturma/düzenleme."""
+    """Displays welcome message and profile creation/editing."""
     st.markdown("<h1 style='text-align: center;'>Hanogt AI</h1>", unsafe_allow_html=True)
     st.markdown(f"<h4 style='text-align: center; color: gray;'>{get_text('welcome_subtitle')}</h4>", unsafe_allow_html=True)
     st.write("---")
@@ -1207,16 +1254,15 @@ def display_welcome_and_profile_setup():
         st.markdown(f"<h3 style='text-align: center;'>{get_text('welcome_title')}</h3>", unsafe_allow_html=True)
         st.subheader(get_text("profile_title"))
         
-        # Profil resmi gösterimi
         if st.session_state.user_avatar:
             try:
                 profile_image = Image.open(io.BytesIO(st.session_state.user_avatar))
-                st.image(profile_image, caption=st.session_state.user_name if st.session_state.user_name else "Kullanıcı", width=150)
+                st.image(profile_image, caption=st.session_state.user_name if st.session_state.user_name else "User", width=150)
             except Exception as e:
                 st.warning(get_text("profile_image_load_error").format(error=e))
-                st.image("https://via.placeholder.com/150?text=Profil", width=150)
+                st.image("https://via.placeholder.com/150?text=Profile", width=150)
         else:
-            st.image("https://via.placeholder.com/150?text=Profil", width=150)
+            st.image("https://via.placeholder.com/150?text=Profile", width=150)
         
         new_name = st.text_input(get_text("profile_name_label"), key="initial_name_input")
         uploaded_avatar = st.file_uploader(get_text("profile_upload_label"), type=["png", "jpg", "jpeg"], key="initial_avatar_upload")
@@ -1231,7 +1277,7 @@ def display_welcome_and_profile_setup():
     st.write("---")
 
 def display_settings_and_personalization():
-    """Ayarlar ve Kişiselleştirme bölümünü gösterir."""
+    """Displays the Settings and Personalization section."""
     st.markdown(f"## {get_text('settings_personalization_title')}")
 
     new_name = st.text_input(get_text("settings_name_change_label"), value=st.session_state.user_name, key="settings_name_input")
@@ -1252,24 +1298,23 @@ def display_settings_and_personalization():
     st.write("---")
 
 def display_about_section():
-    """'Hakkımızda' bölümünü gösterir."""
+    """Displays the 'About Us' section."""
     st.markdown(f"## {get_text('about_us_title')}")
     st.markdown(get_text("about_us_text"))
     st.write("---")
 
 def display_main_chat_interface():
-    """Ana sohbet arayüzünü gösterir."""
+    """Displays the main chat interface."""
     
-    # Ayarlar ve Hakkımızda butonları
     col_settings, col_about = st.columns(2)
     with col_settings:
         if st.button(get_text("settings_button"), key="toggle_settings"):
             st.session_state.show_settings = not st.session_state.show_settings
-            st.session_state.show_about = False # Diğerini kapat
+            st.session_state.show_about = False
     with col_about:
         if st.button(get_text("about_button"), key="toggle_about"):
             st.session_state.show_about = not st.session_state.show_about
-            st.session_state.show_settings = False # Diğerini kapat
+            st.session_state.show_settings = False
 
     if st.session_state.show_settings:
         display_settings_and_personalization()
@@ -1286,11 +1331,12 @@ def display_main_chat_interface():
         get_text("chat_mode_creative")
     ]
     st.session_state.chat_mode = st.radio(
-        "Mod Seçimi", # Etiket Streamlit tarafından gösterilmeyecek olsa da, erişilebilirlik için dolu olmalı.
+        "Mode Selection",
         mode_options,
         horizontal=True,
         index=mode_options.index(st.session_state.chat_mode) if st.session_state.chat_mode in mode_options else 0,
-        key="main_mode_radio"
+        key="main_mode_radio",
+        label_visibility="collapsed" # Hide default label for cleaner UI
     )
     
     current_mode_string = st.session_state.chat_mode 
@@ -1305,7 +1351,7 @@ def display_main_chat_interface():
         handle_creative_studio()
 
 def handle_text_chat():
-    """Yazılı sohbet modunu yönetir."""
+    """Manages the text chat mode."""
     chat_messages = st.session_state.all_chats.get(st.session_state.active_chat_id, [])
 
     for message_index, message in enumerate(chat_messages):
@@ -1344,8 +1390,9 @@ def handle_text_chat():
     if prompt:
         add_to_chat_history(st.session_state.active_chat_id, "user", prompt)
         
-        if prompt.lower().startswith("web ara:"):
-            query = prompt[len("web ara:"):].strip()
+        # Command handling (web search, wiki search, image generation)
+        if prompt.lower().startswith("web ara:") or prompt.lower().startswith("web search:"):
+            query = prompt.split(":", 1)[1].strip()
             results = duckduckgo_search(query)
             if results:
                 response_text = get_text("web_search_results") + "\n"
@@ -1354,8 +1401,8 @@ def handle_text_chat():
             else:
                 response_text = get_text("web_search_no_results")
             add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-        elif prompt.lower().startswith("wiki ara:"):
-            query = prompt[len("wiki ara:"):].strip()
+        elif prompt.lower().startswith("wiki ara:") or prompt.lower().startswith("wiki search:"):
+            query = prompt.split(":", 1)[1].strip()
             results = wikipedia_search(query)
             if results:
                 response_text = get_text("wikipedia_search_results") + "\n"
@@ -1364,32 +1411,36 @@ def handle_text_chat():
             else:
                 response_text = get_text("wikipedia_search_no_results")
             add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-        elif prompt.lower().startswith("görsel oluştur:"):
-            image_prompt = prompt[len("görsel oluştur:"):].strip()
+        elif prompt.lower().startswith("görsel oluştur:") or prompt.lower().startswith("image generate:"):
+            image_prompt = prompt.split(":", 1)[1].strip()
             generate_image(image_prompt)
         else:
-            # Buradaki kontrolü doğrudan kullanabilirsiniz çünkü initialize_session_state() içinde zaten başlatılıyor.
-            if st.session_state.gemini_model: 
+            # Regular chat interaction with Gemini
+            if st.session_state.gemini_model:
                 with st.spinner(get_text("generating_response")):
                     try:
+                        # Prepare history for Gemini, handling potential image parts
                         processed_history = []
                         for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
                             if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
                                 try:
+                                    # Convert stored image bytes back to PIL Image for Gemini
                                     processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
-                                except Exception:
-                                    continue
+                                except Exception as e:
+                                    logger.error(f"Error converting stored image bytes to PIL Image: {e}")
+                                    continue # Skip problematic image entries
                             else:
                                 processed_history.append(msg)
 
-                        # chat_session'ı yalnızca ilk kez başlat veya sıfırla
+                        # Check if a chat session exists and if its history matches the current chat_messages
+                        # If not, initialize a new chat session to ensure correct context
                         if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
-                             st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+                            st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
                         
                         response = st.session_state.chat_session.send_message(prompt, stream=True)
                         
                         response_text = ""
-                        response_placeholder = st.empty() 
+                        response_placeholder = st.empty()
                         for chunk in response:
                             response_text += chunk.text
                             with response_placeholder.container():
@@ -1404,7 +1455,7 @@ def handle_text_chat():
         st.rerun()
 
 def handle_image_generation():
-    """Görsel oluşturma modunu yönetir."""
+    """Manages the image generation mode."""
     st.subheader(get_text("image_gen_title"))
     image_prompt = st.text_input(get_text("image_gen_input_label"), key="image_prompt_input")
     if st.button(get_text("image_gen_button"), key="generate_image_button"):
@@ -1414,12 +1465,13 @@ def handle_image_generation():
             st.warning(get_text("image_gen_warning_prompt_missing"))
 
 def handle_voice_chat():
-    """Sesli sohbet modunu yönetir."""
+    """Manages the voice chat mode."""
     st.subheader(get_text("voice_chat_title"))
     
     if not TTS_SR_AVAILABLE:
-        st.info(get_text("voice_not_available"))
+        st.info(get_text("tts_sr_not_available"))
     else:
+        # Placeholder for audio file upload (as per original code)
         uploaded_audio_file = st.file_uploader(get_text("voice_upload_label"), type=["mp3", "wav"], key="audio_uploader")
         if uploaded_audio_file:
             st.audio(uploaded_audio_file, format=uploaded_audio_file.type)
@@ -1427,30 +1479,35 @@ def handle_voice_chat():
 
         st.markdown("---")
         st.subheader(get_text("voice_live_input_title"))
+        
         if st.button(get_text("voice_mic_button"), key="start_mic_button"):
             recognized_text = record_audio()
+            
             if recognized_text:
                 add_to_chat_history(st.session_state.active_chat_id, "user", recognized_text)
 
                 if st.session_state.gemini_model:
                     with st.spinner(get_text("generating_response")):
                         try:
+                            # Prepare history for Gemini, handling potential image parts
                             processed_history = []
                             for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
                                 if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
                                     try:
                                         processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
-                                    except Exception:
+                                    except Exception as e:
+                                        logger.error(f"Error converting stored image bytes to PIL Image during voice chat history processing: {e}")
                                         continue
                                 else:
                                     processed_history.append(msg)
 
-                            # chat_session'ı yalnızca ilk kez başlat veya sıfırla
+                            # Ensure chat_session is correctly initialized/updated with full history
                             if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
                                 st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
                             
                             response = st.session_state.chat_session.send_message(recognized_text, stream=True)
                             response_text = ""
+                            # Display AI response as it streams
                             response_placeholder = st.empty()
                             for chunk in response:
                                 response_text += chunk.text
@@ -1458,16 +1515,19 @@ def handle_voice_chat():
                                     st.markdown(response_text)
                             
                             add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
+                            
+                            # Speak the AI's response
                             text_to_speech(response_text)
-                            st.rerun()
 
                         except Exception as e:
                             st.error(get_text("gemini_response_error").format(error=e))
+                            logger.error(f"Gemini response error in voice chat: {e}")
                 else:
                     st.warning(get_text("gemini_model_not_initialized"))
+            st.rerun() # Rerun to display updated chat history
 
 def handle_creative_studio():
-    """Yaratıcı stüdyo modunu yönetir."""
+    """Manages the creative studio mode."""
     st.subheader(get_text("creative_studio_title"))
     st.write(get_text("creative_studio_info"))
     
@@ -1477,10 +1537,9 @@ def handle_creative_studio():
             if st.session_state.gemini_model:
                 with st.spinner(get_text("generating_response")):
                     try:
-                        # Creative studio için her zaman yeni bir session başlatılabilir veya önceki session kullanılabilir.
-                        # Eğer geçmişi tutmak istemiyorsanız 'history=[]' ile başlatmak mantıklıdır.
+                        # For creative studio, a fresh session without prior history might be preferred
                         creative_chat_session = st.session_state.gemini_model.start_chat(history=[])
-                        response = creative_chat_session.send_message(f"Yaratıcı metin oluştur: {creative_prompt}", stream=True)
+                        response = creative_chat_session.send_message(f"Generate creative text: {creative_prompt}", stream=True) # Clarified prompt
                         
                         response_text = ""
                         response_placeholder = st.empty()
@@ -1498,12 +1557,12 @@ def handle_creative_studio():
             st.warning(get_text("creative_studio_warning_prompt_missing"))
 
 
-# --- Ana Uygulama Mantığı ---
+# --- Main Application Logic ---
 
 def main():
-    """Ana Streamlit uygulamasını çalıştırır."""
+    """Runs the main Streamlit application."""
     st.set_page_config(
-        page_title="Hanogt AI Asistan",
+        page_title="Hanogt AI Assistant",
         page_icon="✨",
         layout="wide",
         initial_sidebar_state="collapsed"
@@ -1511,18 +1570,18 @@ def main():
 
     initialize_session_state()
 
-    # CSS enjeksiyonu (Streamlit üzerinde sınırlı etki)
+    # CSS injection (limited effect on Streamlit)
     st.markdown("""
         <style>
-            /* Streamlit header'ı gizle - sağ üstteki menüleri içerir */
+            /* Hide Streamlit header - includes top-right menus */
             header.st-emotion-cache-zq5bqg.ezrtsby0 {
                 display: none;
             }
-            /* Sol üstteki menü açma butonunu gizle */
+            /* Hide top-left menu open button */
             .st-emotion-cache-1avcm0k.e1tzin5v2 {
                 display: none;
             }
-            /* Uygulama başlığını ortala */
+            /* Center app title */
             h1 {
                 text-align: center;
             }
@@ -1530,37 +1589,33 @@ def main():
     """, unsafe_allow_html=True)
 
 
-    # Dil Seçici Butonu (Sol üst köşede)
+    # Language Selector Button (Top-left corner)
     col_lang, _ = st.columns([0.1, 0.9])
     with col_lang:
         current_lang_display = f"{LANGUAGES[st.session_state.current_language]['emoji']} {st.session_state.current_language}"
         lang_options = [f"{v['emoji']} {k}" for k, v in LANGUAGES.items()]
         
-        # Seçili dilin index'ini bul, yoksa ilk seçeneği varsay
-        selected_lang_index = 0 # Varsayılan olarak ilk öğeyi seç
+        selected_lang_index = 0
         if current_lang_display in lang_options:
             selected_lang_index = lang_options.index(current_lang_display)
 
-        # Düzeltme: label parametresine anlamlı bir değer verildi ve görsel olarak gizlendi.
         selected_lang_display = st.selectbox(
-            label="Uygulama dilini seçin", # Boş olmayan bir etiket
+            label="Select application language",
             options=lang_options,
             index=selected_lang_index,
             key="language_selector",
-            help="Uygulama dilini seçin",
-            label_visibility="hidden" # Etiketi görsel olarak gizle
+            help="Select application language",
+            label_visibility="hidden"
         )
         
-        new_lang_code = selected_lang_display.split(" ")[1] 
+        new_lang_code = selected_lang_display.split(" ")[1]
         if new_lang_code != st.session_state.current_language:
             st.session_state.current_language = new_lang_code
             st.rerun()
 
-    # Profil bilgisi girilmediyse, başlangıç ekranını göster
     if st.session_state.user_name == "":
         display_welcome_and_profile_setup()
     else:
-        # Uygulamanın ana başlığı
         st.markdown("<h1 style='text-align: center;'>Hanogt AI</h1>", unsafe_allow_html=True)
         st.markdown(f"<h4 style='text-align: center; color: gray;'>{get_text('welcome_subtitle')}</h4>", unsafe_allow_html=True)
         st.write("---")
@@ -1571,7 +1626,7 @@ def main():
     st.markdown("---")
     st.markdown(f"""
         <div style="text-align: center; font-size: 12px; color: gray;">
-            {get_text('footer_user').format(user_name=st.session_state.user_name if st.session_state.user_name else "Misafir")} <br>
+            {get_text('footer_user').format(user_name=st.session_state.user_name if st.session_state.user_name else "Guest")} <br>
             {get_text('footer_version').format(year=datetime.datetime.now().year)} <br>
             {get_text('footer_ai_status').format(model_name=GLOBAL_MODEL_NAME)}
         </div>
