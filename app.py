@@ -48,8 +48,8 @@ LANGUAGES = {
     "ES": {"name": "Español", "emoji": "🇪🇸", "speech_code": "es-ES"},
     "DE": {"name": "Deutsch", "emoji": "🇩🇪", "speech_code": "de-DE"},
     "RU": {"name": "Русский", "emoji": "🇷🇺", "speech_code": "ru-RU"},
-    "SA": {"name": "العربية", "emoji": "🇸🇦", "speech_code": "ar-SA"}, # Arabic might need specific voice pack
-    "AZ": {"name": "Azərbaycan dili", "emoji": "🇦🇿", "speech_code": "az-AZ"}, # Azerbaijani might need specific voice pack
+    "SA": {"name": "العربية", "emoji": "🇸🇦", "speech_code": "ar-SA"},
+    "AZ": {"name": "Azərbaycan dili", "emoji": "🇦🇿", "speech_code": "az-AZ"},
     "JP": {"name": "日本語", "emoji": "🇯🇵", "speech_code": "ja-JP"},
     "KR": {"name": "한국어", "emoji": "🇰🇷", "speech_code": "ko-KR"},
 }
@@ -70,41 +70,33 @@ def get_text(key):
             "profile_edit_info": "Ayarlar & Kişiselleştirme bölümünden profilinizi düzenleyebilirsiniz.",
             "ai_features_title": "Hanogt AI Özellikleri:",
             "feature_general_chat": "Genel sohbet",
-            "feature_web_search": "Web araması (DuckDuckGo)", # Updated
-            "feature_wikipedia_search": "Wikipedia araması", # New
-            "feature_research": "Araştırma (Web, Wiki)", # New for the button
+            "feature_web_search": "Web araması (DuckDuckGo)",
+            "feature_wikipedia_search": "Wikipedia araması",
+            "feature_research_overview": "Araştırma (Web, Wikipedia)",
             "feature_knowledge_base": "Bilgi tabanı yanıtları",
             "feature_creative_text": "Yaratıcı metin üretimi",
             "feature_image_generation": "Basit görsel oluşturma (örnek)",
             "feature_feedback": "Geri bildirim mekanizması",
             "settings_button": "⚙️ Ayarlar & Kişiselleştirme",
             "about_button": "ℹ️ Hakkımızda",
-            "app_mode_title": "Uygulama Modu",
-            "chat_mode_text": "💬 Yazılı Sohbet",
-            "chat_mode_image": "🖼️ Görsel Oluşturucu",
-            "chat_mode_creative": "✨ Yaratıcı Stüdyo",
-            "chat_mode_research": "🔍 Araştırma", # New research mode
-            "chat_input_placeholder": "Mesajınızı yazın veya bir komut girin: Örn: 'Merhaba', 'web ara: Streamlit'...",
+            "chat_input_placeholder": "Mesajınızı yazın veya bir komut girin: Örn: 'Merhaba', 'resim oluştur: bir kedi', 'web ara: Streamlit'...",
             "generating_response": "Yanıt oluşturuluyor...",
-            "tts_button": "▶️", # Kept for potential future use or other text output
             "feedback_button": "👍",
             "feedback_toast": "Geri bildirim için teşekkürler!",
-            "image_gen_title": "Görsel Oluşturucu",
-            "image_gen_input_label": "Oluşturmak istediğiniz görseli tanımlayın:",
-            "image_gen_button": "Görsel Oluştur",
+            "image_gen_title": "Oluşturulan Görsel",
+            "image_gen_input_label": "Oluşturmak istediğiniz görseli tanımlayın:", # No longer used in main chat, but kept for clarity if a dedicated image mode is re-added.
+            "image_gen_button": "Görsel Oluştur", # No longer used in main chat
             "image_gen_warning_placeholder": "Görsel oluşturma özelliği şu anda bir placeholder'dır ve gerçek bir API'ye bağlı değildir.",
             "image_gen_warning_prompt_missing": "Lütfen bir görsel açıklaması girin.",
-            "creative_studio_title": "Yaratıcı Stüdyo",
+            "creative_studio_title": "Yaratıcı Stüdyo", # This mode is conceptually removed, but text keys remain.
             "creative_studio_info": "Bu bölüm, yaratıcı metin üretimi gibi gelişmiş özellikler için tasarlanmıştır.",
             "creative_studio_input_label": "Yaratıcı metin isteğinizi girin:",
             "creative_studio_button": "Metin Oluştur",
             "creative_studio_warning_prompt_missing": "Lütfen bir yaratıcı metin isteği girin.",
-            "research_title": "🔍 Araştırma Modu", # New
-            "research_info": "Burada web aramaları (DuckDuckGo) ve Wikipedia aramaları yapabilirsiniz.", # New
-            "research_input_label": "Aramak istediğiniz konuyu girin (örneğin: 'Streamlit', 'yapay zeka'):", # New
-            "research_web_button": "Web Ara (DuckDuckGo)", # New
-            "research_wiki_button": "Wikipedia Ara", # New
-            "research_warning_prompt_missing": "Lütfen aramak istediğiniz bir konu girin.", # New
+            "research_title": "🔍 Araştırma Sonuçları",
+            "research_info": "Aşağıda son aramanızla ilgili hem web'den hem de Wikipedia'dan toplanan bilgiler bulunmaktadır.",
+            "research_button_text_on": "Araştırmayı Kapat",
+            "research_button_text_off": "Araştır",
             "settings_personalization_title": "Ayarlar & Kişiselleştirme",
             "settings_name_change_label": "Adınızı Değiştir:",
             "settings_avatar_change_label": "Profil Resmini Değiştir (isteğe bağlı)",
@@ -130,17 +122,17 @@ def get_text(key):
             "source_error": "Kaynak: Hata ({error})",
             "chat_cleared_toast": "Aktif sohbet temizlendi!",
             "profile_image_load_error": "Profil resmi yüklenemedi: {error}",
-            "web_search_results": "Web Arama Sonuçları:",
-            "web_search_no_results": "Aradığınız terimle ilgili sonuç bulunamadı.",
-            "wikipedia_search_results": "Wikipedia Arama Sonuçları:",
-            "wikipedia_search_no_results": "Aradığınız terimle ilgili sonuç bulunamadı.",
+            "web_search_results": "Web'den Bilgiler:",
+            "web_search_no_results": "Web'de ilgili bilgi bulunamadı.",
+            "wikipedia_search_results": "Wikipedia'dan Bilgiler:",
+            "wikipedia_search_no_results": "Wikipedia'da ilgili bilgi bulunamadı.",
             "image_generated_example": "'{prompt}' için bir görsel oluşturuldu (örnek).",
             "image_upload_caption": "Yüklenen Görsel",
             "image_processing_error": "Görsel işlenirken bir hata oluştu: {error}",
             "image_vision_query": "Bu görselde ne görüyorsun?",
-            "loading_audio_file": "Ses dosyası yükleniyor...", # Kept for consistency if other audio features are added
             "gemini_response_error": "Yanıt alınırken beklenmeyen bir hata oluştu: {error}",
             "creative_text_generated": "Yaratıcı Metin Oluşturuldu: {text}",
+            "research_input_required": "Araştırma yapmak için önce bir mesaj girin."
         },
         "EN": {
             "welcome_title": "Hanogt AI",
@@ -153,26 +145,20 @@ def get_text(key):
             "profile_edit_info": "You can edit your profile in the Settings & Personalization section.",
             "ai_features_title": "Hanogt AI Features:",
             "feature_general_chat": "General chat",
-            "feature_web_search": "Web search (DuckDuckGo)", # Updated
-            "feature_wikipedia_search": "Wikipedia search", # New
-            "feature_research": "Research (Web, Wiki)", # New for the button
+            "feature_web_search": "Web search (DuckDuckGo)",
+            "feature_wikipedia_search": "Wikipedia search",
+            "feature_research_overview": "Research (Web, Wikipedia)",
             "feature_knowledge_base": "Knowledge base responses",
             "feature_creative_text": "Creative text generation",
             "feature_image_generation": "Simple image generation (placeholder)",
             "feature_feedback": "Feedback mechanism",
             "settings_button": "⚙️ Settings & Personalization",
             "about_button": "ℹ️ About Us",
-            "app_mode_title": "Application Mode",
-            "chat_mode_text": "💬 Text Chat",
-            "chat_mode_image": "🖼️ Image Generator",
-            "chat_mode_creative": "✨ Creative Studio",
-            "chat_mode_research": "🔍 Research", # New research mode
-            "chat_input_placeholder": "Type your message or enter a command: E.g., 'Hello', 'web search: Streamlit'...",
+            "chat_input_placeholder": "Type your message or enter a command: E.g., 'Hello', 'image generate: a cat', 'web search: Streamlit'...",
             "generating_response": "Generating response...",
-            "tts_button": "▶️",
             "feedback_button": "👍",
             "feedback_toast": "Thanks for your feedback!",
-            "image_gen_title": "Image Generator",
+            "image_gen_title": "Generated Image",
             "image_gen_input_label": "Describe the image you want to create:",
             "image_gen_button": "Generate Image",
             "image_gen_warning_placeholder": "Image generation feature is currently a placeholder and not connected to a real API.",
@@ -182,12 +168,10 @@ def get_text(key):
             "creative_studio_input_label": "Enter your creative text request:",
             "creative_studio_button": "Generate Text",
             "creative_studio_warning_prompt_missing": "Please enter a creative text request.",
-            "research_title": "🔍 Research Mode", # New
-            "research_info": "Here you can perform web searches (DuckDuckGo) and Wikipedia searches.", # New
-            "research_input_label": "Enter the topic you want to search for (e.g., 'Streamlit', 'artificial intelligence'):", # New
-            "research_web_button": "Search Web (DuckDuckGo)", # New
-            "research_wiki_button": "Search Wikipedia", # New
-            "research_warning_prompt_missing": "Please enter a topic to search.", # New
+            "research_title": "🔍 Research Results",
+            "research_info": "Below is information gathered from both the web and Wikipedia related to your last query.",
+            "research_button_text_on": "Close Research",
+            "research_button_text_off": "Research",
             "settings_personalization_title": "Settings & Personalization",
             "settings_name_change_label": "Change Your Name:",
             "settings_avatar_change_label": "Change Profile Picture (optional)",
@@ -213,17 +197,17 @@ def get_text(key):
             "source_error": "Source: Error ({error})",
             "chat_cleared_toast": "Active chat cleared!",
             "profile_image_load_error": "Could not load profile image: {error}",
-            "web_search_results": "Web Search Results:",
-            "web_search_no_results": "No results found for your search term.",
-            "wikipedia_search_results": "Wikipedia Search Results:",
-            "wikipedia_search_no_results": "No results found for your search term.",
+            "web_search_results": "Information from Web:",
+            "web_search_no_results": "No relevant information found on the web.",
+            "wikipedia_search_results": "Information from Wikipedia:",
+            "wikipedia_search_no_results": "No relevant information found on Wikipedia.",
             "image_generated_example": "An image for '{prompt}' was generated (example).",
             "image_upload_caption": "Uploaded Image",
             "image_processing_error": "An error occurred while processing the image: {error}",
             "image_vision_query": "What do you see in this image?",
-            "loading_audio_file": "Loading audio file...",
             "gemini_response_error": "An unexpected error occurred while getting a response: {error}",
             "creative_text_generated": "Creative Text Generated: {text}",
+            "research_input_required": "Please enter a message first to perform research."
         },
         "FR": {
             "welcome_title": "Hanogt AI",
@@ -238,24 +222,18 @@ def get_text(key):
             "feature_general_chat": "Chat général",
             "feature_web_search": "Recherche Web (DuckDuckGo)",
             "feature_wikipedia_search": "Recherche Wikipédia",
-            "feature_research": "Recherche (Web, Wiki)",
+            "feature_research_overview": "Recherche (Web, Wikipédia)",
             "feature_knowledge_base": "Réponses basées sur la connaissance",
             "feature_creative_text": "Génération de texte créatif",
             "feature_image_generation": "Génération d'images simple (aperçu)",
             "feature_feedback": "Mécanisme de feedback",
             "settings_button": "⚙️ Paramètres & Personnalisation",
             "about_button": "ℹ️ À Propos",
-            "app_mode_title": "Mode de l'application",
-            "chat_mode_text": "💬 Chat Textuel",
-            "chat_mode_image": "🖼️ Générateur d'Images",
-            "chat_mode_creative": "✨ Studio Créatif",
-            "chat_mode_research": "🔍 Recherche",
-            "chat_input_placeholder": "Tapez votre message ou une commande : Ex: 'Bonjour', 'recherche web: Streamlit'...",
+            "chat_input_placeholder": "Tapez votre message ou une commande : Ex: 'Bonjour', 'générer image: un chat', 'recherche web: Streamlit'...",
             "generating_response": "Génération de la réponse...",
-            "tts_button": "▶️",
             "feedback_button": "👍",
             "feedback_toast": "Merci pour votre feedback !",
-            "image_gen_title": "Générateur d'Images",
+            "image_gen_title": "Image Générée",
             "image_gen_input_label": "Décrivez l'image que vous voulez créer :",
             "image_gen_button": "Générer l'Image",
             "image_gen_warning_placeholder": "La fonction de génération d'images est actuellement un aperçu et n'est pas connectée à une véritable API.",
@@ -265,12 +243,10 @@ def get_text(key):
             "creative_studio_input_label": "Entrez votre demande de texte créatif :",
             "creative_studio_button": "Générer du Texte",
             "creative_studio_warning_prompt_missing": "Veuillez entrer une demande de texte créatif.",
-            "research_title": "🔍 Mode Recherche",
-            "research_info": "Ici, vous pouvez effectuer des recherches web (DuckDuckGo) et des recherches Wikipédia.",
-            "research_input_label": "Entrez le sujet que vous voulez rechercher (par exemple : 'Streamlit', 'intelligence artificielle') :",
-            "research_web_button": "Recherche Web (DuckDuckGo)",
-            "research_wiki_button": "Recherche Wikipédia",
-            "research_warning_prompt_missing": "Veuillez entrer un sujet à rechercher.",
+            "research_title": "🔍 Résultats de Recherche",
+            "research_info": "Voici les informations recueillies sur le web et Wikipédia concernant votre dernière requête.",
+            "research_button_text_on": "Fermer la Recherche",
+            "research_button_text_off": "Rechercher",
             "settings_personalization_title": "Paramètres & Personnalisation",
             "settings_name_change_label": "Changer votre nom :",
             "settings_avatar_change_label": "Changer la photo de profil (facultatif)",
@@ -296,17 +272,17 @@ def get_text(key):
             "source_error": "Source : Erreur ({error})",
             "chat_cleared_toast": "Chat actif effacé !",
             "profile_image_load_error": "Impossible de charger l'image de profil : {error}",
-            "web_search_results": "Résultats de la recherche Web :",
-            "web_search_no_results": "Aucun résultat trouvé pour votre terme de recherche.",
-            "wikipedia_search_results": "Résultats de la recherche Wikipédia :",
-            "wikipedia_search_no_results": "Aucun résultat trouvé pour votre terme de recherche.",
+            "web_search_results": "Informations du Web :",
+            "web_search_no_results": "Aucune information pertinente trouvée sur le web.",
+            "wikipedia_search_results": "Informations de Wikipédia :",
+            "wikipedia_search_no_results": "Aucune information pertinente trouvée sur Wikipédia.",
             "image_generated_example": "Une image pour '{prompt}' a été générée (exemple).",
             "image_upload_caption": "Image Téléchargée",
             "image_processing_error": "Une erreur s'est produite lors du traitement de l'image : {error}",
             "image_vision_query": "Que voyez-vous dans cette image ?",
-            "loading_audio_file": "Chargement du fichier audio...",
             "gemini_response_error": "Une erreur inattendue s'est produite lors de l'obtention d'une réponse : {error}",
             "creative_text_generated": "Texte Créatif Généré : {text}",
+            "research_input_required": "Veuillez d'abord entrer un message pour effectuer une recherche."
         },
         "ES": {
             "welcome_title": "Hanogt AI",
@@ -321,24 +297,18 @@ def get_text(key):
             "feature_general_chat": "Chat general",
             "feature_web_search": "Búsqueda web (DuckDuckGo)",
             "feature_wikipedia_search": "Búsqueda en Wikipedia",
-            "feature_research": "Investigación (Web, Wiki)",
+            "feature_research_overview": "Investigación (Web, Wikipedia)",
             "feature_knowledge_base": "Respuestas de la base de conocimientos",
             "feature_creative_text": "Generación de texto creativo",
             "feature_image_generation": "Generación simple de imágenes (ejemplo)",
             "feature_feedback": "Mecanismo de retroalimentación",
             "settings_button": "⚙️ Configuración & Personalización",
             "about_button": "ℹ️ Acerca de Nosotros",
-            "app_mode_title": "Modo de Aplicación",
-            "chat_mode_text": "💬 Chat de Texto",
-            "chat_mode_image": "🖼️ Generador de Imágenes",
-            "chat_mode_creative": "✨ Estudio Creativo",
-            "chat_mode_research": "🔍 Investigación",
-            "chat_input_placeholder": "Escribe tu mensaje o un comando: Ej.: 'Hola', 'búsqueda web: Streamlit'...",
+            "chat_input_placeholder": "Escribe tu mensaje o un comando: Ej.: 'Hola', 'generar imagen: un gato', 'búsqueda web: Streamlit'...",
             "generating_response": "Generando respuesta...",
-            "tts_button": "▶️",
             "feedback_button": "👍",
             "feedback_toast": "¡Gracias por tu comentario!",
-            "image_gen_title": "Generador de Imágenes",
+            "image_gen_title": "Imagen Generada",
             "image_gen_input_label": "Describe la imagen que quieres crear:",
             "image_gen_button": "Generar Imagen",
             "image_gen_warning_placeholder": "La función de generación de imágenes es actualmente un marcador de posición y no está conectada a una API real.",
@@ -348,12 +318,10 @@ def get_text(key):
             "creative_studio_input_label": "Introduce tu solicitud de texto creativo:",
             "creative_studio_button": "Generar Texto",
             "creative_studio_warning_prompt_missing": "Por favor, introduce una solicitud de texto creativo.",
-            "research_title": "🔍 Modo de Investigación",
-            "research_info": "Aquí puedes realizar búsquedas web (DuckDuckGo) y búsquedas en Wikipedia.",
-            "research_input_label": "Introduce el tema que quieres buscar (ejemplo: 'Streamlit', 'inteligencia artificial'):",
-            "research_web_button": "Buscar en la Web (DuckDuckGo)",
-            "research_wiki_button": "Buscar en Wikipedia",
-            "research_warning_prompt_missing": "Por favor, introduce un tema a buscar.",
+            "research_title": "🔍 Resultados de Investigación",
+            "research_info": "Aquí tienes la información recopilada de la web y Wikipedia relacionada con tu última consulta.",
+            "research_button_text_on": "Cerrar Investigación",
+            "research_button_text_off": "Investigar",
             "settings_personalization_title": "Configuración & Personalización",
             "settings_name_change_label": "Cambiar tu nombre:",
             "settings_avatar_change_label": "Cambiar foto de perfil (opcional)",
@@ -379,17 +347,17 @@ def get_text(key):
             "source_error": "Fuente: Error ({error})",
             "chat_cleared_toast": "¡Chat activo borrado!",
             "profile_image_load_error": "No se pudo cargar la imagen de perfil: {error}",
-            "web_search_results": "Resultados de la Búsqueda Web:",
-            "web_search_no_results": "No se encontraron resultados para su término de búsqueda.",
-            "wikipedia_search_results": "Resultados de la Búsqueda de Wikipedia:",
-            "wikipedia_search_no_results": "No se encontraron resultados para su término de búsqueda.",
+            "web_search_results": "Información de la Web:",
+            "web_search_no_results": "No se encontró información relevante en la web.",
+            "wikipedia_search_results": "Información de Wikipedia:",
+            "wikipedia_search_no_results": "No se encontró información relevante en Wikipedia.",
             "image_generated_example": "Se generó una imagen para '{prompt}' (ejemplo).",
             "image_upload_caption": "Imagen Subida",
             "image_processing_error": "Se produjo un error al procesar la imagen: {error}",
             "image_vision_query": "¿Qué ves en esta imagen?",
-            "loading_audio_file": "Cargando archivo de audio...",
             "gemini_response_error": "Se produjo un error inesperado al obtener una respuesta: {error}",
             "creative_text_generated": "Texto Creativo Generado: {text}",
+            "research_input_required": "Por favor, introduce un mensaje primero para realizar la investigación."
         },
         "DE": {
             "welcome_title": "Hanogt AI",
@@ -404,24 +372,18 @@ def get_text(key):
             "feature_general_chat": "Allgemeiner Chat",
             "feature_web_search": "Websuche (DuckDuckGo)",
             "feature_wikipedia_search": "Wikipedia-Suche",
-            "feature_research": "Recherche (Web, Wiki)",
+            "feature_research_overview": "Recherche (Web, Wikipedia)",
             "feature_knowledge_base": "Wissensdatenbank-Antworten",
             "feature_creative_text": "Kreative Texterstellung",
             "feature_image_generation": "Einfache Bilderzeugung (Beispiel)",
             "feature_feedback": "Feedback-Mechanismus",
             "settings_button": "⚙️ Einstellungen & Personalisierung",
             "about_button": "ℹ️ Über Uns",
-            "app_mode_title": "Anwendungsmodus",
-            "chat_mode_text": "💬 Text-Chat",
-            "chat_mode_image": "🖼️ Bilderzeuger",
-            "chat_mode_creative": "✨ Kreativ-Studio",
-            "chat_mode_research": "🔍 Recherche",
-            "chat_input_placeholder": "Geben Sie Ihre Nachricht oder einen Befehl ein: Z.B. 'Hallo', 'websuche: Streamlit'...",
+            "chat_input_placeholder": "Geben Sie Ihre Nachricht oder einen Befehl ein: Z.B. 'Hallo', 'bild erzeugen: eine Katze', 'websuche: Streamlit'...",
             "generating_response": "Antwort wird generiert...",
-            "tts_button": "▶️",
             "feedback_button": "👍",
             "feedback_toast": "Vielen Dank für Ihr Feedback!",
-            "image_gen_title": "Bilderzeuger",
+            "image_gen_title": "Erzeugtes Bild",
             "image_gen_input_label": "Beschreiben Sie das Bild, das Sie erstellen möchten:",
             "image_gen_button": "Bild erzeugen",
             "image_gen_warning_placeholder": "Die Bilderzeugungsfunktion ist derzeit ein Platzhalter und nicht mit einer echten API verbunden.",
@@ -431,12 +393,10 @@ def get_text(key):
             "creative_studio_input_label": "Geben Sie Ihre kreative Textanfrage ein:",
             "creative_studio_button": "Text erzeugen",
             "creative_studio_warning_prompt_missing": "Bitte geben Sie eine kreative Textanfrage ein.",
-            "research_title": "🔍 Recherchemodus",
-            "research_info": "Hier können Sie Websuchen (DuckDuckGo) und Wikipedia-Suchen durchführen.",
-            "research_input_label": "Geben Sie das Thema ein, nach dem Sie suchen möchten (z.B. 'Streamlit', 'künstliche Intelligenz'):",
-            "research_web_button": "Web suchen (DuckDuckGo)",
-            "research_wiki_button": "Wikipedia suchen",
-            "research_warning_prompt_missing": "Bitte geben Sie ein Thema zum Suchen ein.",
+            "research_title": "🔍 Rechercheergebnisse",
+            "research_info": "Nachfolgend finden Sie Informationen, die sowohl aus dem Web als auch von Wikipedia zu Ihrer letzten Anfrage gesammelt wurden.",
+            "research_button_text_on": "Recherche schließen",
+            "research_button_text_off": "Recherchieren",
             "settings_personalization_title": "Einstellungen & Personalisierung",
             "settings_name_change_label": "Namen ändern:",
             "settings_avatar_change_label": "Profilbild ändern (optional)",
@@ -462,17 +422,17 @@ def get_text(key):
             "source_error": "Quelle: Fehler ({error})",
             "chat_cleared_toast": "Aktueller Chat gelöscht!",
             "profile_image_load_error": "Profilbild konnte nicht geladen werden: {error}",
-            "web_search_results": "Websuchergebnisse:",
-            "web_search_no_results": "Keine Ergebnisse für Ihren Suchbegriff gefunden.",
-            "wikipedia_search_results": "Wikipedia-Suchergebnisse:",
-            "wikipedia_search_no_results": "Keine Ergebnisse für Ihren Suchbegriff gefunden.",
+            "web_search_results": "Informationen aus dem Web:",
+            "web_search_no_results": "Keine relevanten Informationen im Web gefunden.",
+            "wikipedia_search_results": "Informationen aus Wikipedia:",
+            "wikipedia_search_no_results": "Keine relevanten Informationen in Wikipedia gefunden.",
             "image_generated_example": "Ein Bild für '{prompt}' wurde generiert (Beispiel).",
             "image_upload_caption": "Hochgeladenes Bild",
             "image_processing_error": "Beim Verarbeiten des Bildes ist ein Fehler aufgetreten: {error}",
             "image_vision_query": "Was sehen Sie auf diesem Bild?",
-            "loading_audio_file": "Audiodatei wird geladen...",
             "gemini_response_error": "Ein unerwarteter Fehler beim Abrufen einer Antwort: {error}",
             "creative_text_generated": "Kreativer Text generiert: {text}",
+            "research_input_required": "Bitte geben Sie zuerst eine Nachricht ein, um eine Recherche durchzuführen."
         },
         "RU": {
             "welcome_title": "Hanogt AI",
@@ -487,24 +447,18 @@ def get_text(key):
             "feature_general_chat": "Общий чат",
             "feature_web_search": "Веб-поиск (DuckDuckGo)",
             "feature_wikipedia_search": "Поиск в Википедии",
-            "feature_research": "Исследование (Веб, Вики)",
+            "feature_research_overview": "Исследование (Веб, Википедия)",
             "feature_knowledge_base": "Ответы из базы знаний",
             "feature_creative_text": "Генерация креативного текста",
             "feature_image_generation": "Простая генерация изображений (пример)",
             "feature_feedback": "Механизм обратной связи",
             "settings_button": "⚙️ Настройки и персонализация",
             "about_button": "ℹ️ О нас",
-            "app_mode_title": "Режим приложения",
-            "chat_mode_text": "💬 Текстовый чат",
-            "chat_mode_image": "🖼️ Генератор изображений",
-            "chat_mode_creative": "✨ Креативная студия",
-            "chat_mode_research": "🔍 Исследование",
-            "chat_input_placeholder": "Введите сообщение или команду: Например, 'Привет', 'веб-поиск: Streamlit'...",
+            "chat_input_placeholder": "Введите сообщение или команду: Например, 'Привет', 'сгенерировать изображение: кошка', 'веб-поиск: Streamlit'...",
             "generating_response": "Генерация ответа...",
-            "tts_button": "▶️",
             "feedback_button": "👍",
             "feedback_toast": "Спасибо за ваш отзыв!",
-            "image_gen_title": "Генератор изображений",
+            "image_gen_title": "Сгенерированное изображение",
             "image_gen_input_label": "Опишите изображение, которое вы хотите создать:",
             "image_gen_button": "Сгенерировать изображение",
             "image_gen_warning_placeholder": "Функция генерации изображений в настоящее время является заглушкой и не подключена к реальному API.",
@@ -514,12 +468,10 @@ def get_text(key):
             "creative_studio_input_label": "Введите свой запрос на креативный текст:",
             "creative_studio_button": "Сгенерировать текст",
             "creative_studio_warning_prompt_missing": "Пожалуйста, введите запрос на креативный текст.",
-            "research_title": "🔍 Режим исследования",
-            "research_info": "Здесь вы можете выполнять веб-поиск (DuckDuckGo) и поиск в Википедии.",
-            "research_input_label": "Введите тему, которую вы хотите найти (например, 'Streamlit', 'искусственный интеллект'):",
-            "research_web_button": "Искать в Интернете (DuckDuckGo)",
-            "research_wiki_button": "Искать в Википедии",
-            "research_warning_prompt_missing": "Пожалуйста, введите тему для поиска.",
+            "research_title": "🔍 Результаты исследования",
+            "research_info": "Ниже представлена информация, собранная как из интернета, так и из Википедии по вашему последнему запросу.",
+            "research_button_text_on": "Закрыть исследование",
+            "research_button_text_off": "Исследовать",
             "settings_personalization_title": "Настройки и персонализация",
             "settings_name_change_label": "Изменить ваше имя:",
             "settings_avatar_change_label": "Изменить фото профиля (необязательно)",
@@ -545,17 +497,17 @@ def get_text(key):
             "source_error": "Источник: Ошибка ({error})",
             "chat_cleared_toast": "Активный чат очищен!",
             "profile_image_load_error": "Не удалось загрузить изображение профиля: {error}",
-            "web_search_results": "Результаты веб-поиска:",
-            "web_search_no_results": "Результаты по вашему запросу не найдены.",
-            "wikipedia_search_results": "Результаты поиска Википедии:",
-            "wikipedia_search_no_results": "Результаты по вашему запросу не найдены.",
+            "web_search_results": "Информация из Интернета:",
+            "web_search_no_results": "В Интернете не найдено соответствующей информации.",
+            "wikipedia_search_results": "Информация из Википедии:",
+            "wikipedia_search_no_results": "В Википедии не найдено соответствующей информации.",
             "image_generated_example": "Изображение для '{prompt}' сгенерировано (пример).",
             "image_upload_caption": "Загруженное изображение",
             "image_processing_error": "Произошла ошибка при обработке изображения: {error}",
             "image_vision_query": "Что вы видите на этом изображении?",
-            "loading_audio_file": "Загрузка аудиофайла...",
             "gemini_response_error": "Произошла непредвиденная ошибка при получении ответа: {error}",
             "creative_text_generated": "Креативный текст сгенерирован: {text}",
+            "research_input_required": "Пожалуйста, сначала введите сообщение для выполнения исследования."
         },
         "SA": {
             "welcome_title": "Hanogt AI",
@@ -570,24 +522,18 @@ def get_text(key):
             "feature_general_chat": "دردشة عامة",
             "feature_web_search": "بحث الويب (DuckDuckGo)",
             "feature_wikipedia_search": "بحث ويكيبيديا",
-            "feature_research": "بحث (ويب، ويكي)",
+            "feature_research_overview": "بحث (ويب، ويكيبيديا)",
             "feature_knowledge_base": "استجابات قاعدة المعرفة",
             "feature_creative_text": "إنشاء نص إبداعي",
             "feature_image_generation": "إنشاء صور بسيطة (مثال)",
             "feature_feedback": "آلية التغذية الراجعة",
             "settings_button": "⚙️ الإعدادات والتخصيص",
             "about_button": "ℹ️ حولنا",
-            "app_mode_title": "وضع التطبيق",
-            "chat_mode_text": "💬 الدردشة النصية",
-            "chat_mode_image": "🖼️ منشئ الصور",
-            "chat_mode_creative": "✨ استوديو إبداعي",
-            "chat_mode_research": "🔍 بحث",
-            "chat_input_placeholder": "اكتب رسالتك أو أدخل أمرًا: مثال: 'مرحبًا', 'بحث ويب: Streamlit'...",
+            "chat_input_placeholder": "اكتب رسالتك أو أدخل أمرًا: مثال: 'مرحبًا', 'إنشاء صورة: قطة', 'بحث ويب: Streamlit'...",
             "generating_response": "جاري إنشاء الرد...",
-            "tts_button": "▶️",
             "feedback_button": "👍",
             "feedback_toast": "شكرًا لملاحظاتك!",
-            "image_gen_title": "منشئ الصور",
+            "image_gen_title": "الصورة التي تم إنشاؤها",
             "image_gen_input_label": "صف الصورة التي تريد إنشاءها:",
             "image_gen_button": "إنشاء صورة",
             "image_gen_warning_placeholder": "ميزة إنشاء الصور هي حاليًا مكان مؤقت وغير متصلة بواجهة برمجة تطبيقات حقيقية.",
@@ -597,12 +543,10 @@ def get_text(key):
             "creative_studio_input_label": "أدخل طلب النص الإبداعي الخاص بك:",
             "creative_studio_button": "إنشاء نص",
             "creative_studio_warning_prompt_missing": "الرجاء إدخال طلب نص إبداعي.",
-            "research_title": "🔍 وضع البحث",
-            "research_info": "هنا يمكنك إجراء عمليات بحث عبر الويب (DuckDuckGo) وعمليات بحث في ويكيبيديا.",
-            "research_input_label": "أدخل الموضوع الذي تريد البحث عنه (على سبيل المثال: 'Streamlit', 'الذكاء الاصطناعي'):",
-            "research_web_button": "بحث الويب (DuckDuckGo)",
-            "research_wiki_button": "بحث ويكيبيديا",
-            "research_warning_prompt_missing": "الرجاء إدخال موضوع للبحث.",
+            "research_title": "🔍 نتائج البحث",
+            "research_info": "أدناه معلومات تم جمعها من الويب وويكيبيديا تتعلق بآخر استعلام لك.",
+            "research_button_text_on": "إغلاق البحث",
+            "research_button_text_off": "بحث",
             "settings_personalization_title": "الإعدادات والتخصيص",
             "settings_name_change_label": "تغيير اسمك:",
             "settings_avatar_change_label": "تغيير صورة الملف الشخصي (اختياري)",
@@ -628,17 +572,17 @@ def get_text(key):
             "source_error": "المصدر: خطأ ({error})",
             "chat_cleared_toast": "تم مسح الدردشة النشطة!",
             "profile_image_load_error": "تعذر تحميل صورة الملف الشخصي: {error}",
-            "web_search_results": "نتائج بحث الويب:",
-            "web_search_no_results": "لم يتم العثور على نتائج لمصطلح البحث الخاص بك.",
-            "wikipedia_search_results": "نتائج بحث ويكيبيديا:",
-            "wikipedia_search_no_results": "لم يتم العثور على نتائج لمصطلح البحث الخاص بك.",
+            "web_search_results": "معلومات من الويب:",
+            "web_search_no_results": "لم يتم العثور على معلومات ذات صلة على الويب.",
+            "wikipedia_search_results": "معلومات من ويكيبيديا:",
+            "wikipedia_search_no_results": "لم يتم العثور على معلومات ذات صلة في ويكيبيديا.",
             "image_generated_example": "تم إنشاء صورة لـ '{prompt}' (مثال).",
             "image_upload_caption": "الصورة المحملة",
             "image_processing_error": "حدث خطأ أثناء معالجة الصورة: {error}",
             "image_vision_query": "ماذا ترى في هذه الصورة؟",
-            "loading_audio_file": "جاري تحميل الملف الصوتي...",
             "gemini_response_error": "حدث خطأ غير متوقع أثناء تلقي رد: {error}",
             "creative_text_generated": "تم إنشاء النص الإبداعي: {text}",
+            "research_input_required": "الرجاء إدخال رسالة أولاً لإجراء البحث."
         },
         "AZ": {
             "welcome_title": "Hanogt AI",
@@ -653,24 +597,18 @@ def get_text(key):
             "feature_general_chat": "Ümumi söhbət",
             "feature_web_search": "Veb axtarış (DuckDuckGo)",
             "feature_wikipedia_search": "Vikipediya axtarışı",
-            "feature_research": "Araşdırma (Veb, Wiki)",
+            "feature_research_overview": "Araşdırma (Veb, Vikipediya)",
             "feature_knowledge_base": "Bilik bazası cavabları",
             "feature_creative_text": "Yaradıcı mətn yaratma",
             "feature_image_generation": "Sadə şəkil yaratma (nümunə)",
             "feature_feedback": "Rəy mexanizmi",
             "settings_button": "⚙️ Ayarlar & Fərdiləşdirmə",
             "about_button": "ℹ️ Haqqımızda",
-            "app_mode_title": "Tətbiq Rejimi",
-            "chat_mode_text": "💬 Yazılı Söhbət",
-            "chat_mode_image": "🖼️ Şəkil Yaradıcı",
-            "chat_mode_creative": "✨ Yaradıcı Studiya",
-            "chat_mode_research": "🔍 Araşdırma",
-            "chat_input_placeholder": "Mesajınızı yazın və ya əmr daxil edin: Məsələn: 'Salam', 'veb axtar: Streamlit'...",
+            "chat_input_placeholder": "Mesajınızı yazın və ya əmr daxil edin: Məsələn: 'Salam', 'şəkil yarat: pişik', 'veb axtar: Streamlit'...",
             "generating_response": "Cavab yaradılır...",
-            "tts_button": "▶️",
             "feedback_button": "👍",
             "feedback_toast": "Rəyiniz üçün təşəkkür edirik!",
-            "image_gen_title": "Şəkil Yaradıcı",
+            "image_gen_title": "Yaradılmış Şəkil",
             "image_gen_input_label": "Yaratmaq istədiyiniz şəkli təsvir edin:",
             "image_gen_button": "Şəkil Yarat",
             "image_gen_warning_placeholder": "Şəkil yaratma xüsusiyyəti hazırda bir yer tutucudur və real API-yə qoşulmayıb.",
@@ -680,12 +618,10 @@ def get_text(key):
             "creative_studio_input_label": "Yaradıcı mətn istəyinizi daxil edin:",
             "creative_studio_button": "Mətn Yarat",
             "creative_studio_warning_prompt_missing": "Zəhmət olmasa, bir yaradıcı mətn istəyi daxil edin.",
-            "research_title": "🔍 Araşdırma Rejimi",
-            "research_info": "Burada veb axtarışlar (DuckDuckGo) və Vikipediya axtarışları edə bilərsiniz.",
-            "research_input_label": "Axtarmaq istədiyiniz mövzunu daxil edin (məsələn: 'Streamlit', 'süni intellekt'):",
-            "research_web_button": "Veb Axtar (DuckDuckGo)",
-            "research_wiki_button": "Vikipediya Axtar",
-            "research_warning_prompt_missing": "Zəhmət olmasa, axtarmaq istədiyiniz bir mövzu daxil edin.",
+            "research_title": "🔍 Araşdırma Nəticələri",
+            "research_info": "Aşağıda son sorğunuzla əlaqədar vebdən və Vikipediyadan toplanmış məlumatlar verilmişdir.",
+            "research_button_text_on": "Araşdırmanı Bağla",
+            "research_button_text_off": "Araşdır",
             "settings_personalization_title": "Ayarlar & Fərdiləşdirmə",
             "settings_name_change_label": "Adınızı Dəyişdirin:",
             "settings_avatar_change_label": "Profil Şəklini Dəyişdirin (isteğe bağlı)",
@@ -711,17 +647,17 @@ def get_text(key):
             "source_error": "Mənbə: Səhv ({error})",
             "chat_cleared_toast": "Aktiv söhbət təmizləndi!",
             "profile_image_load_error": "Profil şəkli yüklənmədi: {error}",
-            "web_search_results": "Veb Axtarış Nəticələri:",
-            "web_search_no_results": "Axtarış termininizlə əlaqəli nəticə tapılmadı.",
-            "wikipedia_search_results": "Vikipediya Axtarış Nəticələri:",
-            "wikipedia_search_no_results": "Axtarış termininizlə əlaqəli nəticə tapılmadı.",
+            "web_search_results": "Vebdən Məlumat:",
+            "web_search_no_results": "Vebdə əlaqəli məlumat tapılmadı.",
+            "wikipedia_search_results": "Vikipediyadan Məlumat:",
+            "wikipedia_search_no_results": "Vikipediyada əlaqəli məlumat tapılmadı.",
             "image_generated_example": "'{prompt}' üçün bir şəkil yaradıldı (nümunə).",
             "image_upload_caption": "Yüklənən Şəkil",
             "image_processing_error": "Şəkil işlənərkən bir səhv baş verdi: {error}",
             "image_vision_query": "Bu şəkildə nə görürsən?",
-            "loading_audio_file": "Səs faylı yüklənir...",
             "gemini_response_error": "Cavab alınarkən gözlənilməz bir səhv baş verdi: {error}",
             "creative_text_generated": "Yaradıcı Mətn Yaradıldı: {text}",
+            "research_input_required": "Araşdırma aparmaq üçün əvvəlcə mesaj daxil edin."
         },
         "JP": {
             "welcome_title": "Hanogt AI",
@@ -736,24 +672,18 @@ def get_text(key):
             "feature_general_chat": "一般チャット",
             "feature_web_search": "ウェブ検索 (DuckDuckGo)",
             "feature_wikipedia_search": "Wikipedia検索",
-            "feature_research": "リサーチ (ウェブ, Wiki)",
+            "feature_research_overview": "リサーチ (ウェブ, Wikipedia)",
             "feature_knowledge_base": "ナレッジベースの回答",
             "feature_creative_text": "クリエイティブテキスト生成",
             "feature_image_generation": "簡易画像生成 (例)",
             "feature_feedback": "フィードバックメカニズム",
             "settings_button": "⚙️ 設定とパーソナライズ",
             "about_button": "ℹ️ 会社概要",
-            "app_mode_title": "アプリケーションモード",
-            "chat_mode_text": "💬 テキストチャット",
-            "chat_mode_image": "🖼️ 画像生成",
-            "chat_mode_creative": "✨ クリエイティブスタジオ",
-            "chat_mode_research": "🔍 リサーチ",
-            "chat_input_placeholder": "メッセージまたはコマンドを入力してください: 例: 'こんにちは', 'ウェブ検索: Streamlit'...",
+            "chat_input_placeholder": "メッセージまたはコマンドを入力してください: 例: 'こんにちは', '画像生成: 猫', 'ウェブ検索: Streamlit'...",
             "generating_response": "応答を生成中...",
-            "tts_button": "▶️",
             "feedback_button": "👍",
             "feedback_toast": "フィードバックありがとうございます！",
-            "image_gen_title": "画像生成",
+            "image_gen_title": "生成された画像",
             "image_gen_input_label": "作成したい画像を説明してください：",
             "image_gen_button": "画像を生成",
             "image_gen_warning_placeholder": "画像生成機能は現在プレースホルダーであり、実際のAPIには接続されていません。",
@@ -763,12 +693,10 @@ def get_text(key):
             "creative_studio_input_label": "クリエイティブなテキストリクエストを入力してください：",
             "creative_studio_button": "テキストを生成",
             "creative_studio_warning_prompt_missing": "クリエイティブなテキストリクエストを入力してください。",
-            "research_title": "🔍 リサーチモード",
-            "research_info": "ここでは、ウェブ検索 (DuckDuckGo) と Wikipedia 検索を実行できます。",
-            "research_input_label": "検索したいトピックを入力してください (例: 'Streamlit', '人工知能'):",
-            "research_web_button": "ウェブ検索 (DuckDuckGo)",
-            "research_wiki_button": "Wikipedia検索",
-            "research_warning_prompt_missing": "検索するトピックを入力してください。",
+            "research_title": "🔍 リサーチ結果",
+            "research_info": "以下は、最新のクエリに関連するウェブとWikipediaからの情報です。",
+            "research_button_text_on": "リサーチを閉じる",
+            "research_button_text_off": "リサーチ",
             "settings_personalization_title": "設定とパーソナライズ",
             "settings_name_change_label": "名前を変更：",
             "settings_avatar_change_label": "プロフィール画像を変更 (オプション)",
@@ -794,17 +722,17 @@ def get_text(key):
             "source_error": "ソース: エラー ({error})",
             "chat_cleared_toast": "アクティブなチャットがクリアされました！",
             "profile_image_load_error": "プロフィール画像を読み込めませんでした：{error}",
-            "web_search_results": "ウェブ検索結果：",
-            "web_search_no_results": "検索語句に一致する結果は見つかりませんでした。",
-            "wikipedia_search_results": "Wikipedia検索結果：",
-            "wikipedia_search_no_results": "検索語句に一致する結果は見つかりませんでした。",
+            "web_search_results": "ウェブからの情報：",
+            "web_search_no_results": "ウェブに関連情報は見つかりませんでした。",
+            "wikipedia_search_results": "Wikipediaからの情報：",
+            "wikipedia_search_no_results": "Wikipediaに関連情報は見つかりませんでした。",
             "image_generated_example": "'{prompt}'の画像が生成されました (例)。",
             "image_upload_caption": "アップロードされた画像",
             "image_processing_error": "画像の処理中にエラーが発生しました：{error}",
             "image_vision_query": "この画像に何が見えますか？",
-            "loading_audio_file": "音声ファイルを読み込み中...",
             "gemini_response_error": "応答の取得中に予期しないエラーが発生しました：{error}",
             "creative_text_generated": "クリエイティブテキスト生成済み：{text}",
+            "research_input_required": "リサーチを実行するには、まずメッセージを入力してください。"
         },
         "KR": {
             "welcome_title": "Hanogt AI",
@@ -819,24 +747,18 @@ def get_text(key):
             "feature_general_chat": "일반 채팅",
             "feature_web_search": "웹 검색 (DuckDuckGo)",
             "feature_wikipedia_search": "위키백과 검색",
-            "feature_research": "연구 (웹, 위키)",
+            "feature_research_overview": "연구 (웹, 위키백과)",
             "feature_knowledge_base": "지식 기반 응답",
             "feature_creative_text": "창의적인 텍스트 생성",
             "feature_image_generation": "간단한 이미지 생성 (예시)",
             "feature_feedback": "피드백 메커니즘",
             "settings_button": "⚙️ 설정 및 개인화",
             "about_button": "ℹ️ 회사 소개",
-            "app_mode_title": "애플리케이션 모드",
-            "chat_mode_text": "💬 텍스트 채팅",
-            "chat_mode_image": "🖼️ 이미지 생성기",
-            "chat_mode_creative": "✨ 크리에이티브 스튜디오",
-            "chat_mode_research": "🔍 연구",
-            "chat_input_placeholder": "메시지를 입력하거나 명령을 입력하세요: 예: '안녕하세요', '웹 검색: Streamlit'...",
+            "chat_input_placeholder": "메시지를 입력하거나 명령을 입력하세요: 예: '안녕하세요', '이미지 생성: 고양이', '웹 검색: Streamlit'...",
             "generating_response": "응답 생성 중...",
-            "tts_button": "▶️",
             "feedback_button": "👍",
             "feedback_toast": "피드백 감사합니다!",
-            "image_gen_title": "이미지 생성기",
+            "image_gen_title": "생성된 이미지",
             "image_gen_input_label": "생성하려는 이미지를 설명하세요:",
             "image_gen_button": "이미지 생성",
             "image_gen_warning_placeholder": "이미지 생성 기능은 현재 플레이스홀더이며 실제 API에 연결되어 있지 않습니다.",
@@ -846,12 +768,10 @@ def get_text(key):
             "creative_studio_input_label": "창의적인 텍스트 요청을 입력하세요:",
             "creative_studio_button": "텍스트 생성",
             "creative_studio_warning_prompt_missing": "창의적인 텍스트 요청을 입력하세요.",
-            "research_title": "🔍 연구 모드",
-            "research_info": "여기서 웹 검색 (DuckDuckGo) 및 위키백과 검색을 수행할 수 있습니다.",
-            "research_input_label": "검색하려는 주제를 입력하세요 (예: 'Streamlit', '인공지능'):",
-            "research_web_button": "웹 검색 (DuckDuckGo)",
-            "research_wiki_button": "위키백과 검색",
-            "research_warning_prompt_missing": "검색할 주제를 입력하세요.",
+            "research_title": "🔍 연구 결과",
+            "research_info": "아래는 마지막 쿼리와 관련된 웹 및 위키백과에서 수집된 정보입니다.",
+            "research_button_text_on": "연구 닫기",
+            "research_button_text_off": "연구",
             "settings_personalization_title": "설정 및 개인화",
             "settings_name_change_label": "이름 변경:",
             "settings_avatar_change_label": "프로필 사진 변경 (선택 사항)",
@@ -877,17 +797,17 @@ def get_text(key):
             "source_error": "출처: 오류 ({error})",
             "chat_cleared_toast": "활성 채팅이 지워졌습니다!",
             "profile_image_load_error": "프로필 이미지를 로드할 수 없습니다: {error}",
-            "web_search_results": "웹 검색 결과:",
-            "web_search_no_results": "검색어에 대한 결과가 없습니다.",
-            "wikipedia_search_results": "위키백과 검색 결과:",
-            "wikipedia_search_no_results": "검색어에 대한 결과가 없습니다.",
+            "web_search_results": "웹에서 얻은 정보:",
+            "web_search_no_results": "웹에서 관련 정보를 찾을 수 없습니다.",
+            "wikipedia_search_results": "위키백과에서 얻은 정보:",
+            "wikipedia_search_no_results": "위키백과에서 관련 정보를 찾을 수 없습니다.",
             "image_generated_example": "'{prompt}'에 대한 이미지가 생성되었습니다(예시).",
             "image_upload_caption": "업로드된 이미지",
             "image_processing_error": "이미지 처리 중 오류가 발생했습니다: {error}",
             "image_vision_query": "이 이미지에서 무엇을 보시나요?",
-            "loading_audio_file": "오디오 파일 로드 중...",
             "gemini_response_error": "응답을 가져오는 중 예기치 않은 오류가 발생했습니다: {error}",
             "creative_text_generated": "창의적인 텍스트 생성됨: {text}",
+            "research_input_required": "연구를 수행하려면 먼저 메시지를 입력하세요."
         },
     }
     return texts.get(st.session_state.current_language, texts["TR"]).get(key, "TEXT_MISSING")
@@ -906,14 +826,28 @@ def initialize_session_state():
         st.session_state.active_chat_id = "chat_0"
         if "chat_0" not in st.session_state.all_chats:
             st.session_state.all_chats["chat_0"] = []
-    if "chat_mode" not in st.session_state:
-        st.session_state.chat_mode = "💬 Yazılı Sohbet"
-    if "current_mode_index" not in st.session_state:
-        st.session_state.current_mode_index = 0
+    
+    # Unified mode management
+    if "current_view" not in st.session_state:
+        st.session_state.current_view = "chat" # Can be "chat", "image_display", "research_results"
+    
     if "show_settings" not in st.session_state:
         st.session_state.show_settings = False
     if "show_about" not in st.session_state:
         st.session_state.show_about = False
+
+    # Research specific states
+    if "show_research_results" not in st.session_state:
+        st.session_state.show_research_results = False
+    if "last_research_query" not in st.session_state:
+        st.session_state.last_research_query = ""
+    if "last_research_results" not in st.session_state:
+        st.session_state.last_research_results = None
+
+    # Image generation specific states
+    if "generated_image_url" not in st.session_state:
+        st.session_state.generated_image_url = None
+
     if "current_language" not in st.session_state:
         st.session_state.current_language = "TR"
 
@@ -1006,31 +940,38 @@ def wikipedia_search(query):
         st.error(get_text("wikipedia_general_error").format(error=e))
         return []
 
-def generate_image(prompt):
+def perform_combined_research(query):
+    """Performs combined web and Wikipedia research."""
+    web_results = duckduckgo_search(query)
+    wiki_results = wikipedia_search(query)
+    return {"web": web_results, "wiki": wiki_results}
+
+def generate_image_placeholder(prompt):
     """Image generation (example - placeholder)."""
-    st.warning(get_text("image_gen_warning_placeholder"))
-    placeholder_image_url = "https://via.placeholder.com/400x300.png?text=Image+Generated"
-    st.image(placeholder_image_url, caption=prompt)
+    st.session_state.generated_image_url = "https://via.placeholder.com/600x400.png?text=" + prompt.replace(" ", "+")
+    st.session_state.current_view = "image_display"
     add_to_chat_history(st.session_state.active_chat_id, "model", get_text("image_generated_example").format(prompt=prompt))
+    logger.info(f"Generated placeholder image for prompt: {prompt}")
 
 def process_image_input(uploaded_file):
     """Processes the uploaded image and converts it to text (vision)."""
     if uploaded_file is not None:
         try:
             image = Image.open(uploaded_file)
-            st.image(image, caption=get_text("image_upload_caption"), use_column_width=True)
             add_to_chat_history(st.session_state.active_chat_id, "user", image)
             
             if st.session_state.gemini_model:
-                vision_chat_session = st.session_state.gemini_model.start_chat(history=[])
-                response = vision_chat_session.send_message([image, get_text("image_vision_query")])
-                response_text = response.text
-                st.markdown(response_text)
-                add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
+                vision_chat_session = st.session_state.gemini_model.start_chat(history=[]) # New session for vision
+                with st.spinner(get_text("generating_response")):
+                    response = vision_chat_session.send_message([image, get_text("image_vision_query")])
+                    response_text = response.text
+                    add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
+                    st.session_state.current_view = "chat" # Return to chat view after vision
             else:
                 st.error(get_text("gemini_model_not_initialized"))
         except Exception as e:
             st.error(get_text("image_processing_error").format(error=e))
+        st.rerun()
 
 # --- UI Components ---
 
@@ -1048,6 +989,7 @@ def display_welcome_and_profile_setup():
             * {get_text('feature_general_chat')}
             * {get_text('feature_web_search')}
             * {get_text('feature_wikipedia_search')}
+            * {get_text('feature_research_overview')}
             * {get_text('feature_knowledge_base')}
             * {get_text('feature_creative_text')}
             * {get_text('feature_image_generation')}
@@ -1107,8 +1049,8 @@ def display_about_section():
     st.markdown(get_text("about_us_text"))
     st.write("---")
 
-def display_main_chat_interface():
-    """Displays the main chat interface."""
+def display_unified_interface():
+    """Displays the unified main interface for chat, image generation, and research."""
     
     col_settings, col_about = st.columns(2)
     with col_settings:
@@ -1126,166 +1068,143 @@ def display_main_chat_interface():
         display_about_section()
 
     st.markdown("---")
-    st.markdown(f"## {get_text('app_mode_title')}")
 
-    mode_options = [
-        get_text("chat_mode_text"),
-        get_text("chat_mode_image"),
-        get_text("chat_mode_creative"),
-        get_text("chat_mode_research") # Added Research mode
-    ]
-    st.session_state.chat_mode = st.radio(
-        "Mode Selection",
-        mode_options,
-        horizontal=True,
-        index=mode_options.index(st.session_state.chat_mode) if st.session_state.chat_mode in mode_options else 0,
-        key="main_mode_radio",
-        label_visibility="collapsed" # Hide default label for cleaner UI
-    )
-    
-    current_mode_string = st.session_state.chat_mode 
+    # Display content based on current_view state
+    if st.session_state.show_research_results and st.session_state.last_research_results:
+        st.subheader(get_text("research_title"))
+        st.markdown(get_text("research_info"))
 
-    if current_mode_string == get_text("chat_mode_text"):
-        handle_text_chat()
-    elif current_mode_string == get_text("chat_mode_image"):
-        handle_image_generation()
-    elif current_mode_string == get_text("chat_mode_creative"):
-        handle_creative_studio()
-    elif current_mode_string == get_text("chat_mode_research"): # Handle Research mode
-        handle_research_mode()
+        # Web results
+        st.markdown(f"#### {get_text('web_search_results')}")
+        if st.session_state.last_research_results["web"]:
+            for i, r in enumerate(st.session_state.last_research_results["web"]):
+                st.markdown(f"- **[{r['title']}]({r['href']})**: {r['body']}")
+        else:
+            st.info(get_text("web_search_no_results"))
 
-def handle_text_chat():
-    """Manages the text chat mode."""
-    chat_messages = st.session_state.all_chats.get(st.session_state.active_chat_id, [])
+        # Wikipedia results
+        st.markdown(f"#### {get_text('wikipedia_search_results')}")
+        if st.session_state.last_research_results["wiki"]:
+            for i, r in enumerate(st.session_state.last_research_results["wiki"]):
+                st.markdown(f"- **{r['title']}**: {r['snippet']}...") # Wikipedia API snippet is usually short
+        else:
+            st.info(get_text("wikipedia_search_no_results"))
 
-    for message_index, message in enumerate(chat_messages):
-        avatar_src = None
-        if message["role"] == "user" and st.session_state.user_avatar:
-            try:
-                profile_image_bytes = message["parts"][0] if isinstance(message["parts"][0], bytes) else None
-                if profile_image_bytes:
-                    avatar_src = Image.open(io.BytesIO(profile_image_bytes))
-            except Exception as e:
-                logger.warning(f"Failed to load user avatar for chat message: {e}")
-                avatar_src = None
+    elif st.session_state.generated_image_url:
+        st.subheader(get_text("image_gen_title"))
+        st.image(st.session_state.generated_image_url, caption=st.session_state.last_research_query, use_column_width=True)
+        st.info(get_text("image_gen_warning_placeholder"))
+        # After showing the image, clear the URL to return to chat history by default next rerun
+        # st.session_state.generated_image_url = None # This will cause it to flash and disappear. Better to let it stay until new interaction.
 
-        with st.chat_message(message["role"], avatar=avatar_src):
-            content_part = message["parts"][0]
-            if isinstance(content_part, str):
-                st.markdown(content_part)
-            elif isinstance(content_part, bytes):
+    else: # Default chat view
+        st.subheader("💬 Hanogt AI Sohbet") # Generic chat title
+        chat_messages = st.session_state.all_chats.get(st.session_state.active_chat_id, [])
+
+        # Display chat history
+        for message_data in reversed(chat_messages): # Displaying newest at bottom
+            role = message_data["role"]
+            content_parts = message_data["parts"]
+
+            avatar_src = None
+            if role == "user" and st.session_state.user_avatar:
                 try:
-                    image = Image.open(io.BytesIO(content_part))
-                    st.image(image, caption=get_text("image_upload_caption"), use_column_width=True)
+                    avatar_src = Image.open(io.BytesIO(st.session_state.user_avatar))
                 except Exception as e:
-                    st.warning(get_text("image_load_error").format(error=e))
+                    logger.warning(f"Failed to load user avatar for chat message: {e}")
+                    avatar_src = None
 
-            # Removed TTS button from here since voice chat is removed
-            col_btn1, col_btn2 = st.columns([0.05, 1])
-            with col_btn1:
-                # Kept for potential future text output functionality, though not TTS anymore
-                # if st.button(get_text("tts_button"), key=f"tts_btn_{st.session_state.active_chat_id}_{message_index}"):
-                #     st.warning(get_text("image_not_convertible")) # Placeholder
-                pass # No action for now
-            with col_btn2:
-                if st.button(get_text("feedback_button"), key=f"fb_btn_{st.session_state.active_chat_id}_{message_index}"):
-                    st.toast(get_text("feedback_toast"), icon="🙏")
+            with st.chat_message(role, avatar=avatar_src):
+                for part in content_parts:
+                    if isinstance(part, str):
+                        st.markdown(part)
+                    elif isinstance(part, bytes):
+                        try:
+                            image_content = Image.open(io.BytesIO(part))
+                            st.image(image_content, caption=get_text("image_upload_caption"), use_column_width=True)
+                        except Exception as e:
+                            st.warning(get_text("image_load_error").format(error=e))
+                # Feedback button
+                st.button(get_text("feedback_button"), key=f"fb_btn_{uuid.uuid4()}", on_click=lambda: st.toast(get_text("feedback_toast"), icon="🙏"))
 
-    prompt = st.chat_input(get_text("chat_input_placeholder"))
+        if not st.session_state.chat_history: # Initial message for empty chat
+            st.info("Merhaba! Size nasıl yardımcı olabilirim? 'Resim oluştur: bir kedi' gibi komutlar veya doğrudan mesajlar kullanabilirsiniz.")
 
-    # Placeholder for Research button within chat input area (conceptually below it)
-    col1, col2 = st.columns([1, 8]) # Adjust column ratio as needed
-    with col1:
-        if st.button(get_text("chat_mode_research"), key="research_button_in_chat"):
-            st.session_state.chat_mode = get_text("chat_mode_research")
-            st.rerun()
 
-    if prompt:
-        add_to_chat_history(st.session_state.active_chat_id, "user", prompt)
+    # --- Chat Input and Research Button ---
+    col_input, col_button = st.columns([8, 1])
+
+    with col_input:
+        user_input = st.chat_input(get_text("chat_input_placeholder"), key="main_chat_input")
         
-        # Command handling (web search, wiki search, image generation) - these can still be used as commands
-        if prompt.lower().startswith("web ara:") or prompt.lower().startswith("web search:"):
-            query = prompt.split(":", 1)[1].strip()
-            results = duckduckgo_search(query)
-            if results:
-                response_text = get_text("web_search_results") + "\n"
-                for i, r in enumerate(results):
-                    response_text += f"{i+1}. **{r['title']}**\n{r['body']}\n{r['href']}\n\n"
-            else:
-                response_text = get_text("web_search_no_results")
-            add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-        elif prompt.lower().startswith("wiki ara:") or prompt.lower().startswith("wiki search:"):
-            query = prompt.split(":", 1)[1].strip()
-            results = wikipedia_search(query)
-            if results:
-                response_text = get_text("wikipedia_search_results") + "\n"
-                for i, r in enumerate(results):
-                    response_text += f"{i+1}. **{r['title']}**\n"
-            else:
-                response_text = get_text("wikipedia_search_no_results")
-            add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-        elif prompt.lower().startswith("görsel oluştur:") or prompt.lower().startswith("image generate:"):
-            image_prompt = prompt.split(":", 1)[1].strip()
-            generate_image(image_prompt)
+    with col_button:
+        # Toggle Research Button
+        if st.session_state.show_research_results:
+            button_label = get_text("research_button_text_on")
         else:
-            # Regular chat interaction with Gemini
+            button_label = get_text("research_button_text_off")
+        
+        # Unique key for the button to avoid re-rendering issues
+        if st.button(button_label, key="toggle_research_mode_button", help="Araştırma modunu aç/kapat"):
+            if st.session_state.show_research_results:
+                # If currently showing research results, close it
+                st.session_state.show_research_results = False
+                st.session_state.current_view = "chat"
+                st.session_state.last_research_results = None # Clear old results
+                st.session_state.last_research_query = ""
+            else:
+                # If research mode is off, activate it if there's a query
+                if user_input or st.session_state.last_research_query:
+                    # Use current input if available, otherwise use the last query
+                    query_to_research = user_input if user_input else st.session_state.last_research_query
+                    
+                    st.session_state.show_research_results = True
+                    st.session_state.current_view = "research_results"
+                    st.session_state.last_research_query = query_to_research
+                    with st.spinner(get_text("generating_response")):
+                        st.session_state.last_research_results = perform_combined_research(query_to_research)
+                else:
+                    st.warning(get_text("research_input_required"))
+            st.rerun() # Crucial for state change to reflect immediately
+
+    # Process user input if available
+    if user_input:
+        st.session_state.last_research_query = user_input # Update last query
+        add_to_chat_history(st.session_state.active_chat_id, "user", user_input)
+        
+        # Reset image display if new text input
+        st.session_state.generated_image_url = None
+
+        # Command handling
+        if user_input.lower().startswith("resim oluştur:") or user_input.lower().startswith("image generate:"):
+            prompt_for_image = user_input.split(":", 1)[1].strip()
+            generate_image_placeholder(prompt_for_image)
+            st.session_state.current_view = "image_display" # Show image after generation
+        # Removed explicit "web ara" and "wiki ara" commands to encourage using the Research button
+        # elif user_input.lower().startswith("web ara:") or user_input.lower().startswith("web search:"):
+        #     st.session_state.current_view = "research_results"
+        #     query = user_input.split(":", 1)[1].strip()
+        #     st.session_state.last_research_query = query
+        #     with st.spinner(get_text("generating_response")):
+        #         st.session_state.last_research_results = perform_combined_research(query)
+        #     st.session_state.show_research_results = True # Ensure research results are shown
+        # elif user_input.lower().startswith("wiki ara:") or user_input.lower().startswith("wiki search:"):
+        #     st.session_state.current_view = "research_results"
+        #     query = user_input.split(":", 1)[1].strip()
+        #     st.session_state.last_research_query = query
+        #     with st.spinner(get_text("generating_response")):
+        #         st.session_state.last_research_results = perform_combined_research(query) # Use combined research
+        #     st.session_state.show_research_results = True # Ensure research results are shown
+        
+        # Creative Text Generation Command (can be integrated similarly if needed)
+        elif user_input.lower().startswith("yaratıcı metin oluştur:") or user_input.lower().startswith("generate creative text:"):
+            creative_prompt = user_input.split(":", 1)[1].strip()
             if st.session_state.gemini_model:
                 with st.spinner(get_text("generating_response")):
                     try:
-                        processed_history = []
-                        for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
-                            if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
-                                try:
-                                    processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
-                                except Exception as e:
-                                    logger.error(f"Error converting stored image bytes to PIL Image: {e}")
-                                    continue
-                            else:
-                                processed_history.append(msg)
-
-                        if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
-                            st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
-                        
-                        response = st.session_state.chat_session.send_message(prompt, stream=True)
-                        
-                        response_text = ""
-                        response_placeholder = st.empty()
-                        for chunk in response:
-                            response_text += chunk.text
-                            with response_placeholder.container():
-                                st.markdown(response_text)
-                        
-                        add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-                    except Exception as e:
-                        st.error(get_text("unexpected_response_error").format(error=e))
-            else:
-                st.warning(get_text("gemini_model_not_initialized"))
-        
-        st.rerun()
-
-def handle_image_generation():
-    """Manages the image generation mode."""
-    st.subheader(get_text("image_gen_title"))
-    image_prompt = st.text_input(get_text("image_gen_input_label"), key="image_prompt_input")
-    if st.button(get_text("image_gen_button"), key="generate_image_button"):
-        if image_prompt:
-            generate_image(image_prompt)
-        else:
-            st.warning(get_text("image_gen_warning_prompt_missing"))
-
-def handle_creative_studio():
-    """Manages the creative studio mode."""
-    st.subheader(get_text("creative_studio_title"))
-    st.write(get_text("creative_studio_info"))
-    
-    creative_prompt = st.text_area(get_text("creative_studio_input_label"), height=150, key="creative_prompt_input")
-    if st.button(get_text("creative_studio_button"), key="generate_creative_text_button"):
-        if creative_prompt:
-            if st.session_state.gemini_model:
-                with st.spinner(get_text("generating_response")):
-                    try:
+                        # Start a fresh chat session for creative generation to avoid history influencing
                         creative_chat_session = st.session_state.gemini_model.start_chat(history=[])
-                        response = creative_chat_session.send_message(f"Generate creative text: {creative_prompt}", stream=True)
+                        response = creative_chat_session.send_message(f"Generate creative text based on this: {creative_prompt}", stream=True)
                         
                         response_text = ""
                         response_placeholder = st.empty()
@@ -1295,57 +1214,61 @@ def handle_creative_studio():
                                 st.markdown(response_text)
                         
                         add_to_chat_history(st.session_state.active_chat_id, "model", get_text("creative_text_generated").format(text=response_text))
+                        st.session_state.current_view = "chat" # Return to chat view
                     except Exception as e:
                         st.error(get_text("unexpected_response_error").format(error=e))
             else:
                 st.warning(get_text("gemini_model_not_initialized"))
+
         else:
-            st.warning(get_text("creative_studio_warning_prompt_missing"))
-
-def handle_research_mode():
-    """Manages the research mode with web and Wikipedia search."""
-    st.subheader(get_text("research_title"))
-    st.write(get_text("research_info"))
-
-    search_query = st.text_input(get_text("research_input_label"), key="research_query_input")
-
-    col_web_search, col_wiki_search = st.columns(2)
-
-    with col_web_search:
-        if st.button(get_text("research_web_button"), key="perform_web_search_button"):
-            if search_query:
-                with st.spinner(get_text("generating_response")):
-                    results = duckduckgo_search(search_query)
-                    if results:
-                        response_text = get_text("web_search_results") + "\n"
-                        for i, r in enumerate(results):
-                            response_text += f"{i+1}. **{r['title']}**\n{r['body']}\n{r['href']}\n\n"
-                    else:
-                        response_text = get_text("web_search_no_results")
-                    st.markdown(response_text)
-                    add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
+            # Regular chat interaction with Gemini (only if not in research mode)
+            if not st.session_state.show_research_results:
+                if st.session_state.gemini_model:
+                    with st.spinner(get_text("generating_response")):
+                        try:
+                            # Prepare history for Gemini, handling image content
+                            processed_history = []
+                            for msg in st.session_state.all_chats[st.session_state.active_chat_id]:
+                                if msg["role"] == "user" and isinstance(msg["parts"][0], bytes):
+                                    try:
+                                        processed_history.append({"role": msg["role"], "parts": [Image.open(io.BytesIO(msg["parts"][0]))]})
+                                    except Exception as e:
+                                        logger.error(f"Error converting stored image bytes to PIL Image for chat history: {e}")
+                                        # Optionally, skip this message or replace with a placeholder text
+                                        processed_history.append({"role": msg["role"], "parts": ["(Uploaded Image)"]})
+                                else:
+                                    processed_history.append(msg)
+                            
+                            # Ensure chat_session is initialized or reset with current history
+                            if "chat_session" not in st.session_state or st.session_state.chat_session.history != processed_history:
+                                st.session_state.chat_session = st.session_state.gemini_model.start_chat(history=processed_history)
+                            
+                            response = st.session_state.chat_session.send_message(user_input, stream=True)
+                            
+                            response_text = ""
+                            response_placeholder = st.empty()
+                            for chunk in response:
+                                response_text += chunk.text
+                                with response_placeholder.container():
+                                    st.markdown(response_text)
+                            
+                            add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
+                            st.session_state.current_view = "chat" # Ensure chat view after response
+                        except Exception as e:
+                            st.error(get_text("unexpected_response_error").format(error=e))
+                            logger.error(f"Gemini chat response error: {e}")
+                else:
+                    st.warning(get_text("gemini_model_not_initialized"))
             else:
-                st.warning(get_text("research_warning_prompt_missing"))
-            st.rerun() # Rerun to display results and clear input if needed
+                # If in research mode and user types, assume it's a new research query
+                # This path is implicitly handled by the research button now, but keep in mind for future.
+                pass
+        st.rerun() # Rerun to display new chat messages or command results
 
-    with col_wiki_search:
-        if st.button(get_text("research_wiki_button"), key="perform_wiki_search_button"):
-            if search_query:
-                with st.spinner(get_text("generating_response")):
-                    results = wikipedia_search(search_query)
-                    if results:
-                        response_text = get_text("wikipedia_search_results") + "\n"
-                        for i, r in enumerate(results):
-                            response_text += f"{i+1}. **{r['title']}**\n"
-                            # You might want to fetch full content for the top result here,
-                            # but for brevity, only title is shown as per previous implementation.
-                    else:
-                        response_text = get_text("wikipedia_search_no_results")
-                    st.markdown(response_text)
-                    add_to_chat_history(st.session_state.active_chat_id, "model", response_text)
-            else:
-                st.warning(get_text("research_warning_prompt_missing"))
-            st.rerun() # Rerun to display results and clear input if needed
+    # Handle image upload separately outside the main chat_input logic
+    uploaded_file = st.file_uploader("Bir görsel yükle (AI'ya analiz ettir)", type=["png", "jpg", "jpeg"], key="image_upload_for_vision")
+    if uploaded_file:
+        process_image_input(uploaded_file)
 
 
 # --- Main Application Logic ---
@@ -1376,14 +1299,33 @@ def main():
             h1 {
                 text-align: center;
             }
-            /* Adjust chat input and button alignment - might need fine-tuning */
+            /* Adjust chat input and button alignment */
             .st-chat-input-container {
                 display: flex;
-                flex-direction: column; /* Stack input and buttons */
+                flex-direction: row; /* Keep input and button in a row */
+                align-items: flex-end; /* Align to the bottom */
             }
             .st-chat-input-container .stButton {
-                margin-top: 5px; /* Space between input and button */
-                width: 100%; /* Make button full width if needed */
+                margin-left: 10px; /* Space between input and button */
+                min-width: 100px; /* Ensure button has some width */
+                height: 56px; /* Match height of chat input for better alignment */
+            }
+            .st-emotion-cache-vj1n86 { /* Targets the div around chat_input, may change in Streamlit versions */
+                flex-grow: 1; /* Allow chat input to take remaining space */
+            }
+            /* Styling for chat messages - optional */
+            .st-chat-message-container {
+                padding: 10px;
+                border-radius: 10px;
+                margin-bottom: 10px;
+            }
+            .st-chat-message-container.user {
+                background-color: #e6f7ff; /* Light blue for user messages */
+                border-left: 5px solid #007bff;
+            }
+            .st-chat-message-container.assistant {
+                background-color: #f0f0f0; /* Light gray for assistant messages */
+                border-right: 5px solid #6c757d;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -1420,7 +1362,7 @@ def main():
         st.markdown(f"<h4 style='text-align: center; color: gray;'>{get_text('welcome_subtitle')}</h4>", unsafe_allow_html=True)
         st.write("---")
 
-        display_main_chat_interface()
+        display_unified_interface()
 
     # Footer
     st.markdown("---")
