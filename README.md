@@ -1,1 +1,2 @@
 # hanogt-ai
+Not:Bu Bir Yapay Zeka Modeli Değildir,Bu Yapay Zeka Modelinin Arayüzüdür.Gerçek Yapay Zeka Dil Modelimizi Daha Yapmakla Uğraşıyoruz,Ama Yakın Zamanda Kendi Yapay Zeka Dil Modelimiz Yayınlanacaktır.Arayüzde Yapay Zeka Modeli Gemini 1.5 Pro'dur Bizim Yapay Zeka Dil Modelimiz Değildir,Deneme Amaçlıdır.Gemini Api Şifresi İle Çalışır Ve Streamlit Adlı Siteden Ücretsiz Bir Şekilde Site Olarak Yayınladım Sizde Benim Ki Gibi Yapabilirsiniz.Yapay Zeka Dil Modelimizi Geliştirmemiz İçin Ekip Arıyoruz Bilginize.
